@@ -152,6 +152,35 @@ int main(void) {
                              PP_V6_QP_IMS_RCS_AUTO_CONFIG, sizeof(PP_V6_QP_IMS_RCS_AUTO_CONFIG), PP_EFS_PUT_FLAGS, 6002u);
     CHECK(rlen > 0 && roundtrip_wide_frame(req, rlen, &cap) == 0, "PUT 1024B qp_ims_rcs_auto_config HDLC roundtrip");
 
+    /* 6. Cross-unit / multi-carrier DS profile1 & profile2 structural validation */
+    {
+        uint8_t p1[789];
+        uint8_t p2[789];
+        memset(p1, 0, sizeof(p1));
+        p1[0] = 0x15u;
+        p1[35] = 0x01u;
+        CHECK(pp_regfile_validate_ds_profile_ref(1u, p1, sizeof(p1)) == 0, "DS profile1 baseline valid");
+        p1[12] = 0xa5u;
+        p1[29] = 0x7eu;
+        CHECK(pp_regfile_validate_ds_profile_ref(1u, p1, sizeof(p1)) == 0, "DS profile1 QDP stack padding tolerated");
+        CHECK(pp_regfile_validate_ds_profile_ref(2u, p1, sizeof(p1)) != 0, "DS profile1 rejected for slot 2");
+        CHECK(pp_regfile_validate_ds_profile_ref(3u, p1, sizeof(p1)) != 0, "DS validator rejects slot 3");
+        CHECK(pp_regfile_validate_ds_profile_ref(1u, p1, 788u) != 0, "DS validator rejects wrong length");
+        CHECK(pp_regfile_validate_ds_profile_ref(1u, NULL, sizeof(p1)) != 0, "DS validator rejects NULL buffer");
+
+        memset(p2, 0, sizeof(p2));
+        p2[0] = 0x15u;
+        p2[35] = 0x02u;
+        CHECK(pp_regfile_validate_ds_profile_ref(2u, p2, sizeof(p2)) == 0, "DS profile2 baseline valid");
+        p2[750] = 0x01u;
+        CHECK(pp_regfile_validate_ds_profile_ref(2u, p2, sizeof(p2)) != 0, "DS validator rejects im_cn_flag=1");
+        p2[750] = 0x00u;
+        p2[751] = 0x01u;
+        CHECK(pp_regfile_validate_ds_profile_ref(2u, p2, sizeof(p2)) != 0, "DS validator rejects request_pcscf=1");
+        CHECK(pp_regfile_validate_ds_profile_ref(1u, PP_V6_PDP_PROFILE4_V4V6, sizeof(PP_V6_PDP_PROFILE4_V4V6)) != 0,
+              "DS validator rejects IMS profile4 as profile1");
+    }
+
     printf("{\"checks\":%u,\"failed\":%u}\n", g_checks, g_failed);
     return g_failed ? 1 : 0;
 }

@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.octolab.qcom32ims"
     android:sharedUserId="android.uid.phone"
-    android:versionCode="5"
-    android:versionName="2.5-qcom32-volte">
+    android:versionCode="6"
+    android:versionName="2.6-qcom32-volte">
 
     <uses-sdk
         android:minSdkVersion="30"

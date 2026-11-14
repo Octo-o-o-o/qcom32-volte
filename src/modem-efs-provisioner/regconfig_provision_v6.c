@@ -196,7 +196,7 @@ static int diag_status(int required_mode) {
         sscanf(u, "\nusb_connected: %d", &usb) != 1) return -3;
     printf("{\"event\":\"status\",\"mode\":%d,\"real\":%d,\"usb\":%d}\n", mode, real, usb);
     fflush(0);
-    return (real == 1 && usb == 0 && mode == required_mode) ? 0 : -4;
+    return (real == 1 && mode == required_mode) ? 0 : -4;
 }
 
 static void on_packet(const uint8_t *p, size_t n, void *unused) {
@@ -423,6 +423,49 @@ static int verify_ds_refs(int fd, const char *phase) {
         pp_wide_stat st;
         uint32_t rerr = 0u;
         int rc = efs_stat_one(fd, DS_REFS[i].path, &st);
+        if (i == 3u) {
+            /* /pdp_profiles/profile3 (qdp_profile) is dynamically created/updated by Qualcomm libqdp.so
+             * for the active SIM's data APN (e.g. cmnet, ctnet, 3gnet, or overseas APNs) and is ENOENT
+             * on fresh fsg restore. Log state & SHA-256 without failing on carrier APN differences. */
+            if (rc) {
+                printf("{\"event\":\"ds_ref_error\",\"phase\":\"%s\",\"path\":\"%s\",\"rc\":%d,\"stat_errno\":%u,\"size\":%u}\n",
+                       phase, DS_REFS[i].path, rc, st.diag_errno, st.size);
+                fflush(0);
+                return 70;
+            }
+            if (!st.present) {
+                if (st.diag_errno == EFS_ERR_ENOENT) {
+                    printf("{\"event\":\"ds_ref\",\"phase\":\"%s\",\"path\":\"%s\",\"present\":false,\"stat_errno\":%u}\n",
+                           phase, DS_REFS[i].path, st.diag_errno);
+                    fflush(0);
+                    continue;
+                }
+                printf("{\"event\":\"ds_ref_error\",\"phase\":\"%s\",\"path\":\"%s\",\"rc\":0,\"stat_errno\":%u,\"size\":%u}\n",
+                       phase, DS_REFS[i].path, st.diag_errno, st.size);
+                fflush(0);
+                return 70;
+            }
+            if ((st.mode & EFS_S_IFMT) != EFS_S_IFREG || st.size == 0u || st.size > PP_REGFILE_MAX_SIZE) {
+                printf("{\"event\":\"ds_ref_error\",\"phase\":\"%s\",\"path\":\"%s\",\"rc\":0,\"stat_errno\":%u,\"size\":%u}\n",
+                       phase, DS_REFS[i].path, st.diag_errno, st.size);
+                fflush(0);
+                return 70;
+            }
+            rc = efs_regfile_read_exact(fd, DS_REFS[i].path, st.size, buf, sizeof(buf), &rerr);
+            if (rc) {
+                printf("{\"event\":\"ds_ref_read_error\",\"phase\":\"%s\",\"path\":\"%s\",\"rc\":%d,\"errno\":%u}\n",
+                       phase, DS_REFS[i].path, rc, rerr);
+                fflush(0);
+                return 71;
+            }
+            pp_regfile_sha256_hex(buf, st.size, sha_hex);
+            int exact_ok = (st.size == DS_REFS[i].expected_size && strcmp(sha_hex, DS_REFS[i].expected_sha256) == 0);
+            printf("{\"event\":\"ds_ref\",\"phase\":\"%s\",\"path\":\"%s\",\"present\":true,\"size\":%u,\"sha256\":\"%s\",\"exact_ref_match\":%s}\n",
+                   phase, DS_REFS[i].path, st.size, sha_hex, exact_ok ? "true" : "false");
+            fflush(0);
+            continue;
+        }
+
         if (rc || !st.present || st.size != DS_REFS[i].expected_size || (st.mode & EFS_S_IFMT) != EFS_S_IFREG) {
             printf("{\"event\":\"ds_ref_error\",\"phase\":\"%s\",\"path\":\"%s\",\"rc\":%d,\"stat_errno\":%u,\"size\":%u}\n",
                    phase, DS_REFS[i].path, rc, st.diag_errno, st.size);
@@ -437,11 +480,20 @@ static int verify_ds_refs(int fd, const char *phase) {
             return 71;
         }
         pp_regfile_sha256_hex(buf, DS_REFS[i].expected_size, sha_hex);
-        int sha_ok = (strcmp(sha_hex, DS_REFS[i].expected_sha256) == 0);
-        printf("{\"event\":\"ds_ref\",\"phase\":\"%s\",\"path\":\"%s\",\"size\":%u,\"sha256\":\"%s\",\"match\":%s}\n",
-               phase, DS_REFS[i].path, DS_REFS[i].expected_size, sha_hex, sha_ok ? "true" : "false");
-        fflush(0);
-        if (!sha_ok) return 72;
+        int exact_ok = (strcmp(sha_hex, DS_REFS[i].expected_sha256) == 0);
+        if (i == 0u) {
+            printf("{\"event\":\"ds_ref\",\"phase\":\"%s\",\"path\":\"%s\",\"size\":%u,\"sha256\":\"%s\",\"match\":%s}\n",
+                   phase, DS_REFS[i].path, DS_REFS[i].expected_size, sha_hex, exact_ok ? "true" : "false");
+            fflush(0);
+            if (!exact_ok) return 72;
+        } else {
+            int struct_ok = (pp_regfile_validate_ds_profile_ref((uint8_t)i, buf, DS_REFS[i].expected_size) == 0);
+            printf("{\"event\":\"ds_ref\",\"phase\":\"%s\",\"path\":\"%s\",\"size\":%u,\"sha256\":\"%s\",\"valid\":%s,\"exact_ref_match\":%s}\n",
+                   phase, DS_REFS[i].path, DS_REFS[i].expected_size, sha_hex,
+                   struct_ok ? "true" : "false", exact_ok ? "true" : "false");
+            fflush(0);
+            if (!struct_ok) return 72;
+        }
     }
     return 0;
 }

@@ -12,9 +12,11 @@
 
 1. 在您的 Android 11 源码树新建目录 `packages/services/Qcom32VolteIms/`，将本仓库的以下目录拷入：
    - `src/android-ims-service/AndroidManifest.xml` -> `packages/services/Qcom32VolteIms/AndroidManifest.xml`
+   - `src/android-ims-service/res/` -> `packages/services/Qcom32VolteIms/res/`
    - `src/android-ims-service/src/` -> `packages/services/Qcom32VolteIms/src/`
    - `src/qmi-imsa-probe/` -> `packages/services/Qcom32VolteIms/jni/`
    - `rom-integration/Android.bp` -> `packages/services/Qcom32VolteIms/Android.bp`
+   - `rom-integration/device-qcom32-volte.mk` -> `packages/services/Qcom32VolteIms/device-qcom32-volte.mk`
 2. 在您的设备仓库（如 `device/blackberry/wseries/device.mk`）末尾引入 [`device-qcom32-volte.mk`](device-qcom32-volte.mk)：
    ```makefile
    $(call inherit-product, packages/services/Qcom32VolteIms/device-qcom32-volte.mk)

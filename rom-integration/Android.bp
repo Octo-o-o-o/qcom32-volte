@@ -19,12 +19,14 @@ cc_binary {
     ],
     compile_multilib: "32",
     stem: "libimsa_probe.so",
+    system_ext_specific: true,
     proprietary: false,
 }
 
 android_app {
     name: "Qcom32VolteIms",
     srcs: ["src/**/*.java"],
+    resource_dirs: ["res"],
     manifest: "AndroidManifest.xml",
     platform_apis: true,
     certificate: "platform",

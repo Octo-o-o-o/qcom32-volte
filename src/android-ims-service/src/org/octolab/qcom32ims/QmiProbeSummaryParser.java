@@ -123,4 +123,31 @@ public final class QmiProbeSummaryParser {
         }
         return hasAlpha ? trimmed : "";
     }
+
+    /**
+     * Selects the native QMI probe binary path across standalone APK installs
+     * ({@code <nativeLibraryDir>/libimsa_probe.so}) and Method 4 ROM source-tree builds
+     * ({@code /system_ext/bin/libimsa_probe.so} or {@code /system/bin/libimsa_probe.so}).
+     */
+    public static String selectProbeBinaryPath(String nativeLibDir, String[] existingExecutablePaths) {
+        String apkCandidate = (nativeLibDir != null && !nativeLibDir.trim().isEmpty())
+                ? (nativeLibDir.trim().replaceAll("/+$", "") + "/libimsa_probe.so")
+                : "";
+        String[] candidates = new String[] {
+            apkCandidate,
+            "/system_ext/bin/libimsa_probe.so",
+            "/system/bin/libimsa_probe.so"
+        };
+        if (existingExecutablePaths != null) {
+            for (String cand : candidates) {
+                if (cand.isEmpty()) continue;
+                for (String existing : existingExecutablePaths) {
+                    if (cand.equals(existing)) {
+                        return cand;
+                    }
+                }
+            }
+        }
+        return !apkCandidate.isEmpty() ? apkCandidate : "/system_ext/bin/libimsa_probe.so";
+    }
 }

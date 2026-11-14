@@ -1161,5 +1161,45 @@ public final class Qcom32VolteImsHostTest {
         check(dRepost.action == VolteStatusNotificationLogic.Action.POST
                         && dRepost.kind == VolteStatusNotificationLogic.Kind.ACTIVATED,
                 "after pm install -r, live notification re-posts cleanly once");
+
+        // 10. Explicit-intent broadcast action whitelist & Method 4 ROM QMI probe binary path selection
+        String[] allowedBroadcasts = new String[] {
+            "android.telephony.action.CARRIER_CONFIG_CHANGED",
+            "android.telephony.action.DEFAULT_SUBSCRIPTION_CHANGED",
+            "android.intent.action.SIM_STATE_CHANGED",
+            "android.intent.action.LOCKED_BOOT_COMPLETED",
+            "android.intent.action.BOOT_COMPLETED",
+            "android.intent.action.USER_UNLOCKED",
+            "android.intent.action.MY_PACKAGE_REPLACED"
+        };
+        for (String act : allowedBroadcasts) {
+            check(VolteStatusNotificationLogic.isAllowedBootstrapBroadcastAction(act),
+                    "protected broadcast whitelisted: " + act);
+        }
+        check(!VolteStatusNotificationLogic.isAllowedBootstrapBroadcastAction(null)
+                        && !VolteStatusNotificationLogic.isAllowedBootstrapBroadcastAction("")
+                        && !VolteStatusNotificationLogic.isAllowedBootstrapBroadcastAction("org.octolab.qcom32ims.ACTION_ADMIN")
+                        && !VolteStatusNotificationLogic.isAllowedBootstrapBroadcastAction("android.intent.action.VIEW")
+                        && !VolteStatusNotificationLogic.isAllowedBootstrapBroadcastAction("com.untrusted.SPOOF_BOOTSTRAP"),
+                "non-protected or spoofed explicit broadcast actions rejected");
+
+        check("/data/app/~~abc/org.octolab.qcom32ims/lib/arm/libimsa_probe.so".equals(
+                        QmiProbeSummaryParser.selectProbeBinaryPath(
+                                "/data/app/~~abc/org.octolab.qcom32ims/lib/arm",
+                                new String[] {
+                                    "/data/app/~~abc/org.octolab.qcom32ims/lib/arm/libimsa_probe.so",
+                                    "/system_ext/bin/libimsa_probe.so"
+                                })),
+                "standalone APK prefers extracted nativeLibraryDir libimsa_probe.so");
+        check("/system_ext/bin/libimsa_probe.so".equals(
+                        QmiProbeSummaryParser.selectProbeBinaryPath(
+                                "/system_ext/priv-app/Qcom32VolteIms/lib/arm",
+                                new String[] { "/system_ext/bin/libimsa_probe.so" })),
+                "Method 4 ROM source-tree build falls back to /system_ext/bin/libimsa_probe.so");
+        check("/system/bin/libimsa_probe.so".equals(
+                        QmiProbeSummaryParser.selectProbeBinaryPath(
+                                "/system/priv-app/Qcom32VolteIms/lib/arm",
+                                new String[] { "/system/bin/libimsa_probe.so" })),
+                "ROM build falls back to /system/bin/libimsa_probe.so when present");
     }
 }

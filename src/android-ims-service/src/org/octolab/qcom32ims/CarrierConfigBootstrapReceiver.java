@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Idempotent Direct-Boot-aware BroadcastReceiver that binds Android 11 ImsResolver
- * to org.passport.volteims (MMTEL only, leaving RCS untouched) and persists CarrierConfig
+ * to org.octolab.qcom32ims (MMTEL only, leaving RCS untouched) and persists CarrierConfig
  * VoLTE overrides across reboots via CarrierConfigManager.overrideConfig(subId, bundle, true)
  * (verified in EP40D/EP40E/EP40F against LineageOS 18.1 CarrierConfigLoader.java & ImsResolver.java).
  *
@@ -74,10 +74,17 @@ public final class CarrierConfigBootstrapReceiver extends android.content.Broadc
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (context == null || isBootstrapDisabled(context)) {
+        if (context == null || intent == null) {
             return;
         }
-        String action = intent != null ? intent.getAction() : "null";
+        String action = intent.getAction();
+        if (!VolteStatusNotificationLogic.isAllowedBootstrapBroadcastAction(action)) {
+            Log.w(TAG, "ignoring non-whitelisted broadcast action=" + action);
+            return;
+        }
+        if (isBootstrapDisabled(context)) {
+            return;
+        }
         if ("android.intent.action.MY_PACKAGE_REPLACED".equals(action)) {
             applyOverrideIfNeeded(context, "rx:MY_PACKAGE_REPLACED", false);
             VolteNotificationManager.onPackageReplacedAsync(context);

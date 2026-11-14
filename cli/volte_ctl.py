@@ -49,7 +49,7 @@ LEGACY_ADMIN_RECEIVER = f"{LEGACY_IMS_PKG}/.VolteAdminReceiver"
 LEGACY_ADMIN_ACTION = "org.passport.volteims.ACTION_ADMIN"
 
 REMOTE_TMP_PROVISIONER = "/data/local/tmp/pp_regconfig_provision_v6"
-EXPECTED_VERSION = "2.5-qcom32-volte"
+EXPECTED_VERSION = "2.6-qcom32-volte"
 
 PII_REDACT_RE = re.compile(r"\b\d{11,20}\b")
 
@@ -287,6 +287,18 @@ def resolve_artifact(explicit: str | None, release_name: str, fallback_glob: str
     )
 
 
+def validate_selinux_mode(selinux: str) -> str | None:
+    mode = selinux.strip()
+    if mode == "Enforcing":
+        return None
+    if mode == "Permissive":
+        return (
+            "Device kernel is running SELinux Permissive "
+            "(official LineageOS builds use Enforcing; Qcom32 VoLTE never lowers SELinux mode)."
+        )
+    raise RuntimeError(f"Unexpected SELinux mode {selinux!r}; expected `Enforcing` (or custom-ROM `Permissive`).")
+
+
 def verify_device_identity(adb: AdbClient, require_verified_efs_profile: bool = True) -> dict[str, object]:
     device = adb.shell("getprop ro.product.device").strip()
     model = adb.shell("getprop ro.product.model").strip()
@@ -304,10 +316,9 @@ def verify_device_identity(adb: AdbClient, require_verified_efs_profile: bool = 
             f"Refusing modem EFS write: connected device is {model!r} ({device!r}, SDK {sdk_int}), "
             "which does not match any verified profile under `devices/*/profile.json`."
         )
-    if selinux != "Enforcing":
-        raise RuntimeError(f"Unexpected SELinux mode {selinux!r}; expected `Enforcing`.")
+    selinux_warn = validate_selinux_mode(selinux)
 
-    return {
+    res: dict[str, object] = {
         "device": device,
         "model": model,
         "sdk": sdk_int,
@@ -319,6 +330,9 @@ def verify_device_identity(adb: AdbClient, require_verified_efs_profile: bool = 
         "matched_profile": matched_prof["profile_id"] if matched_prof else "generic-qcom32-readonly",
         "verified_efs_profile": matched_prof is not None,
     }
+    if selinux_warn is not None:
+        res["selinux_warning"] = selinux_warn
+    return res
 
 
 def cleanup_legacy_packages(adb: AdbClient, include_manager: bool = False) -> None:
@@ -415,7 +429,16 @@ def cmd_self_test(out_json: str | None = None) -> int:
     fake_iccid = "8" * 20
     redacted = sanitize_text(f"num={fake_msisdn} iccid={fake_iccid} ok")
     assert fake_msisdn not in redacted and fake_iccid not in redacted
-    emit_json({"self_test": "PASS", "assertions": 12}, out_json)
+    assert validate_selinux_mode("Enforcing") is None
+    perm_warn = validate_selinux_mode("Permissive")
+    assert perm_warn is not None and "Permissive" in perm_warn
+    rejected_selinux = False
+    try:
+        validate_selinux_mode("Disabled")
+    except RuntimeError:
+        rejected_selinux = True
+    assert rejected_selinux is True
+    emit_json({"self_test": "PASS", "assertions": 15}, out_json)
     return 0
 
 
@@ -455,7 +478,7 @@ def run_deploy_flow(
     finally:
         adb.shell(f"rm -f {REMOTE_TMP_PROVISIONER}", check=False)
 
-    step("Installing Qcom32VolteIms.apk v2.5 & applying persistent CarrierConfig...")
+    step("Installing Qcom32VolteIms.apk v2.6 & applying persistent CarrierConfig...")
     adb.run(["install", "-r", str(apk_path)], timeout=60)
     adb.shell(
         f"am broadcast -n {IMS_ADMIN_RECEIVER} -a {IMS_ADMIN_ACTION} "

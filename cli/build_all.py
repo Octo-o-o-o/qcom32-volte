@@ -2,7 +2,7 @@
 """Standalone open-source builder & host unit-test runner for the Qcom32 VoLTE & IMS Stack.
 
 Builds and verifies all four production components directly from `src/`:
-  1. `src/modem-efs-provisioner/` -> `build/release/pp_regconfig_provision_v6` (ARM32 PIE + 549 host C assertions)
+  1. `src/modem-efs-provisioner/` -> `build/release/pp_regconfig_provision_v6` (ARM32 PIE + 559 host C assertions)
   2. `src/qmi-imsa-probe/`        -> `build/release/libimsa_probe.so`          (ARM32 PIE + 17 host C assertions)
   3. `src/android-ims-service/`   -> `build/release/Qcom32VolteIms.apk`        (Android 11 API 30 + host Java assertions + bytecode checks)
   4. `src/android-volte-manager/` -> `build/release/Qcom32VolteManager.apk`    (Android 11 API 30 companion UI + host Java assertions)
@@ -175,7 +175,7 @@ def main() -> int:
     )
     prov_test_out, _ = run_checked([str(prov_test_bin)], "provisioner-host-test")
     prov_test_json = json.loads(prov_test_out.strip())
-    if prov_test_json.get("failed", 1) != 0 or prov_test_json.get("checks", 0) < 530:
+    if prov_test_json.get("failed", 1) != 0 or prov_test_json.get("checks", 0) < 559:
         raise RuntimeError(f"modem-efs-provisioner host tests failed: {prov_test_json}")
 
     # 2. Host Unit Tests: qmi-imsa-probe
@@ -195,6 +195,28 @@ def main() -> int:
     probe_test_json = json.loads(probe_json_lines[-1])
     if probe_test_json.get("failures", 1) != 0 or probe_test_json.get("checks", 0) < 15:
         raise RuntimeError(f"qmi-imsa-probe host tests failed: {probe_test_json}")
+
+    # 2b. Standard POSIX/Bionic header compile check for Method 4 ROM source-tree (Soong cc_binary) compatibility
+    run_checked(
+        [
+            str(zig), "cc", "-std=c11", "-Wall", "-Wextra", "-Werror", "-O2",
+            "-target", "arm-linux-musleabihf",
+            "-I", str(probe_src),
+            "-c", str(probe_src / "imsa_probe_v3.c"),
+            "-o", str(work_dir / "imsa_probe_v3_std.o"),
+        ],
+        "qmi-probe-posix-lib-compile",
+    )
+    run_checked(
+        [
+            str(zig), "cc", "-std=c11", "-Wall", "-Wextra", "-Werror", "-O2",
+            "-target", "arm-linux-musleabihf",
+            "-I", str(probe_src),
+            "-c", str(probe_src / "imsa_probe_v3_main.c"),
+            "-o", str(work_dir / "imsa_probe_v3_main_std.o"),
+        ],
+        "qmi-probe-posix-main-compile",
+    )
 
     # 3. Host Unit Tests: android-ims-service
     host_cls_dir = work_dir / "ims-host-classes"
@@ -316,6 +338,7 @@ def main() -> int:
     run_checked(
         [
             str(zig), "cc", "-std=c11", "-Wall", "-Wextra", "-Werror", "-O2",
+            "-DQCOM32_FREESTANDING=1",
             "-target", "arm-linux-android", "-mcpu=cortex_a9", "-mfloat-abi=softfp",
             "-fPIE", "-fno-stack-protector", "-nostdlib", "-pie",
             "-I", str(prov_src),
@@ -339,6 +362,7 @@ def main() -> int:
     run_checked(
         [
             str(zig), "cc", "-std=c11", "-Wall", "-Wextra", "-Werror", "-O2",
+            "-DQCOM32_FREESTANDING=1",
             "-target", "arm-linux-android", "-mcpu=cortex_a9", "-mfloat-abi=softfp",
             "-fPIE", "-fno-stack-protector", "-nostdlib", "-pie",
             "-I", str(probe_src),
@@ -357,7 +381,7 @@ def main() -> int:
         "qmi-probe-arm32-build",
     )
 
-    # 6. Build & Sign `PassportVolteIms.apk`
+    # 6. Build & Sign `Qcom32VolteIms.apk`
     stub_cls_dir = work_dir / "stub-classes"
     stub_cls_dir.mkdir(parents=True, exist_ok=True)
     stub_sources = sorted(str(p) for p in (ims_src / "compile_stubs").rglob("*.java"))
@@ -471,7 +495,7 @@ def main() -> int:
         raise RuntimeError(f"Manifest must declare zero <uses-permission> to protect com.android.phone permissions, got: {perm_lines}")
     run_checked([str(zipalign), "-c", "4", str(final_apk)], "ims-verify-align")
 
-    # 7. Build & Sign Companion User App `PassportVolteManager.apk` (for Magisk / On-Device Management)
+    # 7. Build & Sign Companion User App `Qcom32VolteManager.apk` (for Magisk / On-Device Management)
     mgr_work = work_dir / "mgr-apk"
     mgr_work.mkdir(parents=True, exist_ok=True)
     mgr_res_zip = mgr_work / "res.zip"

@@ -1,7 +1,11 @@
 #include "imsa_probe_v3.h"
 
+#if defined(QCOM32_FREESTANDING)
 extern int printf(const char *, ...);
 extern int fflush(void *);
+#else
+#include <stdio.h>
+#endif
 
 static void zero_mem(void *dst, size_t n) {
     uint8_t *p = (uint8_t *)dst;

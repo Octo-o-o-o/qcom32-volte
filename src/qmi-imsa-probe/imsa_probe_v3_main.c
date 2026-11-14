@@ -1,5 +1,9 @@
+#if !defined(QCOM32_FREESTANDING) && !defined(_POSIX_C_SOURCE)
+#define _POSIX_C_SOURCE 200809L
+#endif
 #include "imsa_probe_v3.h"
 
+#if defined(QCOM32_FREESTANDING)
 struct Timespec32 {
     long sec;
     long nsec;
@@ -25,6 +29,26 @@ static void pause_ms(unsigned ms) {
     struct Timespec32 t = { (long)(ms / 1000u), (long)(ms % 1000u) * 1000000L };
     (void)nanosleep(&t, 0);
 }
+#else
+#include <dlfcn.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+#ifdef __ANDROID__
+#include <sys/system_properties.h>
+#else
+extern int __system_property_get(const char *, char *);
+#endif
+
+static void pause_ms(unsigned ms) {
+    struct timespec t;
+    t.tv_sec = (time_t)(ms / 1000u);
+    t.tv_nsec = (long)(ms % 1000u) * 1000000L;
+    (void)nanosleep(&t, NULL);
+}
+#endif
 
 enum {
     MODE_NONE = 0,
@@ -35,8 +59,12 @@ enum {
     MODE_IMSS_ENABLE_VOLTE = 5
 };
 
+#if defined(QCOM32_FREESTANDING)
 int main(int argc, char **argv, char **env) {
     (void)env;
+#else
+int main(int argc, char **argv) {
+#endif
     int mode = MODE_NONE;
     if (argc == 2) {
         if (strcmp(argv[1], "--probe-all") == 0) mode = MODE_PROBE_ALL;
@@ -55,7 +83,7 @@ int main(int argc, char **argv, char **env) {
     char context[128] = {0};
     char baseband[128] = {0};
     int fd = open("/proc/self/attr/current", 0);
-    int n = (fd >= 0) ? read(fd, context, sizeof(context) - 1u) : -1;
+    int n = (fd >= 0) ? (int)read(fd, context, sizeof(context) - 1u) : -1;
     if (fd >= 0) (void)close(fd);
     if (n > 0 && context[n - 1] == '\n') context[n - 1] = 0;
     for (int i = 0; i < n; ++i) {

@@ -3,6 +3,7 @@ package org.octolab.qcom32volte;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -92,7 +93,8 @@ public final class VolteManagerLogic {
         if (sdkInt == EXPECTED_SDK) {
             String dev = device == null ? "" : device.trim();
             String mod = model == null ? "" : model.trim();
-            if (EXPECTED_DEVICE.equalsIgnoreCase(dev) && EXPECTED_MODEL.equalsIgnoreCase(mod)) {
+            if (EXPECTED_DEVICE.equalsIgnoreCase(dev)
+                    && mod.toLowerCase(Locale.ROOT).contains(EXPECTED_MODEL.toLowerCase(Locale.ROOT))) {
                 return PROFILE_WOLVERINE_ID;
             }
         }
@@ -154,6 +156,7 @@ public final class VolteManagerLogic {
                 name = "China Telecom (" + op + ")";
                 break;
             case "46015":
+            case "46020":
                 name = "China Broadnet (" + op + ")";
                 break;
             default:
@@ -232,7 +235,7 @@ public final class VolteManagerLogic {
         }
     }
 
-    private static String quoteSh(String path) {
+    public static String quoteSh(String path) {
         if (path == null || path.isEmpty() || path.contains("'") || path.contains("\n") || path.contains("\r")) {
             throw new IllegalArgumentException("Unsafe shell path: " + path);
         }
@@ -297,6 +300,7 @@ public final class VolteManagerLogic {
                 + "-a org.octolab.qcom32ims.ACTION_ADMIN --es op clear_override --es cmd clear_override --include-stopped-packages || true\n"
                 + "sleep 1\n"
                 + "pm uninstall org.octolab.qcom32ims || true\n"
+                + "setprop persist.radio.fallbackmode '' || true\n"
                 + "cp " + stageQuoted + "/pp_regconfig_provision_v6 \"$TMP_PROV\"\n"
                 + "chmod 0700 \"$TMP_PROV\"\n"
                 + "\"$TMP_PROV\" --rollback-all\n"

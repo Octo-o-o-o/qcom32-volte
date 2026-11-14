@@ -28,7 +28,7 @@
 仓库正式源码全部位于 [`src/`](../../src/)，可通过 [`cli/build_all.py`](../../cli/build_all.py) 一键运行宿主机单元测试并交叉编译：
 
 ```bash
-# 1. 仅运行宿主机单元测试（549 项 EFS 断言 + 17 项 QMI 断言 + 113 项 Java 协议栈断言）
+# 1. 仅运行宿主机单元测试（559 项 EFS 断言 + 17 项 QMI 断言 + POSIX 头文件编译门禁 + Java 协议栈与管理端断言）
 python3 cli/build_all.py --host-tests-only
 
 # 2. 完整编译 ARM32 二进制与签名 APK（输出至 build/release/）
@@ -54,7 +54,7 @@ python3 cli/build_all.py
 
 ## 3. 一键激活部署 VoLTE
 
-将手机通过 USB 连接电脑，确认手机无正在进行的通话后执行（普通 Windows 用户也可直接运行单文件 `qcom32-volte-1.2.0-r1-windows-x64.exe`）：
+将手机通过 USB 连接电脑，确认手机无正在进行的通话后执行（普通 Windows 用户也可直接运行单文件 `qcom32-volte-1.2.1-r1-windows-x64.exe`）：
 
 ```bash
 # 先运行 CLI 本地自检
@@ -69,7 +69,7 @@ python3 cli/volte_ctl.py install-manager
 
 部署成功时终端会输出 JSON，其中关键指标如下：
 - `"volte_stack_healthy": true`
-- `"ims_service": { "present": true, "version": "2.5-qcom32-volte", "ril_connected": true, "voice_ims_ready": true, "published_framework_reg": 1 }`
+- `"ims_service": { "present": true, "version": "2.6-qcom32-volte", "ril_connected": true, "voice_ims_ready": true, "published_framework_reg": 1 }`
 - `"qmi_imsa": { "pdp_connected": 1, "reg_status": 2, "legacy_reg": 1, "voip": 2, "voip_rat": 1 }`
 - `"framework_ims_registered": ["true"]`
 
@@ -97,4 +97,16 @@ python3 cli/volte_ctl.py upgrade-apk --reboot
 python3 cli/volte_ctl.py rollback
 ```
 
-回滚脚本会自动清除持久化 `CarrierConfig` 覆盖、卸载 `Qcom32VolteIms.apk`、调用 `pp_regconfig_provision_v6 --rollback-all` 执行 EFS2 删除与 `SYNC` 落盘，随后正常重启手机恢复至纯 CSFB 出厂状态。
+回滚脚本会自动清除持久化 `CarrierConfig` 覆盖、卸载 `Qcom32VolteIms.apk`、还原 `persist.radio.fallbackmode`、调用 `pp_regconfig_provision_v6 --rollback-all` 执行 EFS2 删除与 `SYNC` 落盘，随后正常重启手机恢复至纯 CSFB 出厂状态。
+
+---
+
+## 6. `SELinux Enforcing` 与基带 `EFSmodem` (`modemst1` / `modemst2`) 安全说明
+
+1. **全程原生兼容 `SELinux Enforcing`（绝不降级 `Permissive`）**：
+   - 本项目所有运行时组件（`Qcom32VolteIms.apk`、`libimsa_probe.so`、`VolteStatusProvider`）均在官方 LineageOS 18.1 严格 **`SELinux Enforcing`** 策略下原生运行于 `u:r:radio:s0` (`UID 1001`) 域，从不执行 `setenforce 0`，也不注入任何第三方 sepolicy 补丁；
+   - 首次激活并正常重启确认 VoLTE 就绪后，您完全可以在「开发者选项」中**关闭「Root 身份调试」甚至「USB 调试」**——手机日常通话、开机与换卡自愈均无需任何 Root 权限。
+2. **`EFSmodem` 分区持久性与跨机/跨运营商兼容性**：
+   - 激活写入的 54 项 Stage 6A 配置经 `EFS2_DIAG_SYNC` 持久落盘在手机独立的 `modemst1` / `modemst2` 基带分区中。日常刷入同系 LineageOS 更新包或清除 `userdata` 不会擦除基带侧配置（仅需重装 `Qcom32VolteIms.apk` 并触发一次持久绑定，或直接采用方式四合入 ROM）；
+   - 自 `v1.2.1` 起，`pp_regconfig_provision_v6` 对基带内置非 IMS 数据承载采用结构化校验（严格守护 `embedded_call_prof_nums` 与 `profile1`/`profile2` 非 IMS 属性，同时兼容高通 `libqdp.so` 随联通 `3gnet`、移动 `cmnet`、电信 `ctnet`、海外 SIM 卡动态更新或全新 `fsg` 恢复后的 `/pdp_profiles/profile3` 状态），不会因不同机器或换卡产生的数据 APN 差异误报错；
+   - **刷机防护建议**：每台手机的 `modemst1` / `modemst2` / `fsg`（即 TWRP 中的 **EFS** 分区）包含本机独有的射频校准与串号数据。在进行跨大版本底包刷写或分区折腾前，建议在 TWRP Recovery 中顺手勾选 **EFS** 备份留存一份离线副本。

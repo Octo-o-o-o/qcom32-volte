@@ -214,3 +214,11 @@ void pp_regfile_sha256_hex(const uint8_t *data, size_t len, char hex_out[65]) {
     }
     hex_out[64] = '\0';
 }
+
+int pp_regfile_validate_ds_profile_ref(uint8_t expected_prof_num, const uint8_t *buf, size_t len) {
+    if (!buf || len != 789u) return -1;
+    if (expected_prof_num != 1u && expected_prof_num != 2u) return -1;
+    if (buf[0] != 0x15u || buf[35] != expected_prof_num) return -1;
+    if (buf[750] != 0u || buf[751] != 0u) return -1;
+    return 0;
+}

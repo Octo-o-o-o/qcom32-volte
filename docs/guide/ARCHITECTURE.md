@@ -77,10 +77,10 @@ flowchart TD
      - 设置 `ims_operation_mode=02`、`voice_domain_pref=03` (`IMS_PS_VOICE_PREFERRED_CS_SECONDARY`，即优先 VoLTE、无 VoLTE 时自动回退 CSFB)、`IMS_enable=01`，并执行 `EFS2_DIAG_SYNC` 落盘；
   3. 支持 `--rollback-all`：先回写 `IMS_enable=00` 与 `voice_domain_pref=00`，再逐一 `UNLINK` 删除全部新建条目并 `SYNC`，100% 还原出厂基带基线。
 
-### 3.2 `src/android-ims-service` (`Qcom32VolteIms.apk` v2.5)
-- **运行身份**：包名 `org.octolab.qcom32ims`，声明 `android:sharedUserId="android.uid.phone"`，使用 LineageOS 平台签名安装于 `/data/app/`（或集成至 `/system/priv-app/`），运行在独立 `:qcom32ims` 进程（`UID 1001` / SELinux `u:r:radio:s0`），**零 `<uses-permission>` 声明**（不触碰 `com.android.phone` 原有系统电话权限）。
+### 3.2 `src/android-ims-service` (`Qcom32VolteIms.apk` v2.6)
+- **运行身份**：包名 `org.octolab.qcom32ims`，声明 `android:sharedUserId="android.uid.phone"`，使用 LineageOS 平台签名安装于 `/data/app/`（或集成至 `/system_ext/priv-app/`），运行在独立 `:qcom32ims` 进程（`UID 1001` / SELinux `u:r:radio:s0`），**零 `<uses-permission>` 声明**（不触碰 `com.android.phone` 原有系统电话权限），全程严守 `SELinux Enforcing`。
 - **开机自启、三网换卡自愈与跨重启持久化**：
-  - `CarrierConfigBootstrapReceiver` 监听 `LOCKED_BOOT_COMPLETED`、`BOOT_COMPLETED`、`SIM_STATE_CHANGED` 与 `ACTION_CARRIER_CONFIG_CHANGED`；
+  - `CarrierConfigBootstrapReceiver` 入口内置 7 项系统 `<protected-broadcast>` 白名单校验（阻断非特权显式 Intent 伪造），监听 `LOCKED_BOOT_COMPLETED`、`BOOT_COMPLETED`、`SIM_STATE_CHANGED` 与 `ACTION_CARRIER_CONFIG_CHANGED`；
   - 对当前活跃 SIM `subId` 调用 `@SystemApi` 三参版 `CarrierConfigManager.overrideConfig(subId, bundle, /*persistent=*/true)` 开启 VoLTE 能力并指定 `config_ims_mmtel_package_override_string = "org.octolab.qcom32ims"`，使 `ImsResolver` 在开机或更换新 SIM 卡后无需电脑干预自动拉起并绑定 `Qcom32VolteImsService`。
 - **免 `su` 只读状态导出 (`VolteStatusProvider`)**：
   - 导出零权限要求的只读 `content://org.octolab.qcom32ims.status` (`call("get_status")`)，带 2.5 秒 QMI 探针限流缓存与严格零 PII 脱敏（仅返回数值 MCC/MNC PLMN、RAT 枚举与布尔/整型注册位），供手机端 `Qcom32VolteManager.apk` 在拔掉数据线且未装 Magisk 时直接展示底层实时状态。
@@ -90,5 +90,5 @@ flowchart TD
   - 硬件语音通道由高通基带 `QIPCALL` + DSP (`AMR-WB`, `vsid=0x10c02000`) 原生承载，系统 `InCallUI` 听筒/免提/麦克风控制全部走原生音频路由。
 
 ### 3.3 `src/qmi-imsa-probe` (`libimsa_probe.so`)
-- 随 APK 打包于 `lib/armeabi-v7a/libimsa_probe.so` 的轻量 ARM32 只读诊断探针。
+- 随独立 APK 打包于 `lib/armeabi-v7a/libimsa_probe.so`（ROM 源码集成模式下安装于 `/system_ext/bin/libimsa_probe.so`，由 `Qcom32VolteImsService` 自动解析路径）的轻量 ARM32 只读诊断探针。
 - 当管理员执行 `dumpsys activity service org.octolab.qcom32ims/.Qcom32VolteImsService --qmi-probe`（或由 `VolteStatusProvider` 调用）时，通过 `libqmi_client_qmux.so` 只读读取 `QMI_IMSA` 的实时 `pdp_connected`、`reg_status`、`voip` 与 `voip_rat` 状态，用于秒级故障定位。

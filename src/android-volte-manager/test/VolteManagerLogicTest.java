@@ -15,6 +15,7 @@ public final class VolteManagerLogicTest {
     public static void main(String[] args) {
         // 1. Verified device profile matching
         check(VolteManagerLogic.verifyPassportIdentity("Passport", "wolverine", 30), "Passport wolverine API 30 verified");
+        check(VolteManagerLogic.verifyPassportIdentity("BlackBerry Passport", "wolverine", 30), "BlackBerry Passport variant verified");
         check("blackberry-passport-wolverine".equals(
                 VolteManagerLogic.matchVerifiedDeviceProfile("Passport", "wolverine", 30)), "Profile ID exact");
         check(!VolteManagerLogic.verifyPassportIdentity("OnePlus One", "bacon", 30), "Unverified profile gated from EFS write");
@@ -60,9 +61,10 @@ public final class VolteManagerLogicTest {
         check(!snapUnreg.frameworkRegistered && !snapUnreg.volteHealthy,
                 "publishedFrameworkReg=2 (NOT_REGISTERED) is reported as frameworkRegistered=false");
 
-        // 5. Three-carrier label checks (Mobile & Telecom)
+        // 5. Four-carrier label checks (Mobile, Telecom & Broadnet 46015/46020)
         check("China Mobile (46000) · LTE".equals(VolteManagerLogic.formatCarrierLabel("46000,", "LTE,")), "China Mobile 46000 label");
         check("China Telecom (46011) · LTE".equals(VolteManagerLogic.formatCarrierLabel("46011", "LTE")), "China Telecom 46011 label");
+        check("China Broadnet (46020) · LTE".equals(VolteManagerLogic.formatCarrierLabel("46020", "LTE")), "China Broadnet 46020 label");
 
         // 6. Generic 32-bit Qualcomm read-only telemetry on non-wolverine ROM integration
         VolteManagerLogic.StatusSnapshot snapGenericRom = VolteManagerLogic.parseStatusSummary(
@@ -93,7 +95,9 @@ public final class VolteManagerLogicTest {
 
         String rollbackSh = VolteManagerLogic.buildRootRollbackScript("/data/user/0/org.octolab.qcom32volte/files/staged");
         check(rollbackSh.contains("clear_override"), "Rollback clears CarrierConfig override");
+        check(rollbackSh.contains("setprop persist.radio.fallbackmode ''"), "Rollback clears fallbackmode property");
         check(rollbackSh.contains("--rollback-all"), "Rollback restores all Stage 6A EFS items");
+        check("'/data/local/tmp/probe'".equals(VolteManagerLogic.quoteSh("/data/local/tmp/probe")), "quoteSh public helper");
 
         boolean rejectedBadQuote = false;
         try {

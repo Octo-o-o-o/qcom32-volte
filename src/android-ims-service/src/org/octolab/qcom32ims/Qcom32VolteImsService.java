@@ -31,9 +31,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Production phone-local Android 11 ImsService v2.4 for BlackBerry Passport (wolverine / msm8974).
+ * Production phone-local Android 11 ImsService v2.6 for 32-bit Qualcomm Snapdragon platforms
+ * (verified on BlackBerry Passport wolverine / msm8974).
  *
- * Runs in an isolated process (:volteims) under android.uid.phone (UID 1001, u:r:radio:s0)
+ * Runs in an isolated process (:qcom32ims) under android.uid.phone (UID 1001, u:r:radio:s0)
  * with zero extra manifest permissions, bridging Android 11 Telecom / Telephony ImsPhone
  * to QCRIL /dev/socket/qmux_radio/rild_ims0 and Hexagon Stage 6A autonomous VoLTE.
  *
@@ -41,7 +42,7 @@ import java.util.concurrent.TimeUnit;
  * ImsResolver dynamic-feature-query service instances never touch rild_ims0.
  */
 public final class Qcom32VolteImsService extends ImsService {
-    static final String SERVICE_VERSION = "2.5-qcom32-volte";
+    static final String SERVICE_VERSION = "2.6-qcom32-volte";
     private static final String TAG = "Qcom32VolteIms";
     private static final int KEY_VOLTE_PROVISIONING_STATUS = 10;
     private static final int KEY_VT_PROVISIONING_STATUS = 11;
@@ -458,6 +459,31 @@ public final class Qcom32VolteImsService extends ImsService {
         return b;
     }
 
+    private static String resolveImsaProbeBinaryPath(Context context) {
+        String nativeLibDir = (context != null && context.getApplicationInfo() != null)
+                ? context.getApplicationInfo().nativeLibraryDir
+                : "";
+        String apkPath = (nativeLibDir != null && !nativeLibDir.trim().isEmpty())
+                ? (nativeLibDir.trim().replaceAll("/+$", "") + "/libimsa_probe.so")
+                : "";
+        String[] candidates = new String[] {
+            apkPath,
+            "/system_ext/bin/libimsa_probe.so",
+            "/system/bin/libimsa_probe.so"
+        };
+        java.util.ArrayList<String> present = new java.util.ArrayList<>(3);
+        for (String p : candidates) {
+            if (p != null && !p.isEmpty()) {
+                java.io.File f = new java.io.File(p);
+                if (f.isFile() && f.canExecute()) {
+                    present.add(p);
+                }
+            }
+        }
+        return QmiProbeSummaryParser.selectProbeBinaryPath(
+                nativeLibDir, present.toArray(new String[0]));
+    }
+
     private static QmiProbeSummaryParser.Summary queryCachedQmiSummary(Context context) {
         if (context == null) {
             return QmiProbeSummaryParser.Summary.unknown();
@@ -467,7 +493,7 @@ public final class Qcom32VolteImsService extends ImsService {
             if ((now - lastQmiProbeElapsedMs) < QMI_CACHE_TTL_MS) {
                 return lastQmiSummary;
             }
-            String raw = runNativeQmiProbeRaw(context.getApplicationInfo().nativeLibraryDir + "/libimsa_probe.so");
+            String raw = runNativeQmiProbeRaw(resolveImsaProbeBinaryPath(context));
             lastQmiSummary = QmiProbeSummaryParser.parse(raw);
             lastQmiProbeElapsedMs = SystemClock.elapsedRealtime();
             return lastQmiSummary;
@@ -552,7 +578,7 @@ public final class Qcom32VolteImsService extends ImsService {
     }
 
     private void dumpOnDemandQmiProbe(PrintWriter out) {
-        String raw = runNativeQmiProbeRaw(getApplicationInfo().nativeLibraryDir + "/libimsa_probe.so");
+        String raw = runNativeQmiProbeRaw(resolveImsaProbeBinaryPath(this));
         if (raw.isEmpty()) {
             out.println("qmi_probe_err=EmptyOrFailed");
             return;

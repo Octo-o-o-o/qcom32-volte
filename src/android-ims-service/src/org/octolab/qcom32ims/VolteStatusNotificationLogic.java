@@ -183,6 +183,30 @@ public final class VolteStatusNotificationLogic {
         return s == null ? "" : s.trim();
     }
 
+    /**
+     * Strict action whitelist for {@code CarrierConfigBootstrapReceiver} (which is exported
+     * without a sender permission because system broadcasts come from both UID 1000 and UID 1001).
+     * Every whitelisted action is a system {@code <protected-broadcast>} on Android 11, blocking
+     * explicit-component intent spoofing from unprivileged third-party apps.
+     */
+    public static boolean isAllowedBootstrapBroadcastAction(String action) {
+        if (action == null) {
+            return false;
+        }
+        switch (action) {
+            case "android.telephony.action.CARRIER_CONFIG_CHANGED":
+            case "android.telephony.action.DEFAULT_SUBSCRIPTION_CHANGED":
+            case "android.intent.action.SIM_STATE_CHANGED":
+            case "android.intent.action.LOCKED_BOOT_COMPLETED":
+            case "android.intent.action.BOOT_COMPLETED":
+            case "android.intent.action.USER_UNLOCKED":
+            case "android.intent.action.MY_PACKAGE_REPLACED":
+                return true;
+            default:
+                return false;
+        }
+    }
+
     public static boolean isLteNetwork(String networkType) {
         String n = safeStr(networkType).toUpperCase(Locale.ROOT);
         return "LTE".equals(n) || "LTE_CA".equals(n) || n.startsWith("LTE");

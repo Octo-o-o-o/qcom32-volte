@@ -60,12 +60,12 @@
   <main id="main">
     <section class="guide-hero" aria-labelledby="guide-title">
       <div class="shell">
-        <p class="eyebrow">SETUP &amp; INTEGRATION GUIDE · <span data-release-version>v1.2.0-r1</span></p>
+        <p class="eyebrow">SETUP &amp; INTEGRATION GUIDE · <span data-release-version>v1.2.1-r1</span></p>
         <h1 id="guide-title">从首次激活到拔线三网换卡验收</h1>
         <p class="guide-intro">按顺序完成：检查前提条件 → 开启 USB/Root 调试 → 选择四种方式之一完成备份与激活 → 拔掉数据线完成真实双向通话与三网换卡验收。</p>
         <div class="guide-actions">
-          <a class="button button-primary" data-download="windows" href="https://qcom32-downloads.octoooo.com/v1.2.0-r1/qcom32-volte-1.2.0-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>下载 Windows 一键版 EXE</span><small>推荐 · 无需 Magisk</small></span></a>
-          <a class="button button-secondary" data-download="manager" href="https://qcom32-downloads.octoooo.com/v1.2.0-r1/Qcom32VolteManager-1.2.0-r1.apk" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>下载手机端管理 APK</span><small>免 su 实时状态面板 + Magisk 可选</small></span></a>
+          <a class="button button-primary" data-download="windows" href="https://qcom32-downloads.octoooo.com/v1.2.1-r1/qcom32-volte-1.2.1-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>下载 Windows 一键版 EXE</span><small>推荐 · 无需 Magisk</small></span></a>
+          <a class="button button-secondary" data-download="manager" href="https://qcom32-downloads.octoooo.com/v1.2.1-r1/Qcom32VolteManager-1.2.1-r1.apk" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>下载手机端管理 APK</span><small>免 su 实时状态面板 + Magisk 可选</small></span></a>
         </div>
       </div>
     </section>
@@ -107,24 +107,24 @@
             <li>进入 <strong>设置 → 关于手机</strong>，连续点击 7 次最下方的 <strong>版本号（Build number）</strong> 启用开发者选项。</li>
             <li>返回进入 <strong>设置 → 系统 → 高级 → 开发者选项</strong>。</li>
             <li>开启 <strong>Android 调试（USB 调试）</strong>，并在同页面开启 <strong>Root 调试（Rooted debugging）</strong>。</li>
-            <li>连接电脑，在手机弹出的「允许 USB 调试吗？」对话框中勾选一律允许并点击确定。</li>
+            <li>连接电脑，在手机弹出的「允许 USB 调试吗？」对话框中勾选一律允许并点击确定。（注：激活完成后可随时关闭「Root 调试」，通话栈在标准 <code>SELinux Enforcing</code> 下 100% 独立运行。）</li>
           </ol>
         </section>
 
         <section class="guide-section" id="method-windows">
           <h2>03. 方式一：Windows 桌面一键激活工具（最推荐）</h2>
           <ol class="step-list">
-            <li>下载 <code>qcom32-volte-1.2.0-r1-windows-x64.exe</code> 并双击运行（无需安装 Python 或 ADB）。</li>
+            <li>下载 <code>qcom32-volte-1.2.1-r1-windows-x64.exe</code> 并双击运行（无需安装 Python 或 ADB）。</li>
             <li>确认顶部「ADB 设备」下拉框已识别到手机序列号，点击 <strong>「1. 只读检查状态」</strong> 确认匹配到设备 Profile。</li>
             <li>点击绿色主按钮 <strong>「2. 备份并一键激活 VoLTE」</strong> 并确认提示框。</li>
-            <li>程序自动：切换 <code>adb root</code> → 将原始基带快照保存至电脑 <code>%LOCALAPPDATA%\qcom32-volte\backups\</code> → 写入 Stage 6A 基带配置并执行 <code>EFS_SYNC</code> → 清理旧包残留并安装 <code>Qcom32VolteIms.apk</code> v2.5 → 正常重启手机并轮询确认 <code>volte_stack_healthy: true</code>。</li>
+            <li>程序自动：切换 <code>adb root</code> → 将原始基带快照保存至电脑 <code>%LOCALAPPDATA%\qcom32-volte\backups\</code> → 写入 Stage 6A 基带配置并执行 <code>EFS_SYNC</code> → 清理旧包残留并安装 <code>Qcom32VolteIms.apk</code> v2.6 → 正常重启手机并轮询确认 <code>volte_stack_healthy: true</code>。</li>
             <li>（推荐顺手点一下）点击 <strong>「安装手机端管理 App」</strong>，将伴侣应用推送到手机桌面，拔掉数据线后换三网 SIM 卡可直接看屏幕状态。</li>
           </ol>
         </section>
 
         <section class="guide-section" id="method-manager">
           <h2>04. 方式二：手机端独立状态与管理 App</h2>
-          <p>安装 <code>Qcom32VolteManager-1.2.0-r1.apk</code>（桌面图标名称 <strong>Qcom32 VoLTE</strong>）：</p>
+          <p>安装 <code>Qcom32VolteManager-1.2.1-r1.apk</code>（桌面图标名称 <strong>Qcom32 VoLTE</strong>）：</p>
           <ol class="step-list">
             <li><strong>无 Magisk 场景（免 su 实时状态面板）：</strong>打开应用点击「刷新实时状态」，应用通过只读 <code>content://org.octolab.qcom32ims.status</code> 接口直接读取并展示当前 SIM 运营商、<code>rild_ims0</code> 连接、<code>QMI_IMSA</code> 承载/语音就绪与系统 <code>mImsRegistered</code> 状态——拔掉电脑数据线换卡测试时非常直观。</li>
             <li><strong>已刷 Magisk 场景（机内独立激活/回滚）：</strong>点击「一键激活 / 修复原生 VoLTE（需 Magisk su）」并授予超级用户权限，即可脱离电脑在手机内校验内嵌载荷 SHA-256、备份原值、写入 Stage 6A 配置或一键恢复出厂基带。</li>
@@ -133,7 +133,7 @@
 
         <section class="guide-section" id="method-cli">
           <h2>05. 方式三：macOS / Linux / 跨平台便携包（CLI &amp; GUI）</h2>
-          <p>下载并解压 <code>qcom32-volte-1.2.0-r1-portable.zip</code>（内置已编译签名的 ARM32 工具、双 APK 与 <code>devices/</code> Profile 库，仅需 Python 3.9+ 与 <code>adb</code>）：</p>
+          <p>下载并解压 <code>qcom32-volte-1.2.1-r1-portable.zip</code>（内置已编译签名的 ARM32 工具、双 APK 与 <code>devices/</code> Profile 库，仅需 Python 3.9+ 与 <code>adb</code>）：</p>
           <pre class="code-block"><code># 1. 离线单元测试自检
 python3 cli/volte_ctl.py self-test
 
@@ -152,13 +152,15 @@ python3 cli/gui.py</code></pre>
 
         <section class="guide-section" id="method-rom">
           <h2>06. 方式四：LineageOS 18.1 ROM 源码集成与 32 位新机型适配</h2>
-          <p>面向自定义 ROM 维护者，<code>rom-integration/</code> 目录提供了通用 Soong <code>Android.bp</code> 与 <code>device-qcom32-volte.mk</code>：</p>
+          <p>面向自定义 ROM 维护者，<code>rom-integration/</code> 目录提供了通用 Soong <code>Android.bp</code> 与 <code>device-qcom32-volte.mk</code>（编译进 <code>/system_ext/priv-app/</code>）：</p>
           <pre class="code-block"><code># 在 LineageOS 18.1 源码树中引入通用通话栈服务：
-mkdir -p packages/apps/Qcom32VolteIms
-cp -r src/android-ims-service/* src/qmi-imsa-probe rom-integration/Android.bp packages/apps/Qcom32VolteIms/
+mkdir -p packages/services/Qcom32VolteIms
+cp -r src/android-ims-service/src src/android-ims-service/res src/android-ims-service/AndroidManifest.xml \
+      src/qmi-imsa-probe rom-integration/Android.bp rom-integration/device-qcom32-volte.mk \
+      packages/services/Qcom32VolteIms/
 
 # 在目标 32 位高通设备的 device.mk 末尾加入：
-$(call inherit-product, packages/apps/Qcom32VolteIms/device-qcom32-volte.mk)</code></pre>
+$(call inherit-product, packages/services/Qcom32VolteIms/device-qcom32-volte.mk)</code></pre>
           <p>注意：ROM 刷机包不会改写高通独立基带分区（Modem EFS），每台实体机首次仍需执行一次基带 EFS 供给。为一加 1、小米 4、索尼 Z2/Z3、三星 S5 等同代 <code>MSM8974</code> 机型新增 <code>devices/&lt;id&gt;/profile.json</code> 的完整规范，请查阅 <a href="https://github.com/Octo-o-o-o/qcom32-volte/blob/main/docs/guide/MSM8974_PORTING_GUIDE.md" target="_blank" rel="noopener noreferrer">MSM8974_PORTING_GUIDE.md</a> 与 <a href="https://github.com/Octo-o-o-o/qcom32-volte/blob/main/devices/README.md" target="_blank" rel="noopener noreferrer">devices/README.md</a>。</p>
         </section>
 
@@ -190,10 +192,10 @@ $(call inherit-product, packages/apps/Qcom32VolteIms/device-qcom32-volte.mk)</co
         <section class="guide-section" id="verify">
           <h2>10. 校验下载文件 SHA-256</h2>
           <pre class="code-block"><code># Windows PowerShell:
-Get-FileHash "$HOME\Downloads\qcom32-volte-1.2.0-r1-windows-x64.exe" -Algorithm SHA256
+Get-FileHash "$HOME\Downloads\qcom32-volte-1.2.1-r1-windows-x64.exe" -Algorithm SHA256
 
 # macOS / Linux:
-shasum -a 256 ~/Downloads/qcom32-volte-1.2.0-r1-portable.zip</code></pre>
+shasum -a 256 ~/Downloads/qcom32-volte-1.2.1-r1-portable.zip</code></pre>
         </section>
       </div>
     </div>

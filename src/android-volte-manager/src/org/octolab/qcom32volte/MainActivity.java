@@ -238,7 +238,7 @@ public final class MainActivity extends Activity {
     private void refreshLabels() {
         if (englishMode) {
             titleView.setText("Qcom32 VoLTE & IMS Stack");
-            subtitleView.setText("OCTOLAB · 32-bit Qualcomm Android 11 VoLTE Stack v2.5");
+            subtitleView.setText("OCTOLAB · 32-bit Qualcomm Android 11 VoLTE Stack v2.6");
             langButton.setText("中文");
             refreshButton.setText("Check Live VoLTE & SIM Status");
             deployButton.setText("Backup EFS & Activate VoLTE (Requires Magisk Root)");
@@ -247,7 +247,7 @@ public final class MainActivity extends Activity {
             copyButton.setText("Copy Redacted Diagnostic Report");
         } else {
             titleView.setText("Qcom32 VoLTE 通话栈管理端");
-            subtitleView.setText("OCTOLAB · 高通 32 位平台 Android 11 原生 IMS 栈 v2.5");
+            subtitleView.setText("OCTOLAB · 高通 32 位平台 Android 11 原生 IMS 栈 v2.6");
             langButton.setText("English");
             refreshButton.setText("检查当前 SIM / 4G / VoLTE 状态");
             deployButton.setText("备份原值并一键激活 VoLTE（需手机本地 Magisk Root）");
@@ -348,13 +348,13 @@ public final class MainActivity extends Activity {
                     phoneDump = "mImsRegistered=true";
                 }
             } else if (suOk) {
-                svcDump = execRoot("dumpsys activity service org.octolab.qcom32ims/.Qcom32VolteImsService || true")
+                svcDump = execRoot("dumpsys activity service org.octolab.qcom32ims/.Qcom32VolteImsService --qmi-probe || true")
                         + "\n" + svcDump;
                 phoneDump = execRoot("dumpsys activity service com.android.phone/.TelephonyDebugService | grep -E 'mImsRegistered=' | head -n 4 || true");
                 try {
                     File staged = stageVerifiedAssets();
                     String probePath = new File(staged, "libimsa_probe.so").getAbsolutePath();
-                    qmiOut = execRoot("cp '" + probePath + "' /data/local/tmp/pp_imsa_probe && chmod 0700 /data/local/tmp/pp_imsa_probe && /data/local/tmp/pp_imsa_probe; rm -f /data/local/tmp/pp_imsa_probe");
+                    qmiOut = execRoot("cp " + VolteManagerLogic.quoteSh(probePath) + " /data/local/tmp/pp_imsa_probe && chmod 0700 /data/local/tmp/pp_imsa_probe && /data/local/tmp/pp_imsa_probe --probe-all; rm -f /data/local/tmp/pp_imsa_probe");
                 } catch (Exception e) {
                     qmiOut = "probe_error=" + e.getMessage();
                 }
@@ -396,8 +396,8 @@ public final class MainActivity extends Activity {
         if (busy) return;
         String title = englishMode ? "Backup & Activate VoLTE" : "备份原值并激活 VoLTE";
         String msg = englishMode
-                ? "This will:\n1. Verify SHA-256 of bundled Stage 6A payloads;\n2. Save original EFS backups locally;\n3. Provision Stage 6A modem EFS + EFS_SYNC;\n4. Install Qcom32VolteIms v2.5 & apply persistent CarrierConfig.\n\nA normal phone reboot is required afterwards. Proceed?"
-                : "即将执行：\n1. 校验内置载荷 SHA-256；\n2. 备份本机基带原始 EFS 配置到本地安全目录；\n3. 写入 Stage 6A 基带配置并完成 EFS_SYNC；\n4. 安装 Qcom32VolteIms v2.5 并写入跨重启绑定。\n\n完成后需正常重启一次手机生效。确认继续？";
+                ? "This will:\n1. Verify SHA-256 of bundled Stage 6A payloads;\n2. Save original EFS backups locally;\n3. Provision Stage 6A modem EFS + EFS_SYNC;\n4. Install Qcom32VolteIms v2.6 & apply persistent CarrierConfig.\n\nA normal phone reboot is required afterwards. Proceed?"
+                : "即将执行：\n1. 校验内置载荷 SHA-256；\n2. 备份本机基带原始 EFS 配置到本地安全目录；\n3. 写入 Stage 6A 基带配置并完成 EFS_SYNC；\n4. 安装 Qcom32VolteIms v2.6 并写入跨重启绑定。\n\n完成后需正常重启一次手机生效。确认继续？";
         new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(msg)
@@ -411,8 +411,8 @@ public final class MainActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle(englishMode ? "Update Qcom32VolteIms APK" : "更新桥接服务 APK")
                 .setMessage(englishMode
-                        ? "Updates Qcom32VolteIms.apk v2.4 in place without touching modem EFS."
-                        : "仅原位更新 Qcom32VolteIms.apk v2.4，不写入任何基带 EFS 项。")
+                        ? "Updates Qcom32VolteIms.apk v2.6 in place without touching modem EFS."
+                        : "仅原位更新 Qcom32VolteIms.apk v2.6，不写入任何基带 EFS 项。")
                 .setPositiveButton(englishMode ? "Update" : "确认更新", (d, w) -> executeRootOperation("upgrade"))
                 .setNegativeButton(englishMode ? "Cancel" : "取消", null)
                 .show();

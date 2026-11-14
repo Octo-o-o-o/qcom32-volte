@@ -46,4 +46,11 @@ int pp_regfile_parse_close(const uint8_t *pkt, size_t n, uint32_t *errno_out);
 /* FIPS 180-4 SHA-256 lowercase hex (writes 64 hex chars + NUL into hex_out[65]) */
 void pp_regfile_sha256_hex(const uint8_t *data, size_t len, char hex_out[65]);
 
+/* Structural validation for untouched non-IMS DS /pdp_profiles/profile{1,2} (789B S_IFREG):
+ *   - buf[0] == 0x15 (ds_umts_pdp_profile_type version)
+ *   - buf[35] == expected_prof_num (1 or 2)
+ *   - buf[750] == 0 (im_cn_flag == 0) and buf[751] == 0 (request_pcscf_address_flag == 0)
+ * Allows cross-unit / cross-carrier QDP stack padding bytes while guaranteeing profile1/2 remain untouched non-IMS profiles. */
+int pp_regfile_validate_ds_profile_ref(uint8_t expected_prof_num, const uint8_t *buf, size_t len);
+
 #endif
