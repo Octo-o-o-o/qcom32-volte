@@ -41,6 +41,7 @@ EXPORT_TREE_ENTRIES = (
     "archive/LESSONS_LEARNED.md",
     "archive/catalog.json",
     "website/package.json",
+    "website/wrangler.jsonc",
     "website/README.md",
     "website/scripts",
     "website/tests",

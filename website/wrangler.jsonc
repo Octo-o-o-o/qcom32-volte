@@ -1,0 +1,14 @@
+{
+  "name": "passport-volte-site",
+  "compatibility_date": "2025-11-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  },
+  "routes": [
+    {
+      "pattern": "passport-volte.octoooo.com",
+      "custom_domain": true
+    }
+  ]
+}
