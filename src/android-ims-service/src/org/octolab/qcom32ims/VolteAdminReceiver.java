@@ -30,9 +30,24 @@ public final class VolteAdminReceiver extends BroadcastReceiver {
                 setResultCode(0);
                 setResultData(result);
                 break;
+            case "notify_check":
+                boolean forceSettle = intent.getBooleanExtra("force_settle", true);
+                result = VolteNotificationManager.evaluateSynchronously(
+                        context, "admin_notify_check", forceSettle);
+                setResultCode(0);
+                setResultData(result);
+                break;
             case "apply_override":
             default:
-                result = CarrierConfigBootstrapReceiver.adminEnableAndApply(context);
+                boolean rebootReq = intent.getBooleanExtra("reboot_required", false);
+                result = CarrierConfigBootstrapReceiver.adminEnableAndApply(context, rebootReq);
+                if (rebootReq) {
+                    String notifyRes = VolteNotificationManager.markRebootRequiredAndNotify(context);
+                    result = result + "|" + notifyRes;
+                } else {
+                    VolteNotificationManager.evaluateNowAsync(context, "admin_apply", false);
+                    Qcom32VolteImsService.schedulePostEventNotificationSettle("admin_apply");
+                }
                 setResultCode(0);
                 setResultData(result);
                 break;

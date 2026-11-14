@@ -4,7 +4,7 @@
 Runs identically:
   - From source (`python cli/gui.py` or `Start-GUI.cmd`)
   - From portable ZIP (`python3 cli/gui.py`)
-  - From standalone Windows x64 EXE (`qcom32-volte-1.1.0-r1-windows-x64.exe`, with bundled Python/Tk/ADB/Payloads)
+  - From standalone Windows x64 EXE (`qcom32-volte-1.2.0-r1-windows-x64.exe`, with bundled Python/Tk/ADB/Payloads)
 
 Supports:
   - `--self-test <report.json>` for automated offline build & packaging verification without touching any connected phone
@@ -34,7 +34,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import volte_ctl  # noqa: E402
 
-APP_VERSION = "1.1.0-r1"
+APP_VERSION = "1.2.0-r1"
 WEBSITE_URL = "https://qcom32-volte.octoooo.com/"
 SISTER_URL = "https://bb10-volte.octoooo.com/"
 GITHUB_URL = "https://github.com/Octo-o-o-o/qcom32-volte"
@@ -86,7 +86,7 @@ STRINGS = {
             "即将对连接的已验证 32 位高通机型（如 BlackBerry Passport wolverine / LineageOS 18.1）执行：\n\n"
             "1. 通过 ADB Root 读取并保存当前基带 EFS 原始状态到本地备份目录；\n"
             "2. 写入机型专属 Stage 6A 协同基带配置并执行 EFS_SYNC；\n"
-            "3. 安装 Qcom32VolteIms.apk v2.4 并写入持久化 CarrierConfig；\n"
+            "3. 安装 Qcom32VolteIms.apk v2.5 并写入持久化 CarrierConfig（含开机/换卡系统通知）；\n"
             "4. 正常重启手机并自动核验 QMI_IMSA / ImsResolver 注册状态。\n\n"
             "请确认手机已插入开通 VoLTE 的 SIM 卡且当前无正在进行的通话。是否继续？"
         ),
@@ -128,7 +128,7 @@ STRINGS = {
             "This will run the guarded activation flow on the connected verified device profile (e.g. BlackBerry Passport wolverine / LineageOS 18.1):\n\n"
             "1. Enable ADB Root (UID 0) and save a pre-deployment modem EFS snapshot locally;\n"
             "2. Provision Stage 6A modem EFS items + EFS_SYNC;\n"
-            "3. Install Qcom32VolteIms.apk v2.4 & apply persistent CarrierConfig overrides;\n"
+            "3. Install Qcom32VolteIms.apk v2.5 & apply persistent CarrierConfig overrides (with boot/SIM-swap notifications);\n"
             "4. Reboot normally and verify QMI_IMSA / ImsResolver registration.\n\n"
             "Ensure a VoLTE-provisioned SIM card is inserted and no call is active. Continue?"
         ),

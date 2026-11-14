@@ -77,7 +77,7 @@ flowchart TD
      - 设置 `ims_operation_mode=02`、`voice_domain_pref=03` (`IMS_PS_VOICE_PREFERRED_CS_SECONDARY`，即优先 VoLTE、无 VoLTE 时自动回退 CSFB)、`IMS_enable=01`，并执行 `EFS2_DIAG_SYNC` 落盘；
   3. 支持 `--rollback-all`：先回写 `IMS_enable=00` 与 `voice_domain_pref=00`，再逐一 `UNLINK` 删除全部新建条目并 `SYNC`，100% 还原出厂基带基线。
 
-### 3.2 `src/android-ims-service` (`Qcom32VolteIms.apk` v2.4)
+### 3.2 `src/android-ims-service` (`Qcom32VolteIms.apk` v2.5)
 - **运行身份**：包名 `org.octolab.qcom32ims`，声明 `android:sharedUserId="android.uid.phone"`，使用 LineageOS 平台签名安装于 `/data/app/`（或集成至 `/system/priv-app/`），运行在独立 `:qcom32ims` 进程（`UID 1001` / SELinux `u:r:radio:s0`），**零 `<uses-permission>` 声明**（不触碰 `com.android.phone` 原有系统电话权限）。
 - **开机自启、三网换卡自愈与跨重启持久化**：
   - `CarrierConfigBootstrapReceiver` 监听 `LOCKED_BOOT_COMPLETED`、`BOOT_COMPLETED`、`SIM_STATE_CHANGED` 与 `ACTION_CARRIER_CONFIG_CHANGED`；

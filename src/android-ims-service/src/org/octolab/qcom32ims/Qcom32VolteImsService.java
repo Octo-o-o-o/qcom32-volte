@@ -41,12 +41,13 @@ import java.util.concurrent.TimeUnit;
  * ImsResolver dynamic-feature-query service instances never touch rild_ims0.
  */
 public final class Qcom32VolteImsService extends ImsService {
-    static final String SERVICE_VERSION = "2.4-qcom32-volte";
+    static final String SERVICE_VERSION = "2.5-qcom32-volte";
     private static final String TAG = "Qcom32VolteIms";
     private static final int KEY_VOLTE_PROVISIONING_STATUS = 10;
     private static final int KEY_VT_PROVISIONING_STATUS = 11;
     private static final int KEY_WFC_PROVISIONING_STATUS = 28;
     private static final long QMI_CACHE_TTL_MS = 2500L;
+    private static final long NOTIFICATION_SETTLE_DELAY_MS = 26000L;
 
     private static volatile Qcom32VolteImsService activeInstance;
     private static final Object QMI_PROBE_LOCK = new Object();
@@ -87,9 +88,38 @@ public final class Qcom32VolteImsService extends ImsService {
         public void onReceive(Context context, Intent intent) {
             if (!CarrierConfigBootstrapReceiver.isBootstrapDisabled(Qcom32VolteImsService.this)) {
                 String act = intent != null ? intent.getAction() : "null";
+                if ("android.intent.action.SIM_STATE_CHANGED".equals(act)) {
+                    String ss = intent != null ? intent.getStringExtra("ss") : null;
+                    if ("ABSENT".equals(ss)) {
+                        VolteNotificationManager.onSimAbsentAsync(Qcom32VolteImsService.this);
+                        return;
+                    }
+                    if ("LOADED".equals(ss) || "READY".equals(ss)) {
+                        rescheduleSettleNotificationCheck("svc_sim_" + ss);
+                        if (rilClient != null && backendStarted) {
+                            rilClient.requestImmediateRefresh();
+                        }
+                    }
+                }
                 CarrierConfigBootstrapReceiver.applyOverrideIfNeeded(
                         Qcom32VolteImsService.this, "svc_guard:" + act, false);
             }
+        }
+    };
+
+    private final Runnable registeredNotifyRunnable = new Runnable() {
+        @Override
+        public void run() {
+            VolteNotificationManager.evaluateNowAsync(
+                    Qcom32VolteImsService.this, "ims_registered", false);
+        }
+    };
+
+    private final Runnable settleNotifyRunnable = new Runnable() {
+        @Override
+        public void run() {
+            VolteNotificationManager.evaluateNowAsync(
+                    Qcom32VolteImsService.this, "svc_settle_26s", true);
         }
     };
 
@@ -104,6 +134,18 @@ public final class Qcom32VolteImsService extends ImsService {
     static boolean isFeatureBound() {
         Qcom32VolteImsService inst = activeInstance;
         return inst != null && inst.mmTelFeature != null;
+    }
+
+    static void schedulePostEventNotificationSettle(String reason) {
+        Qcom32VolteImsService inst = activeInstance;
+        if (inst != null) {
+            inst.rescheduleSettleNotificationCheck(reason);
+        }
+    }
+
+    private void rescheduleSettleNotificationCheck(String reason) {
+        mainHandler.removeCallbacks(settleNotifyRunnable);
+        mainHandler.postDelayed(settleNotifyRunnable, NOTIFICATION_SETTLE_DELAY_MS);
     }
 
     static String triggerActiveInstanceRefresh() {
@@ -149,6 +191,7 @@ public final class Qcom32VolteImsService extends ImsService {
                     CarrierConfigBootstrapReceiver.applyOverrideIfNeeded(
                             Qcom32VolteImsService.this, "ims_service_bound", false);
                 }
+                rescheduleSettleNotificationCheck("backend_started");
             });
         }
         if (!guardRegistered) {
@@ -292,6 +335,10 @@ public final class Qcom32VolteImsService extends ImsService {
         if (feat != null) {
             feat.publishCurrentCapabilities();
         }
+        if (desiredReg == RilImsWire.REG_STATE_REGISTERED && callEngine.isVoiceImsReady()) {
+            mainHandler.removeCallbacks(registeredNotifyRunnable);
+            mainHandler.postDelayed(registeredNotifyRunnable, 1200L);
+        }
     }
 
     @Override
@@ -300,6 +347,8 @@ public final class Qcom32VolteImsService extends ImsService {
         out.println("version=" + SERVICE_VERSION);
         out.println("identity=" + selinuxIdentity);
         out.println("bootstrap=" + CarrierConfigBootstrapReceiver.getLastBootstrapSummary());
+        out.println("notification=" + VolteNotificationManager.getLastSummary()
+                + " kind=" + VolteNotificationManager.getLastKind());
         out.println("backendStarted=" + backendStarted);
         if (rilClient != null) {
             out.println("rilConnected=" + rilClient.isConnected()
@@ -404,6 +453,8 @@ public final class Qcom32VolteImsService extends ImsService {
         b.putString("sim_operator", simOp);
         b.putString("network_type", netType);
         b.putBoolean("volte_healthy", healthy);
+        b.putString("notification_kind", VolteNotificationManager.getLastKind());
+        b.putString("notification_title", VolteNotificationManager.getLastTitle());
         return b;
     }
 
@@ -462,7 +513,7 @@ public final class Qcom32VolteImsService extends ImsService {
         }
     }
 
-    private static String readSafeSimOperator(Context context) {
+    static String readSafeSimOperator(Context context) {
         try {
             if (context != null) {
                 TelephonyManager tm = context.getSystemService(TelephonyManager.class);

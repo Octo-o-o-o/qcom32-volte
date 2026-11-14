@@ -205,6 +205,7 @@ def main() -> int:
         str(ims_src / "src/org/octolab/qcom32ims/RilImsCoreClient.java"),
         str(ims_src / "src/org/octolab/qcom32ims/CallStateEngine.java"),
         str(ims_src / "src/org/octolab/qcom32ims/QmiProbeSummaryParser.java"),
+        str(ims_src / "src/org/octolab/qcom32ims/VolteStatusNotificationLogic.java"),
         str(ims_src / "test/org/octolab/qcom32ims/Qcom32VolteImsHostTest.java"),
     ]
     run_checked(
@@ -374,9 +375,30 @@ def main() -> int:
     merged_sdk_jar = work_dir / "sdk-with-stubs.jar"
     build_merged_sdk_with_stubs(sdk_jar, stub_cls_dir, merged_sdk_jar)
 
+    ims_res_zip = work_dir / "ims-res.zip"
+    run_checked(
+        [str(aapt2), "compile", "--dir", str(ims_src / "res"), "-o", str(ims_res_zip)],
+        "ims-aapt2-compile",
+    )
+    ims_r_dir = work_dir / "ims-r-src"
+    ims_r_dir.mkdir(parents=True, exist_ok=True)
+    unsigned_apk = work_dir / "unsigned.apk"
+    run_checked(
+        [
+            str(aapt2), "link", "-I", str(sdk_jar),
+            "--manifest", str(ims_src / "AndroidManifest.xml"),
+            "--java", str(ims_r_dir),
+            "-o", str(unsigned_apk),
+            str(ims_res_zip),
+        ],
+        "ims-aapt2-link",
+    )
+
     apk_cls_dir = work_dir / "apk-classes"
     apk_cls_dir.mkdir(parents=True, exist_ok=True)
-    apk_java_sources = sorted(str(p) for p in (ims_src / "src").rglob("*.java"))
+    apk_java_sources = sorted(str(p) for p in (ims_src / "src").rglob("*.java")) + sorted(
+        str(p) for p in ims_r_dir.rglob("*.java")
+    )
     boot_cp_merged = os.pathsep.join([str(merged_sdk_jar), str(lambda_stubs)])
     run_checked(
         [
@@ -420,16 +442,6 @@ def main() -> int:
             "--output", str(dex_dir), str(classes_jar),
         ],
         "ims-d8",
-    )
-
-    unsigned_apk = work_dir / "unsigned.apk"
-    run_checked(
-        [
-            str(aapt2), "link", "-I", str(sdk_jar),
-            "--manifest", str(ims_src / "AndroidManifest.xml"),
-            "-o", str(unsigned_apk),
-        ],
-        "ims-aapt2-link",
     )
 
     with zipfile.ZipFile(unsigned_apk, "a") as zf:

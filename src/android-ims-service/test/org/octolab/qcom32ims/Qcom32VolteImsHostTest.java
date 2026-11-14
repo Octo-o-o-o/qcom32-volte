@@ -53,6 +53,7 @@ public final class Qcom32VolteImsHostTest {
         testCoreClientUnsolCoalescingAndReconnect();
         testCallStateEngineLifecycles();
         testQmiProbeSummaryParserAndZeroPiiSanitizer();
+        testStatusNotificationStateMachine();
         System.out.println("PASS; assertions=" + assertions + "; forbidden_26_30=0");
     }
 
@@ -301,6 +302,33 @@ public final class Qcom32VolteImsHostTest {
             check(deltaReq6 >= 1 && deltaReq6 <= 2, "3 UNSOL_201 coalesced into 1..2 REQ_6, got " + deltaReq6);
             check(!callSnapshots.isEmpty() && callSnapshots.get(callSnapshots.size() - 1).size() == 1,
                     "0-byte UNSOL_201 never misinterpreted as empty call list");
+
+            // Burst 4 back-to-back UNSOL 204/210 pokes -> coalesced into <= 2 REQ_1/REQ_29 pairs
+            int baseReq1 = srv1.countRequest(RilImsWire.REQ_IMS_REGISTRATION_STATE);
+            int baseReq29 = srv1.countRequest(RilImsWire.REQ_QUERY_SERVICE_STATUS);
+            srv1.req1DelayMs = 70L;
+            byte[] regUp = new RilImsWire.ProtoWriter().varint(1, RilImsWire.REG_STATE_REGISTERED).toByteArray();
+            srv1.sendUnsol(RilImsWire.UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED, regUp);
+            srv1.sendUnsol(RilImsWire.UNSOL_SRV_STATUS_UPDATE, buildStage6aVoiceLteServicePayload());
+            srv1.sendUnsol(RilImsWire.UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED, regUp);
+            srv1.sendUnsol(RilImsWire.UNSOL_SRV_STATUS_UPDATE, buildStage6aVoiceLteServicePayload());
+            Thread.sleep(260L);
+            srv1.req1DelayMs = 0L;
+            int deltaReq1 = srv1.countRequest(RilImsWire.REQ_IMS_REGISTRATION_STATE) - baseReq1;
+            int deltaReq29 = srv1.countRequest(RilImsWire.REQ_QUERY_SERVICE_STATUS) - baseReq29;
+            check(deltaReq1 >= 1 && deltaReq1 <= 2 && deltaReq29 >= 1 && deltaReq29 <= 2,
+                    "4 UNSOL 204/210 pokes coalesced into 1..2 REQ_1/29 pairs, got " + deltaReq1 + "/" + deltaReq29);
+
+            // Stale REQ_29 ServiceStatus (registered=1) must NEVER override authoritative REQ_1 NOT_REGISTERED (2)
+            srv1.regStateToReturn = RilImsWire.REG_STATE_NOT_REGISTERED;
+            byte[] regDown = new RilImsWire.ProtoWriter().varint(1, RilImsWire.REG_STATE_NOT_REGISTERED).toByteArray();
+            srv1.sendUnsol(RilImsWire.UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED, regDown);
+            awaitCond(() -> client.getLastRegState() == RilImsWire.REG_STATE_NOT_REGISTERED
+                    && !client.isLastVoiceEnabledOnLte(),
+                    "stale REQ_29 ServiceStatus never overrides authoritative REQ_1 NOT_REGISTERED");
+            Thread.sleep(120L);
+            check(client.getLastRegState() == RilImsWire.REG_STATE_NOT_REGISTERED && !client.isLastVoiceEnabledOnLte(),
+                    "registration remains NOT_REGISTERED after REQ_29 completes");
 
             // Simulate rild crash/restart -> close srv1, verify auto-reconnect to pid 987
             srv1.closeServer();
@@ -791,8 +819,10 @@ public final class Qcom32VolteImsHostTest {
         private Thread thread;
 
         volatile byte[] activeCallsPayload = new byte[0];
+        volatile int regStateToReturn = RilImsWire.REG_STATE_REGISTERED;
         volatile int lastFailCause = RilImsWire.CALL_FAIL_NORMAL;
         volatile int nextDialRilError = 0;
+        volatile long req1DelayMs = 0L;
         volatile long req6DelayMs = 0L;
         volatile long dialDelayMs = 0L;
 
@@ -891,8 +921,9 @@ public final class Qcom32VolteImsHostTest {
                     }
                     switch (req.id) {
                         case RilImsWire.REQ_IMS_REGISTRATION_STATE: {
+                            if (req1DelayMs > 0L) Thread.sleep(req1DelayMs);
                             byte[] reg = new RilImsWire.ProtoWriter()
-                                    .varint(1, RilImsWire.REG_STATE_REGISTERED)
+                                    .varint(1, regStateToReturn)
                                     .toByteArray();
                             sendSolicited(req.token, req.id, 0, reg);
                             break;
@@ -952,5 +983,183 @@ public final class Qcom32VolteImsHostTest {
         check("".equals(QmiProbeSummaryParser.sanitizeSimOperator("18612345678")), "MSISDN rejected by PLMN sanitizer");
         check("LTE".equals(QmiProbeSummaryParser.sanitizeNetworkType("LTE")), "LTE RAT allowed");
         check("".equals(QmiProbeSummaryParser.sanitizeNetworkType("18612345678")), "Digits-only rejected by RAT sanitizer");
+    }
+
+    private static void testStatusNotificationStateMachine() {
+        VolteStatusNotificationLogic.SessionState st = new VolteStatusNotificationLogic.SessionState();
+
+        // 1. Provisioning marks reboot required on boot B1 -> posts REBOOT_REQUIRED once
+        VolteStatusNotificationLogic.Decision dReboot =
+                VolteStatusNotificationLogic.markRebootRequired(st, "boot-1", false);
+        check(dReboot.action == VolteStatusNotificationLogic.Action.POST
+                        && dReboot.kind == VolteStatusNotificationLogic.Kind.REBOOT_REQUIRED
+                        && dReboot.title.contains("请重启手机"),
+                "deploy marks REBOOT_REQUIRED notification");
+        st = dReboot.nextState;
+
+        // Even if IMS appears temporarily healthy on boot-1 before reboot, REBOOT_REQUIRED stays sticky until reboot
+        VolteStatusNotificationLogic.Decision dStillPreReboot = VolteStatusNotificationLogic.evaluate(
+                st,
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-1", false, false, true, "46001", "LTE", "wolverine", true, true, 0, false));
+        check(dStillPreReboot.action == VolteStatusNotificationLogic.Action.NOOP,
+                "duplicate REBOOT_REQUIRED deduplicated before reboot");
+        st = dStillPreReboot.nextState;
+
+        // 2. Reboot into boot-2: brief cold-boot SIM absent flicker at uptime=2s must NOT falsely mark hot-swap
+        VolteStatusNotificationLogic.Decision dColdFlicker =
+                VolteStatusNotificationLogic.onSimAbsent(st, "boot-2", 2_000L);
+        st = dColdFlicker.nextState;
+        check(!st.sawSimAbsentInBoot && st.pendingRebootBootToken.isEmpty(),
+                "boot-2 clears pendingReboot and ignores cold-boot 2s SIM_ABSENT flicker");
+
+        // Before settle window & before IMS registers -> quiet NOOP
+        VolteStatusNotificationLogic.Decision dEarlyBoot = VolteStatusNotificationLogic.evaluate(
+                st,
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-2", false, false, true, "46001", "LTE", "wolverine", false, false, 0, false, 4_000L));
+        check(dEarlyBoot.action == VolteStatusNotificationLogic.Action.NOOP,
+                "quiet during initial boot settle window");
+        st = dEarlyBoot.nextState;
+
+        // 3. IMS registers on China Unicom (46001) at t=6s -> posts ACTIVATED immediately!
+        VolteStatusNotificationLogic.Decision dActiveUnicom = VolteStatusNotificationLogic.evaluate(
+                st,
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-2", false, false, true, "46001", "LTE", "wolverine", true, false, 0, false, 6_000L));
+        check(dActiveUnicom.action == VolteStatusNotificationLogic.Action.POST
+                        && dActiveUnicom.kind == VolteStatusNotificationLogic.Kind.ACTIVATED
+                        && dActiveUnicom.title.contains("VoLTE 已激活就绪")
+                        && dActiveUnicom.title.contains("中国联通"),
+                "boot-2 Unicom ACTIVATED notification posted");
+        st = dActiveUnicom.nextState;
+
+        // 4. Routine mid-day elevator signal drop & recovery in boot-2 must NOT spam again!
+        VolteStatusNotificationLogic.Decision dElevatorDrop = VolteStatusNotificationLogic.evaluate(
+                st,
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-2", false, false, true, "46001", "EDGE", "wolverine", false, true, 0, false, 300_000L));
+        check(dElevatorDrop.action == VolteStatusNotificationLogic.Action.NOOP,
+                "mid-day signal drop after activation does not spam");
+        st = dElevatorDrop.nextState;
+
+        VolteStatusNotificationLogic.Decision dElevatorRecover = VolteStatusNotificationLogic.evaluate(
+                st,
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-2", false, false, true, "46001", "LTE", "wolverine", true, true, 0, false, 360_000L));
+        check(dElevatorRecover.action == VolteStatusNotificationLogic.Action.NOOP,
+                "mid-day signal recovery after activation does not re-spam");
+        st = dElevatorRecover.nextState;
+
+        // 5. Hot SIM swap in boot-2: eject Unicom -> insert China Telecom (46011), unregistered at 26s -> SIM_SWAP_REBOOT_NEEDED
+        VolteStatusNotificationLogic.Decision dHotEject =
+                VolteStatusNotificationLogic.onSimAbsent(st, "boot-2", 400_000L);
+        check(dHotEject.action == VolteStatusNotificationLogic.Action.CANCEL,
+                "ejecting active SIM cancels previous SIM notification");
+        st = dHotEject.nextState;
+
+        VolteStatusNotificationLogic.Decision dHotSwapPending = VolteStatusNotificationLogic.evaluate(
+                st,
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-2", false, false, true, "46011", "LTE", "wolverine", false, true, 0, false, 430_000L));
+        check(dHotSwapPending.action == VolteStatusNotificationLogic.Action.POST
+                        && dHotSwapPending.kind == VolteStatusNotificationLogic.Kind.SIM_SWAP_REBOOT_NEEDED
+                        && dHotSwapPending.title.contains("检测到已换卡")
+                        && dHotSwapPending.body.contains("中国电信 (46011)"),
+                "hot-swapped Telecom SIM advises reboot if unregistered after settle window");
+        st = dHotSwapPending.nextState;
+
+        // If Telecom hot-swap subsequently registers at 445s -> upgrades notification to SIM Swapped ACTIVATED!
+        VolteStatusNotificationLogic.Decision dHotSwapSuccess = VolteStatusNotificationLogic.evaluate(
+                st,
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-2", false, false, true, "46011", "LTE", "wolverine", true, true, 0, false, 445_000L));
+        check(dHotSwapSuccess.action == VolteStatusNotificationLogic.Action.POST
+                        && dHotSwapSuccess.kind == VolteStatusNotificationLogic.Kind.ACTIVATED
+                        && dHotSwapSuccess.title.contains("换卡成功")
+                        && dHotSwapSuccess.title.contains("中国电信"),
+                "hot-swapped Telecom SIM upgrades to ACTIVATED when registered");
+        st = dHotSwapSuccess.nextState;
+
+        // 6. Cold boot-3 with China Mobile (46000) in TDD-only area (EDGE) -> explains FDD B3/B8, then upgrades on LTE!
+        VolteStatusNotificationLogic.Decision dCmccEdge = VolteStatusNotificationLogic.evaluate(
+                st,
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-3", false, false, true, "46000", "EDGE", "wolverine", false, true, 0, false, 30_000L));
+        check(dCmccEdge.action == VolteStatusNotificationLogic.Action.POST
+                        && dCmccEdge.kind == VolteStatusNotificationLogic.Kind.AWAITING_4G_LTE
+                        && dCmccEdge.body.contains("FDD B3/B8"),
+                "China Mobile on EDGE explains Passport FDD B3/B8 hardware band requirement");
+        st = dCmccEdge.nextState;
+
+        VolteStatusNotificationLogic.Decision dCmccLteEn = VolteStatusNotificationLogic.evaluate(
+                st,
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-3", false, false, true, "46000", "LTE", "wolverine", true, true, 0, true, 50_000L));
+        check(dCmccLteEn.action == VolteStatusNotificationLogic.Action.POST
+                        && dCmccLteEn.kind == VolteStatusNotificationLogic.Kind.ACTIVATED
+                        && dCmccLteEn.title.contains("VoLTE Active & Ready · China Mobile"),
+                "China Mobile catching FDD LTE upgrades notification to Active (English)");
+        st = dCmccLteEn.nextState;
+
+        // 7. Rollback bootstrapDisabled -> cancels cleanly
+        VolteStatusNotificationLogic.Decision dRollback = VolteStatusNotificationLogic.evaluate(
+                st,
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-3", true, false, true, "46000", "LTE", "wolverine", false, true, 1, true, 60_000L));
+        check(dRollback.action == VolteStatusNotificationLogic.Action.CANCEL,
+                "rollback bootstrapDisabled cancels active notification");
+
+        // 8. China Telecom (46003/46011) wolverine libril fallback_thread alignment invariants (mode 9 + fb="9")
+        check(VolteStatusNotificationLogic.isChinaTelecom("46011")
+                        && VolteStatusNotificationLogic.isChinaTelecom("46003")
+                        && !VolteStatusNotificationLogic.isChinaTelecom("46001")
+                        && !VolteStatusNotificationLogic.isChinaTelecom("46000"),
+                "isChinaTelecom identifies 46003/46011 only");
+        check("9".equals(VolteStatusNotificationLogic.targetWolverineFallbackModeProp("wolverine", "46011"))
+                        && "".equals(VolteStatusNotificationLogic.targetWolverineFallbackModeProp("wolverine", "46001"))
+                        && "".equals(VolteStatusNotificationLogic.targetWolverineFallbackModeProp("shamu", "46011")),
+                "targetWolverineFallbackModeProp sets 9 only for wolverine + China Telecom");
+        long globalBitmask = 32768L | 4L | 4096L | 64L | 8L | 16L | 32L; // GSM|UMTS|LTE|1xRTT|CDMA|EVDO
+        check(VolteStatusNotificationLogic.needsChinaTelecomWolverineAlignment(
+                        "wolverine", "46011", 10, globalBitmask, ""),
+                "China Telecom 46011 on stock mode 10 / empty fallback requires alignment");
+        check(VolteStatusNotificationLogic.needsChinaTelecomWolverineAlignment(
+                        "wolverine", "46011", 11, VolteStatusNotificationLogic.BITMASK_LTE_ONLY, ""),
+                "China Telecom 46011 on legacy LTE_ONLY (11/266240) migrates to mode 9 + fb=9");
+        check(VolteStatusNotificationLogic.needsChinaTelecomWolverineAlignment(
+                        "wolverine", "46011", 9, VolteStatusNotificationLogic.BITMASK_LTE_GSM_WCDMA, ""),
+                "China Telecom 46011 with mode 9 but empty persist.radio.fallbackmode still aligns fb=9");
+        check(!VolteStatusNotificationLogic.needsChinaTelecomWolverineAlignment(
+                        "wolverine", "46011", 9, VolteStatusNotificationLogic.BITMASK_LTE_GSM_WCDMA, "9")
+                        && !VolteStatusNotificationLogic.needsChinaTelecomWolverineAlignment(
+                                "wolverine", "46011", 9, 54151L, "9"),
+                "China Telecom 46011 on mode 9 + LTE_GSM_WCDMA (316295/54151) + fb=9 is idempotent");
+        check(!VolteStatusNotificationLogic.needsChinaTelecomWolverineAlignment(
+                        "wolverine", "46001", 10, globalBitmask, "")
+                        && !VolteStatusNotificationLogic.needsChinaTelecomWolverineAlignment(
+                                "shamu", "46011", 10, globalBitmask, ""),
+                "China Unicom 46001 and non-wolverine devices never force wolverine fallbackmode");
+
+        // 9. Package replacement (pm install -r / upgrade-apk) clears wiped shade flags and re-posts cleanly once
+        VolteStatusNotificationLogic.SessionState stPkgBase = new VolteStatusNotificationLogic.SessionState();
+        VolteStatusNotificationLogic.Decision dPkgAct = VolteStatusNotificationLogic.evaluate(
+                stPkgBase,
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-9", false, false, true, "46011", "LTE", "wolverine", true, false, 0, false, 8_000L));
+        check(dPkgAct.action == VolteStatusNotificationLogic.Action.POST
+                        && dPkgAct.kind == VolteStatusNotificationLogic.Kind.ACTIVATED,
+                "initial China Telecom ACTIVATED posted");
+        VolteStatusNotificationLogic.SessionState stAfterInstallR =
+                VolteStatusNotificationLogic.onPackageReplaced(dPkgAct.nextState, "boot-9");
+        check(!stAfterInstallR.notifiedActivatedInSession && stAfterInstallR.lastPostedFingerprint.isEmpty(),
+                "onPackageReplaced clears wiped shade flags");
+        VolteStatusNotificationLogic.Decision dRepost = VolteStatusNotificationLogic.evaluate(
+                stAfterInstallR,
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-9", false, false, true, "46011", "LTE", "wolverine", true, false, 0, false, 12_000L));
+        check(dRepost.action == VolteStatusNotificationLogic.Action.POST
+                        && dRepost.kind == VolteStatusNotificationLogic.Kind.ACTIVATED,
+                "after pm install -r, live notification re-posts cleanly once");
     }
 }

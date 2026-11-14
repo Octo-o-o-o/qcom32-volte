@@ -37,15 +37,28 @@ public final class VolteManagerLogicTest {
                 "wolverine",
                 30,
                 false,
-                "QCOM32_VOLTE_IMS_V1\nversion=2.4-qcom32-volte\nrilConnected=true\npublishedFrameworkReg=1",
+                "QCOM32_VOLTE_IMS_V1\nversion=2.5-qcom32-volte\nrilConnected=true\npublishedFrameworkReg=1",
                 "{\"event\":\"imsa_pdp\",\"pdp_connected\":1}\n{\"event\":\"imsa_reg\",\"reg_status\":2,\"legacy_reg\":1}\n{\"event\":\"imsa_svc\",\"voip\":2,\"voip_rat\":1}",
                 "",
                 "46006",
                 "LTE");
         check(snapProviderNoSu.telemetryAvailable, "VolteStatusProvider telemetry works without su");
         check(snapProviderNoSu.volteHealthy, "Healthy snapshot detected without su");
-        check("2.4-qcom32-volte".equals(snapProviderNoSu.imsServiceVersion), "Service version 2.4-qcom32-volte parsed");
+        check("2.5-qcom32-volte".equals(snapProviderNoSu.imsServiceVersion), "Service version 2.5-qcom32-volte parsed");
         check("China Unicom (46006) · LTE".equals(snapProviderNoSu.carrierSummary), "China Unicom 46006 label exact");
+
+        VolteManagerLogic.StatusSnapshot snapUnreg = VolteManagerLogic.parseStatusSummary(
+                "Passport",
+                "wolverine",
+                30,
+                false,
+                "QCOM32_VOLTE_IMS_V1\nversion=2.5-qcom32-volte\nrilConnected=true\npublishedFrameworkReg=2",
+                "pdp_connected=1 reg_status=1 voip=0 voip_rat=-1",
+                "",
+                "46011",
+                "LTE");
+        check(!snapUnreg.frameworkRegistered && !snapUnreg.volteHealthy,
+                "publishedFrameworkReg=2 (NOT_REGISTERED) is reported as frameworkRegistered=false");
 
         // 5. Three-carrier label checks (Mobile & Telecom)
         check("China Mobile (46000) · LTE".equals(VolteManagerLogic.formatCarrierLabel("46000,", "LTE,")), "China Mobile 46000 label");
@@ -74,6 +87,7 @@ public final class VolteManagerLogicTest {
         check(deploySh.contains("--provision-stage6a"), "Deploy invokes stage6a");
         check(deploySh.contains("Qcom32VolteIms.apk"), "Deploy installs Qcom32VolteIms.apk");
         check(deploySh.contains("org.octolab.qcom32ims/.VolteAdminReceiver"), "Deploy invokes new admin receiver");
+        check(deploySh.contains("--ez reboot_required true"), "Deploy marks reboot_required notification");
         check(deploySh.contains("pm uninstall org.passport.volteims"), "Deploy migrates legacy package cleanly");
         check(deploySh.contains("if [ \"$DEV\" != \"wolverine\" ]"), "Deploy enforces wolverine EFS guard");
 

@@ -78,11 +78,14 @@ public final class RilImsCoreClient {
     private volatile int lastPeerPid = -1;
     private volatile int lastRadioState = RilImsWire.RADIO_STATE_UNAVAILABLE;
     private volatile int lastRegState = RilImsWire.REG_STATE_NOT_REGISTERED;
+    private volatile boolean rawServiceVoiceOnLte;
     private volatile boolean lastVoiceEnabledOnLte;
     private volatile String lastServiceSummary = "none";
 
     private boolean callSyncInFlight;
     private boolean callSyncDirty;
+    private boolean regPollInFlight;
+    private boolean regPollDirty;
 
     private volatile int txCount;
     private volatile int rxSolicitedCount;
@@ -240,13 +243,31 @@ public final class RilImsCoreClient {
     }
 
     public void sendPassiveRegAndServicePoll() {
-        if (!connected) return;
+        boolean shouldSend = false;
+        synchronized (syncLock) {
+            if (!connected) return;
+            if (regPollInFlight) {
+                regPollDirty = true;
+            } else {
+                regPollInFlight = true;
+                regPollDirty = false;
+                shouldSend = true;
+            }
+        }
+        if (shouldSend) {
+            sendRegThenServicePollInternal();
+        }
+    }
+
+    private void sendRegThenServicePollInternal() {
         sendRequestInternal(RilImsWire.REQ_IMS_REGISTRATION_STATE, new byte[0], frame -> {
             if (frame.error == 0) {
                 try {
                     RilImsWire.RegObservation ro = RilImsWire.decodeRegistration(frame.payload());
                     if (ro.state > 0) {
-                        updateRegAndCapability(ro.state, lastVoiceEnabledOnLte, lastServiceSummary);
+                        boolean effectiveVoice = (ro.state == RilImsWire.REG_STATE_REGISTERED)
+                                && rawServiceVoiceOnLte;
+                        updateRegAndCapability(ro.state, effectiveVoice, lastServiceSummary);
                     }
                 } catch (IOException ex) {
                     recordEvent("decode_reg_err=" + ex.getClass().getSimpleName());
@@ -254,23 +275,49 @@ public final class RilImsCoreClient {
             } else {
                 recordEvent("req1_err=" + frame.error);
             }
+            sendServiceStatusAfterRegInternal();
         });
+    }
+
+    private void sendServiceStatusAfterRegInternal() {
+        if (!connected) {
+            finishRegPollCycle();
+            return;
+        }
         sendRequestInternal(RilImsWire.REQ_QUERY_SERVICE_STATUS, new byte[0], frame -> {
             if (frame.error == 0) {
                 try {
                     RilImsWire.ServiceStatusSnapshot snap = RilImsWire.decodeServiceStatusList(frame.payload());
-                    int effectiveReg = lastRegState;
-                    if (snap.anyRegisteredAccess()) {
-                        effectiveReg = RilImsWire.REG_STATE_REGISTERED;
-                    }
-                    updateRegAndCapability(effectiveReg, snap.isVoiceEnabledOnLte(), snap.summary());
+                    rawServiceVoiceOnLte = snap.isVoiceEnabledOnLte();
+                    int authoritativeReg = lastRegState;
+                    boolean effectiveVoice = (authoritativeReg == RilImsWire.REG_STATE_REGISTERED)
+                            && rawServiceVoiceOnLte;
+                    updateRegAndCapability(authoritativeReg, effectiveVoice, snap.summary());
                 } catch (IOException ex) {
                     recordEvent("decode_svc_err=" + ex.getClass().getSimpleName());
                 }
             } else {
                 recordEvent("req29_err=" + frame.error);
             }
+            finishRegPollCycle();
         });
+    }
+
+    private void finishRegPollCycle() {
+        boolean followUp = false;
+        synchronized (syncLock) {
+            if (regPollDirty && connected) {
+                regPollDirty = false;
+                regPollInFlight = true;
+                followUp = true;
+            } else {
+                regPollInFlight = false;
+                regPollDirty = false;
+            }
+        }
+        if (followUp) {
+            sendRegThenServicePollInternal();
+        }
     }
 
     public int sendDial(String callee, int clirMode, int callDomain, ResponseCallback cb) {
@@ -426,9 +473,12 @@ public final class RilImsCoreClient {
                 }
                 activeTransport = transport;
                 lastPeerPid = pid;
+                rawServiceVoiceOnLte = false;
                 synchronized (syncLock) {
                     callSyncInFlight = false;
                     callSyncDirty = false;
+                    regPollInFlight = false;
+                    regPollDirty = false;
                 }
                 connected = true;
                 backoffMs = reconnectInitialBackoffMs;
@@ -444,9 +494,12 @@ public final class RilImsCoreClient {
                 boolean wasConnected = connected;
                 connected = false;
                 activeTransport = null;
+                rawServiceVoiceOnLte = false;
                 synchronized (syncLock) {
                     callSyncInFlight = false;
                     callSyncDirty = false;
+                    regPollInFlight = false;
+                    regPollDirty = false;
                 }
                 if (transport != null) {
                     transport.close();
@@ -536,6 +589,7 @@ public final class RilImsCoreClient {
                         sendPassiveRegAndServicePoll();
                         requestCallSync();
                     } else {
+                        rawServiceVoiceOnLte = false;
                         updateRegAndCapability(RilImsWire.REG_STATE_NOT_REGISTERED, false, "radio_off_" + rs);
                     }
                     break;
@@ -544,7 +598,9 @@ public final class RilImsCoreClient {
                     if (frame.payloadLength() > 0) {
                         RilImsWire.RegObservation ro = RilImsWire.decodeRegistration(frame.payload());
                         if (ro.state > 0) {
-                            updateRegAndCapability(ro.state, lastVoiceEnabledOnLte, lastServiceSummary);
+                            boolean effectiveVoice = (ro.state == RilImsWire.REG_STATE_REGISTERED)
+                                    && rawServiceVoiceOnLte;
+                            updateRegAndCapability(ro.state, effectiveVoice, lastServiceSummary);
                         }
                     }
                     sendPassiveRegAndServicePoll();
@@ -553,11 +609,11 @@ public final class RilImsCoreClient {
                 case RilImsWire.UNSOL_SRV_STATUS_UPDATE: {
                     if (frame.payloadLength() > 0) {
                         RilImsWire.ServiceStatusSnapshot snap = RilImsWire.decodeServiceStatusList(frame.payload());
-                        int effectiveReg = lastRegState;
-                        if (snap.anyRegisteredAccess()) {
-                            effectiveReg = RilImsWire.REG_STATE_REGISTERED;
-                        }
-                        updateRegAndCapability(effectiveReg, snap.isVoiceEnabledOnLte(), snap.summary());
+                        rawServiceVoiceOnLte = snap.isVoiceEnabledOnLte();
+                        int authoritativeReg = lastRegState;
+                        boolean effectiveVoice = (authoritativeReg == RilImsWire.REG_STATE_REGISTERED)
+                                && rawServiceVoiceOnLte;
+                        updateRegAndCapability(authoritativeReg, effectiveVoice, snap.summary());
                     }
                     sendPassiveRegAndServicePoll();
                     break;

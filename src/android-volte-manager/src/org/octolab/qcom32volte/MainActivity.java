@@ -2,9 +2,14 @@ package org.octolab.qcom32volte;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
@@ -233,7 +238,7 @@ public final class MainActivity extends Activity {
     private void refreshLabels() {
         if (englishMode) {
             titleView.setText("Qcom32 VoLTE & IMS Stack");
-            subtitleView.setText("OCTOLAB · 32-bit Qualcomm Android 11 VoLTE Stack v2.4");
+            subtitleView.setText("OCTOLAB · 32-bit Qualcomm Android 11 VoLTE Stack v2.5");
             langButton.setText("中文");
             refreshButton.setText("Check Live VoLTE & SIM Status");
             deployButton.setText("Backup EFS & Activate VoLTE (Requires Magisk Root)");
@@ -242,7 +247,7 @@ public final class MainActivity extends Activity {
             copyButton.setText("Copy Redacted Diagnostic Report");
         } else {
             titleView.setText("Qcom32 VoLTE 通话栈管理端");
-            subtitleView.setText("OCTOLAB · 高通 32 位平台 Android 11 原生 IMS 栈 v2.4");
+            subtitleView.setText("OCTOLAB · 高通 32 位平台 Android 11 原生 IMS 栈 v2.5");
             langButton.setText("English");
             refreshButton.setText("检查当前 SIM / 4G / VoLTE 状态");
             deployButton.setText("备份原值并一键激活 VoLTE（需手机本地 Magisk Root）");
@@ -303,8 +308,13 @@ public final class MainActivity extends Activity {
             String qmiOut = "";
             String phoneDump = "";
 
+            String notifyKind = "Auto (Boot / SIM Swap)";
             Bundle providerStatus = queryReadOnlyStatusProvider();
             if (providerStatus != null) {
+                String nk = providerStatus.getString("notification_kind", "");
+                if (!nk.isEmpty() && !"NONE".equals(nk)) {
+                    notifyKind = nk;
+                }
                 imsInstalled = true;
                 String pv = providerStatus.getString("version");
                 if (pv != null && !pv.isEmpty()) {
@@ -361,7 +371,8 @@ public final class MainActivity extends Activity {
                     + "ImsService APK : " + (snap.imsServicePresent ? ("Installed (" + snap.imsServiceVersion + ")") : "Not installed") + "\n"
                     + "rild_ims0 Link : " + (snap.telemetryAvailable ? String.valueOf(snap.rilConnected) : "Requires su / PC") + "\n"
                     + "QMI_IMSA VoIP  : " + (snap.telemetryAvailable ? String.valueOf(snap.qmiRegistered) : "Requires su / PC") + "\n"
-                    + "Framework IMS  : " + (snap.telemetryAvailable ? String.valueOf(snap.frameworkRegistered) : "Requires su / PC");
+                    + "Framework IMS  : " + (snap.telemetryAvailable ? String.valueOf(snap.frameworkRegistered) : "Requires su / PC") + "\n"
+                    + "System Alerts  : " + notifyKind;
 
             String rawLog = "[Sanitized Diagnostic Log]\n"
                     + details + "\n"
@@ -385,8 +396,8 @@ public final class MainActivity extends Activity {
         if (busy) return;
         String title = englishMode ? "Backup & Activate VoLTE" : "备份原值并激活 VoLTE";
         String msg = englishMode
-                ? "This will:\n1. Verify SHA-256 of bundled Stage 6A payloads;\n2. Save original EFS backups locally;\n3. Provision Stage 6A modem EFS + EFS_SYNC;\n4. Install Qcom32VolteIms v2.4 & apply persistent CarrierConfig.\n\nA normal phone reboot is required afterwards. Proceed?"
-                : "即将执行：\n1. 校验内置载荷 SHA-256；\n2. 备份本机基带原始 EFS 配置到本地安全目录；\n3. 写入 Stage 6A 基带配置并完成 EFS_SYNC；\n4. 安装 Qcom32VolteIms v2.4 并写入跨重启绑定。\n\n完成后需正常重启一次手机生效。确认继续？";
+                ? "This will:\n1. Verify SHA-256 of bundled Stage 6A payloads;\n2. Save original EFS backups locally;\n3. Provision Stage 6A modem EFS + EFS_SYNC;\n4. Install Qcom32VolteIms v2.5 & apply persistent CarrierConfig.\n\nA normal phone reboot is required afterwards. Proceed?"
+                : "即将执行：\n1. 校验内置载荷 SHA-256；\n2. 备份本机基带原始 EFS 配置到本地安全目录；\n3. 写入 Stage 6A 基带配置并完成 EFS_SYNC；\n4. 安装 Qcom32VolteIms v2.5 并写入跨重启绑定。\n\n完成后需正常重启一次手机生效。确认继续？";
         new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(msg)
@@ -451,7 +462,14 @@ public final class MainActivity extends Activity {
                     logView.setText(redacted);
                     lastSanitizedReport = redacted;
                     setBusy(false);
-                    promptNormalReboot();
+                    if ("rollback".equals(mode)) {
+                        postLocalRollbackRebootNotification();
+                    }
+                    if ("upgrade".equals(mode)) {
+                        runCheckStatus();
+                    } else {
+                        promptNormalReboot();
+                    }
                 });
             } catch (Exception e) {
                 String err = VolteManagerLogic.redactSensitiveDigits("ERROR: " + e.getMessage());
@@ -463,6 +481,45 @@ public final class MainActivity extends Activity {
                 });
             }
         });
+    }
+
+    private void postLocalRollbackRebootNotification() {
+        try {
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            if (nm == null) return;
+            String channelId = "qcom32_volte_manager_alerts";
+            NotificationChannel ch = new NotificationChannel(
+                    channelId,
+                    englishMode ? "VoLTE Manager Reboot Alerts" : "VoLTE 管理端重启提醒",
+                    NotificationManager.IMPORTANCE_DEFAULT);
+            ch.enableVibration(false);
+            ch.setSound(null, null);
+            nm.createNotificationChannel(ch);
+
+            Intent tap = new Intent(this, MainActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            PendingIntent pi = PendingIntent.getActivity(
+                    this, 0, tap, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            String title = englishMode
+                    ? "Factory Modem EFS Restored — Reboot Required"
+                    : "已恢复出厂基带配置 — 请重启手机生效";
+            String body = englishMode
+                    ? "Stage 6A EFS items removed and IMS_enable restored to 00. Reboot your phone once to complete rollback."
+                    : "已完成基带原值恢复并卸载桥接服务；请正常重启一次手机使其完全生效。";
+
+            Notification n = new Notification.Builder(this, channelId)
+                    .setSmallIcon(R.drawable.ic_stat_volte)
+                    .setContentTitle(title)
+                    .setContentText(body)
+                    .setStyle(new Notification.BigTextStyle().bigText(body))
+                    .setColor(COLOR_DANGER)
+                    .setAutoCancel(true)
+                    .setOnlyAlertOnce(true)
+                    .setContentIntent(pi)
+                    .build();
+            nm.notify(32012, n);
+        } catch (Exception ignored) { }
     }
 
     private void promptNormalReboot() {

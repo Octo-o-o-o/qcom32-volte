@@ -54,7 +54,7 @@ python3 cli/build_all.py
 
 ## 3. 一键激活部署 VoLTE
 
-将手机通过 USB 连接电脑，确认手机无正在进行的通话后执行（普通 Windows 用户也可直接运行单文件 `qcom32-volte-1.1.0-r1-windows-x64.exe`）：
+将手机通过 USB 连接电脑，确认手机无正在进行的通话后执行（普通 Windows 用户也可直接运行单文件 `qcom32-volte-1.2.0-r1-windows-x64.exe`）：
 
 ```bash
 # 先运行 CLI 本地自检
@@ -69,7 +69,7 @@ python3 cli/volte_ctl.py install-manager
 
 部署成功时终端会输出 JSON，其中关键指标如下：
 - `"volte_stack_healthy": true`
-- `"ims_service": { "present": true, "version": "2.4-qcom32-volte", "ril_connected": true, "voice_ims_ready": true, "published_framework_reg": 1 }`
+- `"ims_service": { "present": true, "version": "2.5-qcom32-volte", "ril_connected": true, "voice_ims_ready": true, "published_framework_reg": 1 }`
 - `"qmi_imsa": { "pdp_connected": 1, "reg_status": 2, "legacy_reg": 1, "voip": 2, "voip_rat": 1 }`
 - `"framework_ims_registered": ["true"]`
 

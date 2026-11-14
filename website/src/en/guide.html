@@ -60,12 +60,12 @@
   <main id="main">
     <section class="guide-hero" aria-labelledby="guide-title">
       <div class="shell">
-        <p class="eyebrow">SETUP &amp; INTEGRATION GUIDE · <span data-release-version>v1.1.0-r1</span></p>
+        <p class="eyebrow">SETUP &amp; INTEGRATION GUIDE · <span data-release-version>v1.2.0-r1</span></p>
         <h1 id="guide-title">From USB activation to unplugged multi-carrier calls</h1>
         <p class="guide-intro">Follow each stage in order: verify prerequisites → enable Rooted Debugging → run one of the four activation workflows → unplug USB to test calls and swap SIM cards freely.</p>
         <div class="guide-actions">
-          <a class="button button-primary" data-download="windows" href="https://qcom32-downloads.octoooo.com/v1.1.0-r1/qcom32-volte-1.1.0-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>Download Windows EXE</span><small>Recommended · No Magisk</small></span></a>
-          <a class="button button-secondary" data-download="manager" href="https://qcom32-downloads.octoooo.com/v1.1.0-r1/Qcom32VolteManager-1.1.0-r1.apk" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>Download Companion APK</span><small>Zero-su Dashboard + Magisk</small></span></a>
+          <a class="button button-primary" data-download="windows" href="https://qcom32-downloads.octoooo.com/v1.2.0-r1/qcom32-volte-1.2.0-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>Download Windows EXE</span><small>Recommended · No Magisk</small></span></a>
+          <a class="button button-secondary" data-download="manager" href="https://qcom32-downloads.octoooo.com/v1.2.0-r1/Qcom32VolteManager-1.2.0-r1.apk" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>Download Companion APK</span><small>Zero-su Dashboard + Magisk</small></span></a>
         </div>
       </div>
     </section>
@@ -114,10 +114,10 @@
         <section class="guide-section" id="method-windows">
           <h2>03. Method 1: Windows Desktop One-Click EXE (Recommended)</h2>
           <ol class="step-list">
-            <li>Download and launch <code>qcom32-volte-1.1.0-r1-windows-x64.exe</code>.</li>
+            <li>Download and launch <code>qcom32-volte-1.2.0-r1-windows-x64.exe</code>.</li>
             <li>Verify your device serial appears in “ADB Device” and click <strong>“1. Check Status (Read-Only)”</strong>.</li>
             <li>Click <strong>“2. Backup &amp; Activate VoLTE (Recommended)”</strong> and confirm.</li>
-            <li>The tool switches to <code>adb root</code>, saves a pre-deployment EFS snapshot under <code>%LOCALAPPDATA%\qcom32-volte\backups\</code>, provisions Stage 6A + <code>EFS_SYNC</code>, migrates/installs <code>Qcom32VolteIms.apk</code> v2.4, reboots normally, and polls until <code>volte_stack_healthy: true</code>.</li>
+            <li>The tool switches to <code>adb root</code>, saves a pre-deployment EFS snapshot under <code>%LOCALAPPDATA%\qcom32-volte\backups\</code>, provisions Stage 6A + <code>EFS_SYNC</code>, migrates/installs <code>Qcom32VolteIms.apk</code> v2.5, reboots normally, and polls until <code>volte_stack_healthy: true</code>.</li>
             <li>Click <strong>“Install Mobile Companion App”</strong> so you can monitor live IMS status directly on the phone screen while unplugged.</li>
           </ol>
         </section>
@@ -125,7 +125,7 @@
         <section class="guide-section" id="method-manager">
           <h2>04. Method 2: On-Device Companion App</h2>
           <ol class="step-list">
-            <li>Install <code>Qcom32VolteManager-1.1.0-r1.apk</code> (launcher icon: <strong>Qcom32 VoLTE</strong>).</li>
+            <li>Install <code>Qcom32VolteManager-1.2.0-r1.apk</code> (launcher icon: <strong>Qcom32 VoLTE</strong>).</li>
             <li><strong>Without Magisk (Zero-su Live Dashboard):</strong> Tap “Refresh Live Status” anytime to read carrier PLMN, <code>rild_ims0</code>, <code>QMI_IMSA</code> bearer/registration, and framework IMS state over <code>content://org.octolab.qcom32ims.status</code>.</li>
             <li><strong>With Magisk (<code>su</code>):</strong> Tap “Activate / Repair Native VoLTE (Magisk su)” to run SHA-256-verified backup, Stage 6A provisioning, APK installation, or factory rollback right on the device.</li>
           </ol>
@@ -133,7 +133,7 @@
 
         <section class="guide-section" id="method-cli">
           <h2>05. Method 3: macOS / Linux / Cross-Platform Portable ZIP</h2>
-          <p>Extract <code>qcom32-volte-1.1.0-r1-portable.zip</code> (requires Python 3.9+ and <code>adb</code>):</p>
+          <p>Extract <code>qcom32-volte-1.2.0-r1-portable.zip</code> (requires Python 3.9+ and <code>adb</code>):</p>
           <pre class="code-block"><code>python3 cli/volte_ctl.py self-test
 python3 cli/volte_ctl.py status
 python3 cli/volte_ctl.py deploy
@@ -176,10 +176,10 @@ $(call inherit-product, packages/apps/Qcom32VolteIms/device-qcom32-volte.mk)</co
         <section class="guide-section" id="verify">
           <h2>10. Verify SHA-256 Checksums</h2>
           <pre class="code-block"><code># Windows PowerShell:
-Get-FileHash "$HOME\Downloads\qcom32-volte-1.1.0-r1-windows-x64.exe" -Algorithm SHA256
+Get-FileHash "$HOME\Downloads\qcom32-volte-1.2.0-r1-windows-x64.exe" -Algorithm SHA256
 
 # macOS / Linux:
-shasum -a 256 ~/Downloads/qcom32-volte-1.1.0-r1-portable.zip</code></pre>
+shasum -a 256 ~/Downloads/qcom32-volte-1.2.0-r1-portable.zip</code></pre>
         </section>
       </div>
     </div>

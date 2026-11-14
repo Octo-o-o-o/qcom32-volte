@@ -193,8 +193,7 @@ public final class VolteManagerLogic {
         boolean qmiOk = (pdp != null && pdp == 1) && (reg != null && reg == 2) && (voip != null && voip == 2);
 
         boolean fwReg = pDump.contains("mImsRegistered=true")
-                || sDump.contains("publishedFrameworkReg=1")
-                || sDump.contains("publishedFrameworkReg=2");
+                || sDump.contains("publishedFrameworkReg=1");
 
         return new StatusSnapshot(
                 verifiedProfile ? profile : "generic-qcom32-readonly",
@@ -268,7 +267,7 @@ public final class VolteManagerLogic {
                 + "cat " + backupQuoted + "/efs-provision-stage6a.txt\n"
                 + "pm install -r \"$TMP_APK\"\n"
                 + "am broadcast -n org.octolab.qcom32ims/.VolteAdminReceiver "
-                + "-a org.octolab.qcom32ims.ACTION_ADMIN --es op apply_override --es cmd apply_override --include-stopped-packages\n"
+                + "-a org.octolab.qcom32ims.ACTION_ADMIN --es op apply_override --es cmd apply_override --ez reboot_required true --include-stopped-packages\n"
                 + "echo 'DEPLOY_STAGE6A_AND_APK_OK'\n";
     }
 

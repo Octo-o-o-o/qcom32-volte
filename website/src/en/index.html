@@ -90,13 +90,13 @@
             <h1 id="hero-title">Native 4G VoLTE &amp; Android 11<br><code>ImsService</code> for <em>32-bit Snapdragon.</em></h1>
             <p class="hero-lead">Qualcomm ended official Snapdragon 800/801 (<code>MSM8974</code>) support at Android 6.0, leaving Android 11 custom ROMs with LTE data but no voice calls after 2G/3G shutdowns. <strong>Qcom32 VoLTE</strong> provides a clean-room 32-bit Android 11 <code>ImsService</code> stack paired with profile-guarded Hexagon modem EFS provisioning—with <strong>BlackBerry Passport (<code>wolverine</code>)</strong> live-verified end to end.</p>
             <div class="hero-actions">
-              <a class="button button-primary" data-download="windows" href="https://qcom32-downloads.octoooo.com/v1.1.0-r1/qcom32-volte-1.1.0-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer">
+              <a class="button button-primary" data-download="windows" href="https://qcom32-downloads.octoooo.com/v1.2.0-r1/qcom32-volte-1.2.0-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer">
                 <span class="button-copy"><span>Download Windows Activator EXE</span><small>Recommended · No Magisk Needed · Bundled ADB &amp; Rollback</small></span>
                 <svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg>
               </a>
               <a class="button button-secondary" href="#methods">Explore All 4 Methods</a>
             </div>
-            <p class="hero-note">Current release: <strong data-release-version>v1.1.0-r1</strong> (generic <code>Qcom32VolteIms</code> v2.4 + <code>Qcom32VolteManager</code> v1.1.0 + <code>blackberry-passport-wolverine</code> profile). <a href="guide.html">Read the Setup Guide</a></p>
+            <p class="hero-note">Current release: <strong data-release-version>v1.2.0-r1</strong> (generic <code>Qcom32VolteIms</code> v2.5 + <code>Qcom32VolteManager</code> v1.2.0 + <code>blackberry-passport-wolverine</code> profile). <a href="guide.html">Read the Setup Guide</a></p>
           </div>
 
           <div class="hero-visual">
@@ -104,7 +104,7 @@
             <figure class="software-figure">
               <div class="software-topbar"><span>QCOM32 VOLTE STACK · OCTOLAB</span><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
               <img src="../assets/og-card.png" width="1200" height="630" alt="Qcom32 VoLTE 32-bit Qualcomm Android 11 VoLTE stack overview">
-              <figcaption><span><i class="status-dot" aria-hidden="true"></i>QMI_IMSA Registered · Stock Dialer HD Voice · Working Caller ID</span><small>v1.1.0-r1</small></figcaption>
+              <figcaption><span><i class="status-dot" aria-hidden="true"></i>QMI_IMSA Registered · Stock Dialer HD Voice · Working Caller ID</span><small>v1.2.0-r1</small></figcaption>
             </figure>
             <div class="signal-note" aria-hidden="true">
               <svg viewBox="0 0 90 44"><path d="M2 36h12l7-24 9 29 10-36 10 31h12l7-15 7 15h12"/></svg>
@@ -115,7 +115,7 @@
 
         <div class="proof-strip">
           <div><span class="proof-number">01</span><p><strong>Generic Stack + Profile Guard</strong><small>Reusable Android 11 ImsService with device-gated EFS writes</small></p></div>
-          <div><span class="proof-number">02</span><p><strong>No Magisk + Auto SIM Swap</strong><small>Rooted Debugging setup &amp; automatic CarrierConfig re-bind</small></p></div>
+          <div><span class="proof-number">02</span><p><strong>No Magisk + Auto Status Alerts</strong><small>Auto SIM-swap re-bind with native boot &amp; reboot notifications</small></p></div>
           <div><span class="proof-number">03</span><p><strong>Pre-Backup &amp; Full Rollback</strong><small>Restores all 54 modem EFS items on demand</small></p></div>
           <a href="#comparison">Compare vs Reference Project <svg class="icon" aria-hidden="true"><use href="#icon-arrow"/></svg></a>
         </div>
@@ -156,7 +156,7 @@
         <div class="principles">
           <article><span>Device Profile Registry</span><h3>Zero Blind EFS Writes</h3><p><code>Qcom32VolteIms</code> and read-only <code>libimsa_probe.so</code> work generically across 32-bit Qualcomm targets, while modem EFS mutations strictly require a verified <code>devices/*/profile.json</code> match and CRC-16 checks.</p></article>
           <article><span>Zero Permission Drift</span><h3>Protects System Phone State</h3><p>Declaring extra permissions in a runtime-installed <code>android.uid.phone</code> APK breaks telephony on Android 11; bytecode gates enforce zero manifest permissions.</p></article>
-          <article><span>Zero-su Live Telemetry</span><h3>Unplugged SIM-Swap Dashboard</h3><p>Exposes a zero-PII read-only <code>content://org.octolab.qcom32ims.status</code> endpoint so <code>Qcom32VolteManager</code> displays live <code>QMI_IMSA</code> &amp; IMS status on-screen without Magisk <code>su</code>.</p></article>
+          <article><span>Auto Alerts &amp; Zero-su UI</span><h3>Boot / SIM-Swap System Alerts</h3><p>Posts native Android 11 notifications on boot, SIM swap, or pending reboot (with zero mid-day spam); tap any alert to view live <code>QMI_IMSA</code> telemetry without <code>su</code>.</p></article>
         </div>
       </div>
     </section>
@@ -173,7 +173,7 @@
           <article class="method-card method-card-primary">
             <div class="method-top"><span>METHOD 01 · WINDOWS X64</span><span class="badge badge-recommended">Recommended · No Magisk</span></div>
             <h3>Standalone Windows Desktop Activator</h3>
-            <p class="method-sub">qcom32-volte-1.1.0-r1-windows-x64.exe</p>
+            <p class="method-sub">qcom32-volte-1.2.0-r1-windows-x64.exe</p>
             <p>Single-file GUI bundling Python/Tk, official <code>adb.exe</code>, device profiles, and all signed phone payloads—zero external setup required.</p>
             <ul>
               <li>Enable <strong>USB debugging</strong> + <strong>Rooted debugging</strong> in LineageOS Developer Options</li>
@@ -189,7 +189,7 @@
           <article class="method-card">
             <div class="method-top"><span>METHOD 02 · ON-DEVICE APK</span><span class="badge badge-neutral">Zero-su Dashboard + Magisk</span></div>
             <h3>Android Companion Manager App</h3>
-            <p class="method-sub">Qcom32VolteManager-1.1.0-r1.apk (org.octolab.qcom32volte)</p>
+            <p class="method-sub">Qcom32VolteManager-1.2.0-r1.apk (org.octolab.qcom32volte)</p>
             <p>Standalone user-space app (signed with its own key so it never collides with <code>UID 1001</code>) embedding SHA-256-verified payloads.</p>
             <ul>
               <li><strong>Works without Magisk or USB</strong>: displays live carrier PLMN, <code>rild_ims0</code>, <code>QMI_IMSA</code> VoIP, and framework IMS status directly on-screen</li>
@@ -204,7 +204,7 @@
           <article class="method-card">
             <div class="method-top"><span>METHOD 03 · PORTABLE CLI &amp; GUI</span><span class="badge badge-neutral">macOS / Linux / Power Users</span></div>
             <h3>Cross-Platform Portable Bundle</h3>
-            <p class="method-sub">qcom32-volte-1.1.0-r1-portable.zip</p>
+            <p class="method-sub">qcom32-volte-1.2.0-r1-portable.zip</p>
             <p>Zero-dependency Python 3 CLI and Tkinter GUI paired with prebuilt ARM32 binaries, signed APKs, and <code>devices/</code> profiles.</p>
             <ul>
               <li><code>python3 cli/volte_ctl.py status</code> — Read-only live telemetry</li>
@@ -271,7 +271,7 @@
               <tr>
                 <td>Android Stack &amp; Caller ID</td>
                 <td>Zero Android app code (README mentions of <code>qcril.db</code> and boot scripts are unimplemented in its 4 shell scripts).</td>
-                <td>Clean-room <code>Qcom32VolteIms.apk</code> v2.4 (<code>rild_ims0</code> protobuf engine, persistent <code>CarrierConfig</code>, 3GPP <code>CLIP→OIR</code> + <code>TOA=145</code> Caller ID fix).</td>
+                <td>Clean-room <code>Qcom32VolteIms.apk</code> v2.5 (<code>rild_ims0</code> protobuf engine, persistent <code>CarrierConfig</code>, 3GPP <code>CLIP→OIR</code> + <code>TOA=145</code> Caller ID fix).</td>
               </tr>
               <tr>
                 <td>Root &amp; Rollback Safety</td>
@@ -343,8 +343,8 @@
         <div class="section-heading">
           <h2 id="download-title">Pick your package,<br><em>verify its checksum, and start.</em></h2>
           <div class="release-summary">
-            <p>Current Release<br><strong data-release-version>v1.1.0-r1</strong> · Generic Stack</p>
-            <a class="text-link" data-release-link href="https://github.com/Octo-o-o-o/qcom32-volte/releases/tag/v1.1.0-r1" target="_blank" rel="noopener noreferrer">Release Notes<svg class="icon" aria-hidden="true"><use href="#icon-external"/></svg></a>
+            <p>Current Release<br><strong data-release-version>v1.2.0-r1</strong> · Generic Stack</p>
+            <a class="text-link" data-release-link href="https://github.com/Octo-o-o-o/qcom32-volte/releases/tag/v1.2.0-r1" target="_blank" rel="noopener noreferrer">Release Notes<svg class="icon" aria-hidden="true"><use href="#icon-external"/></svg></a>
           </div>
         </div>
 
@@ -355,8 +355,8 @@
             <p class="platform-spec"><span>Windows 10 / 11 · x64</span><span>No Magisk · Bundled Python/ADB</span></p>
             <p>Double-click to launch. Connect your phone with USB Debugging + Rooted Debugging enabled to inspect status, back up EFS, activate VoLTE, push the Companion App, or roll back.</p>
             <div class="download-actions">
-              <a class="button button-primary" data-download="windows" href="https://qcom32-downloads.octoooo.com/v1.1.0-r1/qcom32-volte-1.1.0-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg>Download Windows EXE</a>
-              <a class="checksum-link" data-download="windows-sha" href="https://qcom32-downloads.octoooo.com/v1.1.0-r1/qcom32-volte-1.1.0-r1-windows-x64.exe.sha256" target="_blank" rel="noopener noreferrer">SHA-256 Checksum<svg class="icon" aria-hidden="true"><use href="#icon-external"/></svg></a>
+              <a class="button button-primary" data-download="windows" href="https://qcom32-downloads.octoooo.com/v1.2.0-r1/qcom32-volte-1.2.0-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg>Download Windows EXE</a>
+              <a class="checksum-link" data-download="windows-sha" href="https://qcom32-downloads.octoooo.com/v1.2.0-r1/qcom32-volte-1.2.0-r1-windows-x64.exe.sha256" target="_blank" rel="noopener noreferrer">SHA-256 Checksum<svg class="icon" aria-hidden="true"><use href="#icon-external"/></svg></a>
             </div>
             <small class="package-note">Unsigned independent open-source binary; verify the SHA-256 hash before running if Windows SmartScreen prompts.</small>
           </article>
@@ -367,31 +367,31 @@
             <p class="platform-spec"><span>Qcom32VolteManager.apk</span><span>Android 11 ARM32 · Zero-su Status</span></p>
             <p>Install on your phone: view live carrier PLMN, <code>rild_ims0</code>, <code>QMI_IMSA</code>, and framework IMS status anytime without root, or provision/rollback on-device with Magisk.</p>
             <div class="download-actions">
-              <a class="button button-primary" data-download="manager" href="https://qcom32-downloads.octoooo.com/v1.1.0-r1/Qcom32VolteManager-1.1.0-r1.apk" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg>Download Companion APK</a>
-              <a class="checksum-link" data-download="manager-sha" href="https://qcom32-downloads.octoooo.com/v1.1.0-r1/Qcom32VolteManager-1.1.0-r1.apk.sha256" target="_blank" rel="noopener noreferrer">SHA-256 Checksum<svg class="icon" aria-hidden="true"><use href="#icon-external"/></svg></a>
+              <a class="button button-primary" data-download="manager" href="https://qcom32-downloads.octoooo.com/v1.2.0-r1/Qcom32VolteManager-1.2.0-r1.apk" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg>Download Companion APK</a>
+              <a class="checksum-link" data-download="manager-sha" href="https://qcom32-downloads.octoooo.com/v1.2.0-r1/Qcom32VolteManager-1.2.0-r1.apk.sha256" target="_blank" rel="noopener noreferrer">SHA-256 Checksum<svg class="icon" aria-hidden="true"><use href="#icon-external"/></svg></a>
             </div>
-            <small class="package-note">Embeds SHA-256-verified <code>Qcom32VolteIms.apk</code> v2.4 and <code>pp_regconfig_provision_v6</code>.</small>
+            <small class="package-note">Embeds SHA-256-verified <code>Qcom32VolteIms.apk</code> v2.5 and <code>pp_regconfig_provision_v6</code>.</small>
           </article>
         </div>
 
         <div class="source-download">
           <p><strong>macOS / Linux / ROM Maintainers:</strong> Portable CLI/GUI bundle, platform-signed generic IMS APK, and clean open-source archive.</p>
           <div>
-            <a data-download="portable" href="https://qcom32-downloads.octoooo.com/v1.1.0-r1/qcom32-volte-1.1.0-r1-portable.zip" target="_blank" rel="noopener noreferrer">Portable CLI/GUI ZIP</a>
-            <a data-download="rom-apk" href="https://qcom32-downloads.octoooo.com/v1.1.0-r1/Qcom32VolteIms-2.4-r1-platform.apk" target="_blank" rel="noopener noreferrer">Qcom32VolteIms Platform APK</a>
-            <a data-download="source" href="https://qcom32-downloads.octoooo.com/v1.1.0-r1/qcom32-volte-1.1.0-r1-source.zip" target="_blank" rel="noopener noreferrer">Source ZIP</a>
-            <a data-release-checksums href="https://qcom32-downloads.octoooo.com/v1.1.0-r1/SHA256SUMS.txt" target="_blank" rel="noopener noreferrer">SHA256SUMS.txt</a>
+            <a data-download="portable" href="https://qcom32-downloads.octoooo.com/v1.2.0-r1/qcom32-volte-1.2.0-r1-portable.zip" target="_blank" rel="noopener noreferrer">Portable CLI/GUI ZIP</a>
+            <a data-download="rom-apk" href="https://qcom32-downloads.octoooo.com/v1.2.0-r1/Qcom32VolteIms-2.5-r1-platform.apk" target="_blank" rel="noopener noreferrer">Qcom32VolteIms Platform APK</a>
+            <a data-download="source" href="https://qcom32-downloads.octoooo.com/v1.2.0-r1/qcom32-volte-1.2.0-r1-source.zip" target="_blank" rel="noopener noreferrer">Source ZIP</a>
+            <a data-release-checksums href="https://qcom32-downloads.octoooo.com/v1.2.0-r1/SHA256SUMS.txt" target="_blank" rel="noopener noreferrer">SHA256SUMS.txt</a>
           </div>
         </div>
 
         <div class="mirror-note">
           <p><strong>Served directly via Cloudflare R2 (<code>qcom32-downloads.octoooo.com</code>).</strong> Identical files and checksums are also mirrored on GitHub Releases:</p>
           <p>
-            <a data-github-download="windows" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.1.0-r1/qcom32-volte-1.1.0-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer">GitHub Windows EXE</a> ·
-            <a data-github-download="manager" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.1.0-r1/Qcom32VolteManager-1.1.0-r1.apk" target="_blank" rel="noopener noreferrer">GitHub Companion APK</a> ·
-            <a data-github-download="portable" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.1.0-r1/qcom32-volte-1.1.0-r1-portable.zip" target="_blank" rel="noopener noreferrer">GitHub Portable ZIP</a> ·
-            <a data-github-download="rom-apk" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.1.0-r1/Qcom32VolteIms-2.4-r1-platform.apk" target="_blank" rel="noopener noreferrer">GitHub IMS APK</a> ·
-            <a href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.1.0-r1/SHA256SUMS.txt" target="_blank" rel="noopener noreferrer">GitHub SHA-256</a>
+            <a data-github-download="windows" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.0-r1/qcom32-volte-1.2.0-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer">GitHub Windows EXE</a> ·
+            <a data-github-download="manager" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.0-r1/Qcom32VolteManager-1.2.0-r1.apk" target="_blank" rel="noopener noreferrer">GitHub Companion APK</a> ·
+            <a data-github-download="portable" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.0-r1/qcom32-volte-1.2.0-r1-portable.zip" target="_blank" rel="noopener noreferrer">GitHub Portable ZIP</a> ·
+            <a data-github-download="rom-apk" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.0-r1/Qcom32VolteIms-2.5-r1-platform.apk" target="_blank" rel="noopener noreferrer">GitHub IMS APK</a> ·
+            <a href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.0-r1/SHA256SUMS.txt" target="_blank" rel="noopener noreferrer">GitHub SHA-256</a>
           </p>
         </div>
       </div>
@@ -430,8 +430,8 @@
           </div>
           <div class="faq-list">
             <details><summary>Do I need to install Magisk?<span aria-hidden="true"></span></summary><p>No! LineageOS 18.1 includes built-in “Rooted debugging” under Developer Options, allowing our Windows EXE or cross-platform CLI to run <code>adb root</code> over USB once. After activation, unplug USB, reboot, and swap SIMs freely—and <code>Qcom32VolteManager.apk</code> displays live telemetry on-screen without Magisk.</p></details>
-            <details><summary>How does upgrading from legacy org.passport.volteims work?<span aria-hidden="true"></span></summary><p>Automatically. Deploying or upgrading with <code>v1.1.0-r1</code> cleans up legacy <code>org.passport.volteims</code> overrides and migrates cleanly to <code>org.octolab.qcom32ims</code> (v2.4).</p></details>
-            <details><summary>Does incoming Caller ID work properly?<span aria-hidden="true"></span></summary><p>Yes. <code>Qcom32VolteIms</code> v2.4 translates 3GPP <code>CLIP</code> presentation values into Android’s <code>ImsCallProfile.OIR_*</code> constants, normalizes <code>TOA=145</code> international numbers, and pushes <code>callSessionUpdated</code> so incoming numbers match Contacts cleanly.</p></details>
+            <details><summary>How does upgrading from legacy org.passport.volteims work?<span aria-hidden="true"></span></summary><p>Automatically. Deploying or upgrading with <code>v1.2.0-r1</code> cleans up legacy <code>org.passport.volteims</code> overrides and migrates cleanly to <code>org.octolab.qcom32ims</code> (v2.5).</p></details>
+            <details><summary>Does incoming Caller ID work properly?<span aria-hidden="true"></span></summary><p>Yes. <code>Qcom32VolteIms</code> v2.5 translates 3GPP <code>CLIP</code> presentation values into Android’s <code>ImsCallProfile.OIR_*</code> constants, normalizes <code>TOA=145</code> international numbers, and pushes <code>callSessionUpdated</code> so incoming numbers match Contacts cleanly.</p></details>
             <details><summary>Can I completely revert my modem EFS back to factory state?<span aria-hidden="true"></span></summary><p>Yes. Every deployment saves a local pre-activation snapshot first, and “Restore Factory Modem EFS &amp; Uninstall” (or <code>volte_ctl.py rollback</code>) restores all 54 EFS items, runs <code>EFS_SYNC</code>, uninstalls the APK, and reboots cleanly.</p></details>
             <details><summary>Can I rely on this for emergency calls (911/112/110)?<span aria-hidden="true"></span></summary><p>No. This is an experimental community hardware-preservation project and has not undergone emergency services certification (E911 / IMS Emergency PDN). Do not rely on modified legacy devices as your sole emergency phone.</p></details>
           </div>

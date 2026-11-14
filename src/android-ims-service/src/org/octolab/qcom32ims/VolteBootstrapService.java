@@ -48,7 +48,12 @@ public final class VolteBootstrapService extends Service {
     private final Runnable retryRunnable = new Runnable() {
         @Override
         public void run() {
-            onTrigger("timer_" + stepIndex);
+            int currentIdx = stepIndex;
+            onTrigger("timer_" + currentIdx);
+            if (currentIdx == 5) {
+                VolteNotificationManager.evaluateNowAsync(
+                        VolteBootstrapService.this, "bootstrap_settle_25s", true);
+            }
             stepIndex++;
             if (Qcom32VolteImsService.isFeatureBound()
                     && CarrierConfigBootstrapReceiver.isLastApplyComplete()) {
@@ -60,6 +65,8 @@ public final class VolteBootstrapService extends Service {
                 long delay = RETRY_DELAYS_MS[stepIndex] - RETRY_DELAYS_MS[stepIndex - 1];
                 handler.postDelayed(this, Math.max(500L, delay));
             } else {
+                VolteNotificationManager.evaluateNowAsync(
+                        VolteBootstrapService.this, "bootstrap_window_end", true);
                 Log.i(TAG, "Bootstrap retry window finished; stopping watcher");
                 stopSelf();
             }

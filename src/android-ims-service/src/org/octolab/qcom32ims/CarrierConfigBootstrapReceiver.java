@@ -1,14 +1,21 @@
 package org.octolab.qcom32ims;
 
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.PersistableBundle;
+import android.provider.Settings;
 import android.telephony.CarrierConfigManager;
 import android.telephony.SubscriptionManager;
+import android.telephony.TelephonyManager;
 import android.telephony.ims.ImsMmTelManager;
 import android.util.Log;
+import java.lang.reflect.Method;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Idempotent Direct-Boot-aware BroadcastReceiver that binds Android 11 ImsResolver
@@ -25,7 +32,14 @@ public final class CarrierConfigBootstrapReceiver extends android.content.Broadc
     static final String PACKAGE_NAME = "org.octolab.qcom32ims";
     private static final String PREFS_NAME = "volte_bootstrap_state";
     private static final String KEY_SEEDED_PREFIX = "seeded_advanced_calling_sub_";
+    private static final String KEY_ORIG_NET_MASK_PREFIX = "orig_net_bitmask_sub_";
+    private static final String KEY_ORIG_SUB_NET_MODE_PREFIX = "orig_sub_pref_net_mode_";
+    private static final String KEY_ORIG_GLOBAL_NET_MODE = "orig_global_pref_net_mode";
+    private static final String KEY_ORIG_FALLBACK_PROP = "orig_persist_radio_fallbackmode";
+    private static final String KEY_FALLBACK_MANAGED = "wolverine_fallback_managed";
+    private static final String PROP_FALLBACK_MODE = "persist.radio.fallbackmode";
     private static final String KEY_ROLLBACK_DISABLED = "rollback_disabled";
+    private static final AtomicBoolean RADIO_CYCLE_IN_FLIGHT = new AtomicBoolean(false);
 
     private static volatile String lastBootstrapSummary = "never";
     private static volatile boolean lastApplyComplete;
@@ -64,15 +78,47 @@ public final class CarrierConfigBootstrapReceiver extends android.content.Broadc
             return;
         }
         String action = intent != null ? intent.getAction() : "null";
+        if ("android.intent.action.MY_PACKAGE_REPLACED".equals(action)) {
+            applyOverrideIfNeeded(context, "rx:MY_PACKAGE_REPLACED", false);
+            VolteNotificationManager.onPackageReplacedAsync(context);
+            Qcom32VolteImsService.schedulePostEventNotificationSettle("rx:MY_PACKAGE_REPLACED");
+            if (!Qcom32VolteImsService.isFeatureBound()) {
+                startBootstrapWatcherQuietly(context);
+            }
+            return;
+        }
+        if ("android.intent.action.SIM_STATE_CHANGED".equals(action)) {
+            String ss = intent != null ? intent.getStringExtra("ss") : null;
+            if ("ABSENT".equals(ss)) {
+                VolteNotificationManager.onSimAbsentAsync(context);
+                return;
+            }
+            if ("LOADED".equals(ss) || "READY".equals(ss) || "IMSI".equals(ss)) {
+                applyOverrideIfNeeded(context, "rx:SIM_" + ss, false);
+                startBootstrapWatcherQuietly(context);
+                Qcom32VolteImsService.schedulePostEventNotificationSettle("sim_" + ss);
+                return;
+            }
+        }
         applyOverrideIfNeeded(context, "rx:" + action, false);
+        if ("android.intent.action.BOOT_COMPLETED".equals(action)
+                || "android.intent.action.USER_UNLOCKED".equals(action)
+                || "android.telephony.action.DEFAULT_SUBSCRIPTION_CHANGED".equals(action)) {
+            VolteNotificationManager.evaluateNowAsync(context, "rx:" + action, false);
+            Qcom32VolteImsService.schedulePostEventNotificationSettle("rx:" + action);
+        }
         if (!Qcom32VolteImsService.isFeatureBound()) {
             startBootstrapWatcherQuietly(context);
         }
     }
 
     static String adminEnableAndApply(Context context) {
+        return adminEnableAndApply(context, false);
+    }
+
+    static String adminEnableAndApply(Context context, boolean suppressLiveRadioCycle) {
         setBootstrapDisabled(context, false);
-        String res = applyOverrideIfNeeded(context, "admin_apply", true);
+        String res = applyOverrideIfNeeded(context, "admin_apply", true, suppressLiveRadioCycle);
         if (!Qcom32VolteImsService.isFeatureBound()) {
             startBootstrapWatcherQuietly(context);
         }
@@ -108,6 +154,11 @@ public final class CarrierConfigBootstrapReceiver extends android.content.Broadc
     }
 
     static synchronized String applyOverrideIfNeeded(Context context, String trigger, boolean force) {
+        return applyOverrideIfNeeded(context, trigger, force, false);
+    }
+
+    static synchronized String applyOverrideIfNeeded(
+            Context context, String trigger, boolean force, boolean suppressLiveRadioCycle) {
         if (context == null) return "null_context";
         if (!force && isBootstrapDisabled(context)) {
             lastApplyComplete = false;
@@ -173,6 +224,7 @@ public final class CarrierConfigBootstrapReceiver extends android.content.Broadc
                 }
 
                 seedAdvancedCallingOnce(context, subId, force, sb);
+                alignWolverineChinaTelecomModeIfNeeded(context, subId, suppressLiveRadioCycle, sb);
             }
 
             if (wrotePersistent) {
@@ -194,6 +246,8 @@ public final class CarrierConfigBootstrapReceiver extends android.content.Broadc
     static synchronized String clearOverrideAll(Context context, String trigger) {
         if (context == null) return "null_context";
         setBootstrapDisabled(context, true);
+        VolteNotificationManager.cancelAllAndReset(context);
+        restoreSavedNetworkBitmasksQuietly(context);
         lastApplyComplete = false;
         try {
             context.stopService(new Intent(context, VolteBootstrapService.class));
@@ -266,5 +320,276 @@ public final class CarrierConfigBootstrapReceiver extends android.content.Broadc
         } catch (Exception ex) {
             sb.append("(adv_err=").append(ex.getClass().getSimpleName()).append(')');
         }
+    }
+
+    private static String getSystemProperty(String key, String defVal) {
+        try {
+            Class<?> cls = Class.forName("android.os.SystemProperties");
+            Method m = cls.getMethod("get", String.class, String.class);
+            Object v = m.invoke(null, key, defVal);
+            return v != null ? String.valueOf(v) : defVal;
+        } catch (Throwable ex) {
+            return defVal;
+        }
+    }
+
+    private static boolean writeFallbackModeProperty(String targetVal) {
+        String desired = targetVal != null ? targetVal.trim() : "";
+        try {
+            Class<?> cls = Class.forName("android.os.SystemProperties");
+            Method m = cls.getMethod("set", String.class, String.class);
+            m.invoke(null, PROP_FALLBACK_MODE, desired);
+        } catch (Throwable ex) {
+            Log.w(TAG, "SystemProperties.set(" + PROP_FALLBACK_MODE + ") err=" + ex.getClass().getSimpleName());
+        }
+        if (!desired.equals(getSystemProperty(PROP_FALLBACK_MODE, "").trim())) {
+            try {
+                java.lang.Process p = new ProcessBuilder("/system/bin/setprop", PROP_FALLBACK_MODE, desired).start();
+                p.waitFor(2, TimeUnit.SECONDS);
+            } catch (Throwable ignored) { }
+        }
+        return desired.equals(getSystemProperty(PROP_FALLBACK_MODE, "").trim());
+    }
+
+    private static void scheduleOneShotRadioPowerReload(Context context, final int subId, final String reason) {
+        if (context == null || !RADIO_CYCLE_IN_FLIGHT.compareAndSet(false, true)) {
+            return;
+        }
+        final Context appCtx = context.getApplicationContext();
+        Thread t = new Thread(() -> {
+            try {
+                TelephonyManager tm = appCtx.getSystemService(TelephonyManager.class);
+                if (tm == null || tm.getCallState() != TelephonyManager.CALL_STATE_IDLE) {
+                    Log.i(TAG, "skip radio reload (" + reason + "): call not idle");
+                    return;
+                }
+                TelephonyManager tmSub = tm.createForSubscriptionId(subId);
+                Method setPower = TelephonyManager.class.getMethod("setRadioPower", boolean.class);
+                Object offRes = setPower.invoke(tmSub, Boolean.FALSE);
+                Thread.sleep(1000L);
+                Object onRes = setPower.invoke(tmSub, Boolean.TRUE);
+                Log.i(TAG, "radio power reloaded fallbackmode (" + reason + ") off=" + offRes + " on=" + onRes);
+                Qcom32VolteImsService.schedulePostEventNotificationSettle("radio_reload_" + reason);
+            } catch (Throwable ex) {
+                Log.w(TAG, "radio reload err=" + ex.getClass().getSimpleName() + ":" + ex.getMessage());
+            } finally {
+                RADIO_CYCLE_IN_FLIGHT.set(false);
+            }
+        }, "wolverine-fb-reload");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    private static void alignWolverineChinaTelecomModeIfNeeded(
+            Context context, int subId, boolean suppressLiveRadioCycle, StringBuilder sb) {
+        try {
+            if (!VolteStatusNotificationLogic.isWolverineDevice(Build.DEVICE)) {
+                return;
+            }
+            TelephonyManager tm = context.getSystemService(TelephonyManager.class);
+            if (tm == null) return;
+            TelephonyManager tmSub = tm.createForSubscriptionId(subId);
+            String simOp = QmiProbeSummaryParser.sanitizeSimOperator(tmSub.getSimOperator());
+            if (simOp.isEmpty()) {
+                simOp = Qcom32VolteImsService.readSafeSimOperator(context);
+            }
+            if (simOp.isEmpty()) {
+                return;
+            }
+
+            Context deCtx = context.createDeviceProtectedStorageContext();
+            SharedPreferences prefs = deCtx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            ContentResolver cr = context.getContentResolver();
+            String curProp = getSystemProperty(PROP_FALLBACK_MODE, "").trim();
+
+            if (!VolteStatusNotificationLogic.isChinaTelecom(simOp)) {
+                SharedPreferences.Editor ed = prefs.edit();
+                boolean prefsChanged = false;
+                int origMode = prefs.getInt(
+                        KEY_ORIG_GLOBAL_NET_MODE,
+                        VolteStatusNotificationLogic.NETWORK_MODE_LTE_CDMA_EVDO_GSM_WCDMA);
+                if (prefs.contains(KEY_ORIG_GLOBAL_NET_MODE) && cr != null) {
+                    Settings.Global.putInt(cr, "preferred_network_mode", origMode);
+                    ed.remove(KEY_ORIG_GLOBAL_NET_MODE);
+                    prefsChanged = true;
+                }
+                String subModeKey = KEY_ORIG_SUB_NET_MODE_PREFIX + subId;
+                if (prefs.contains(subModeKey) && cr != null) {
+                    int origSubMode = prefs.getInt(subModeKey, origMode);
+                    Settings.Global.putInt(
+                            cr, "preferred_network_mode" + subId, origSubMode >= 0 ? origSubMode : origMode);
+                    ed.remove(subModeKey);
+                    prefsChanged = true;
+                }
+                String origMaskKey = KEY_ORIG_NET_MASK_PREFIX + subId;
+                if (prefs.contains(origMaskKey)) {
+                    long origMask = prefs.getLong(origMaskKey, 0L);
+                    if (origMask > 0L) {
+                        tmSub.setPreferredNetworkTypeBitmask(origMask);
+                    }
+                    ed.remove(origMaskKey);
+                    prefsChanged = true;
+                }
+                boolean propRestored = false;
+                if (prefs.getBoolean(KEY_FALLBACK_MANAGED, false)) {
+                    String origProp = prefs.getString(KEY_ORIG_FALLBACK_PROP, "");
+                    if (!origProp.equals(curProp)) {
+                        propRestored = writeFallbackModeProperty(origProp);
+                    }
+                    ed.remove(KEY_FALLBACK_MANAGED);
+                    ed.remove(KEY_ORIG_FALLBACK_PROP);
+                    prefsChanged = true;
+                }
+                if (prefsChanged) {
+                    ed.commit();
+                    sb.append("(restored_non_ct=").append(origMode)
+                            .append(",fb_restored=").append(propRestored).append(')');
+                }
+                if (propRestored && !suppressLiveRadioCycle) {
+                    scheduleOneShotRadioPowerReload(context, subId, "restore_non_ct");
+                }
+                return;
+            }
+
+            int targetMode = VolteStatusNotificationLogic.NETWORK_MODE_LTE_GSM_WCDMA;
+            long targetMask = VolteStatusNotificationLogic.BITMASK_LTE_GSM_WCDMA;
+            String targetProp = VolteStatusNotificationLogic.targetWolverineFallbackModeProp(Build.DEVICE, simOp);
+
+            int curGlobal = cr != null
+                    ? Settings.Global.getInt(
+                            cr,
+                            "preferred_network_mode",
+                            VolteStatusNotificationLogic.NETWORK_MODE_LTE_CDMA_EVDO_GSM_WCDMA)
+                    : targetMode;
+            int curSubMode = cr != null
+                    ? Settings.Global.getInt(cr, "preferred_network_mode" + subId, -1)
+                    : targetMode;
+            long curMask = tmSub.getPreferredNetworkTypeBitmask();
+
+            SharedPreferences.Editor saveEd = prefs.edit();
+            boolean savedAny = false;
+            if (!prefs.contains(KEY_ORIG_GLOBAL_NET_MODE) && cr != null) {
+                int toSave = (curGlobal == VolteStatusNotificationLogic.NETWORK_MODE_LTE_ONLY
+                        || curGlobal == targetMode)
+                        ? VolteStatusNotificationLogic.NETWORK_MODE_LTE_CDMA_EVDO_GSM_WCDMA
+                        : curGlobal;
+                saveEd.putInt(KEY_ORIG_GLOBAL_NET_MODE, toSave);
+                savedAny = true;
+            }
+            String subModeKey = KEY_ORIG_SUB_NET_MODE_PREFIX + subId;
+            if (!prefs.contains(subModeKey) && cr != null) {
+                int toSaveSub = (curSubMode == VolteStatusNotificationLogic.NETWORK_MODE_LTE_ONLY
+                        || curSubMode == targetMode)
+                        ? VolteStatusNotificationLogic.NETWORK_MODE_LTE_CDMA_EVDO_GSM_WCDMA
+                        : curSubMode;
+                saveEd.putInt(subModeKey, toSaveSub);
+                savedAny = true;
+            }
+            String origMaskKey = KEY_ORIG_NET_MASK_PREFIX + subId;
+            if (!prefs.contains(origMaskKey)
+                    && curMask > 0L
+                    && curMask != VolteStatusNotificationLogic.BITMASK_LTE_ONLY
+                    && curMask != targetMask) {
+                saveEd.putLong(origMaskKey, curMask);
+                savedAny = true;
+            }
+            if (!prefs.getBoolean(KEY_FALLBACK_MANAGED, false)) {
+                saveEd.putString(KEY_ORIG_FALLBACK_PROP, targetProp.equals(curProp) ? "" : curProp);
+                saveEd.putBoolean(KEY_FALLBACK_MANAGED, true);
+                savedAny = true;
+            }
+            if (savedAny) {
+                saveEd.commit();
+            }
+
+            if (!VolteStatusNotificationLogic.needsChinaTelecomWolverineAlignment(
+                    Build.DEVICE, simOp, curGlobal, curMask, curProp)
+                    && curSubMode == targetMode) {
+                sb.append("(ct_wolverine_already=9/").append(curMask).append("/fb=").append(curProp).append(')');
+                return;
+            }
+
+            if (cr != null) {
+                if (curGlobal != targetMode) {
+                    Settings.Global.putInt(cr, "preferred_network_mode", targetMode);
+                }
+                if (curSubMode != targetMode) {
+                    Settings.Global.putInt(cr, "preferred_network_mode" + subId, targetMode);
+                }
+            }
+            boolean maskOk = true;
+            if (!VolteStatusNotificationLogic.isLteGsmWcdmaMask(curMask)) {
+                maskOk = tmSub.setPreferredNetworkTypeBitmask(targetMask);
+            }
+            boolean propChanged = false;
+            if (!targetProp.equals(curProp)) {
+                propChanged = writeFallbackModeProperty(targetProp);
+            }
+            String verifyProp = getSystemProperty(PROP_FALLBACK_MODE, "").trim();
+            sb.append("(ct_wolverine_align=9,maskOk=").append(maskOk)
+                    .append(",prevMask=").append(curMask)
+                    .append(",fb=").append(verifyProp).append(')');
+            if (propChanged && !suppressLiveRadioCycle) {
+                scheduleOneShotRadioPowerReload(context, subId, "ct_fallback_align");
+            }
+        } catch (Exception ex) {
+            sb.append("(ct_net_err=").append(ex.getClass().getSimpleName()).append(')');
+        }
+    }
+
+    private static void restoreSavedNetworkBitmasksQuietly(Context context) {
+        try {
+            TelephonyManager tm = context.getSystemService(TelephonyManager.class);
+            Context deCtx = context.createDeviceProtectedStorageContext();
+            SharedPreferences prefs = deCtx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            Map<String, ?> all = prefs.getAll();
+            SharedPreferences.Editor ed = prefs.edit();
+            boolean changed = false;
+            ContentResolver cr = context.getContentResolver();
+            int origGlobal = prefs.getInt(
+                    KEY_ORIG_GLOBAL_NET_MODE,
+                    VolteStatusNotificationLogic.NETWORK_MODE_LTE_CDMA_EVDO_GSM_WCDMA);
+            if (prefs.contains(KEY_ORIG_GLOBAL_NET_MODE) && cr != null) {
+                Settings.Global.putInt(cr, "preferred_network_mode", origGlobal);
+                ed.remove(KEY_ORIG_GLOBAL_NET_MODE);
+                changed = true;
+            }
+            if (all != null) {
+                for (Map.Entry<String, ?> entry : all.entrySet()) {
+                    String k = entry.getKey();
+                    if (k == null) continue;
+                    if (k.startsWith(KEY_ORIG_SUB_NET_MODE_PREFIX) && entry.getValue() instanceof Integer && cr != null) {
+                        int subId = Integer.parseInt(k.substring(KEY_ORIG_SUB_NET_MODE_PREFIX.length()));
+                        int savedSub = (Integer) entry.getValue();
+                        Settings.Global.putInt(
+                                cr, "preferred_network_mode" + subId, savedSub >= 0 ? savedSub : origGlobal);
+                        ed.remove(k);
+                        changed = true;
+                    } else if (k.startsWith(KEY_ORIG_NET_MASK_PREFIX)
+                            && entry.getValue() instanceof Long
+                            && tm != null) {
+                        int subId = Integer.parseInt(k.substring(KEY_ORIG_NET_MASK_PREFIX.length()));
+                        long origMask = (Long) entry.getValue();
+                        if (SubscriptionManager.isValidSubscriptionId(subId) && origMask > 0L) {
+                            tm.createForSubscriptionId(subId).setPreferredNetworkTypeBitmask(origMask);
+                        }
+                        ed.remove(k);
+                        changed = true;
+                    }
+                }
+            }
+            if (prefs.getBoolean(KEY_FALLBACK_MANAGED, false)) {
+                String origProp = prefs.getString(KEY_ORIG_FALLBACK_PROP, "");
+                writeFallbackModeProperty(origProp);
+                ed.remove(KEY_FALLBACK_MANAGED);
+                ed.remove(KEY_ORIG_FALLBACK_PROP);
+                changed = true;
+            } else if ("9".equals(getSystemProperty(PROP_FALLBACK_MODE, "").trim())) {
+                writeFallbackModeProperty("");
+            }
+            if (changed) {
+                ed.commit();
+            }
+        } catch (Exception ignored) { }
     }
 }

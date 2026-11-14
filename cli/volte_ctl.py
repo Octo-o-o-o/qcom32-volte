@@ -49,7 +49,7 @@ LEGACY_ADMIN_RECEIVER = f"{LEGACY_IMS_PKG}/.VolteAdminReceiver"
 LEGACY_ADMIN_ACTION = "org.passport.volteims.ACTION_ADMIN"
 
 REMOTE_TMP_PROVISIONER = "/data/local/tmp/pp_regconfig_provision_v6"
-EXPECTED_VERSION = "2.4-qcom32-volte"
+EXPECTED_VERSION = "2.5-qcom32-volte"
 
 PII_REDACT_RE = re.compile(r"\b\d{11,20}\b")
 
@@ -455,11 +455,11 @@ def run_deploy_flow(
     finally:
         adb.shell(f"rm -f {REMOTE_TMP_PROVISIONER}", check=False)
 
-    step("Installing Qcom32VolteIms.apk v2.4 & applying persistent CarrierConfig...")
+    step("Installing Qcom32VolteIms.apk v2.5 & applying persistent CarrierConfig...")
     adb.run(["install", "-r", str(apk_path)], timeout=60)
     adb.shell(
         f"am broadcast -n {IMS_ADMIN_RECEIVER} -a {IMS_ADMIN_ACTION} "
-        "--es op apply_override --es cmd apply_override --include-stopped-packages",
+        "--es op apply_override --es cmd apply_override --ez reboot_required true --include-stopped-packages",
         timeout=30,
     )
     pkg_dump = adb.shell(f"dumpsys package {IMS_PKG}", timeout=30)
@@ -476,11 +476,62 @@ def run_deploy_flow(
     return ready_status
 
 
+def poll_until_apk_bound(
+    adb: AdbClient,
+    require_registered: bool = False,
+    timeout_sec: int = 35,
+) -> dict[str, object]:
+    if require_registered:
+        status = poll_until_volte_ready(adb, timeout_sec=max(timeout_sec, 90))
+        status["apk_upgrade_verified"] = True
+        return status
+
+    deadline = time.time() + timeout_sec
+    last_status: dict[str, object] = {}
+    bound_since: float | None = None
+    while time.time() < deadline:
+        last_status = query_live_volte_status(adb)
+        svc = last_status.get("ims_service", {})
+        is_bound = (
+            isinstance(svc, dict)
+            and svc.get("present") is True
+            and svc.get("version") == EXPECTED_VERSION
+            and svc.get("ril_connected") is True
+            and svc.get("feature_ready") is True
+        )
+        if is_bound and last_status.get("volte_stack_healthy") is True:
+            last_status["apk_upgrade_verified"] = True
+            return last_status
+        if is_bound:
+            if bound_since is None:
+                bound_since = time.time()
+            elif time.time() - bound_since >= 16.0:
+                last_status["apk_upgrade_verified"] = True
+                return last_status
+        time.sleep(3.0)
+
+    svc = last_status.get("ims_service", {})
+    if (
+        isinstance(svc, dict)
+        and svc.get("present") is True
+        and svc.get("version") == EXPECTED_VERSION
+        and svc.get("ril_connected") is True
+        and svc.get("feature_ready") is True
+    ):
+        last_status["apk_upgrade_verified"] = True
+        return last_status
+    raise RuntimeError(
+        f"Upgraded {IMS_PKG} ({EXPECTED_VERSION}) did not bind to ImsResolver + rild within {timeout_sec}s: "
+        f"{json.dumps(last_status)}"
+    )
+
+
 def run_upgrade_apk_flow(
     adb: AdbClient,
     apk_path: Path,
     do_reboot: bool,
     on_progress: Callable[[str], None] | None = None,
+    require_registered: bool = False,
 ) -> dict[str, object]:
     if on_progress:
         on_progress("Verifying device identity & upgrading Qcom32VolteIms.apk in-place (zero EFS writes)...")
@@ -496,7 +547,9 @@ def run_upgrade_apk_flow(
         if on_progress:
             on_progress("Rebooting phone normally & verifying hands-free VoLTE restoration...")
         adb.wait_after_reboot(str(ident["boot_id"]))
-    status = poll_until_volte_ready(adb, timeout_sec=90)
+        status = poll_until_apk_bound(adb, require_registered=require_registered, timeout_sec=90)
+    else:
+        status = poll_until_apk_bound(adb, require_registered=require_registered, timeout_sec=35)
     status["upgraded_apk_sha256"] = sha256_bytes(apk_path.read_bytes())
     return status
 
@@ -540,6 +593,7 @@ def run_rollback_flow(
     )
     adb.run(["uninstall", IMS_PKG], timeout=30, check=False)
     adb.run(["uninstall", MANAGER_PKG], timeout=30, check=False)
+    adb.shell("setprop persist.radio.fallbackmode ''", timeout=15, check=False)
 
     backup_dir = persistent_backup_root() / ("volte-ctl-rollback-" + dt.datetime.now().strftime("%Y%m%d-%H%M%S"))
     backup_dir.mkdir(parents=True, exist_ok=True)
@@ -580,6 +634,11 @@ def main(argv: list[str] | None = None) -> int:
     p_upg = sub.add_parser("upgrade-apk", help="In-place Qcom32VolteIms.apk upgrade (zero EFS writes)")
     p_upg.add_argument("--apk", default=None, help="Path to signed Qcom32VolteIms.apk")
     p_upg.add_argument("--reboot", action="store_true", help="Reboot and verify hands-free VoLTE restoration")
+    p_upg.add_argument(
+        "--require-registered",
+        action="store_true",
+        help="Require active SIM carrier VoLTE registration after APK upgrade",
+    )
 
     p_mgr = sub.add_parser("install-manager", help="Install optional on-device companion app Qcom32VolteManager.apk")
     p_mgr.add_argument("--manager-apk", default=None, help="Path to signed Qcom32VolteManager.apk")
@@ -602,7 +661,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.subcmd == "upgrade-apk":
         apk = resolve_artifact(args.apk, "Qcom32VolteIms.apk")
-        emit_json(run_upgrade_apk_flow(adb, apk, args.reboot), args.out_json)
+        emit_json(run_upgrade_apk_flow(adb, apk, args.reboot, require_registered=args.require_registered), args.out_json)
         return 0
     if args.subcmd == "install-manager":
         mgr = resolve_artifact(args.manager_apk, "Qcom32VolteManager.apk")
