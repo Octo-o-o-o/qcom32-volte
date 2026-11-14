@@ -4,7 +4,7 @@
 Runs identically:
   - From source (`python cli/gui.py` or `Start-GUI.cmd`)
   - From portable ZIP (`python3 cli/gui.py`)
-  - From standalone Windows x64 EXE (`qcom32-volte-1.2.1-r1-windows-x64.exe`, with bundled Python/Tk/ADB/Payloads)
+  - From standalone Windows x64 EXE (`qcom32-volte-1.2.2-r1-windows-x64.exe`, with bundled Python/Tk/ADB/Payloads)
 
 Supports:
   - `--self-test <report.json>` for automated offline build & packaging verification without touching any connected phone
@@ -34,10 +34,11 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import volte_ctl  # noqa: E402
 
-APP_VERSION = "1.2.1-r1"
+APP_VERSION = "1.2.2-r1"
 WEBSITE_URL = "https://qcom32-volte.octoooo.com/"
 SISTER_URL = "https://bb10-volte.octoooo.com/"
 GITHUB_URL = "https://github.com/Octo-o-o-o/qcom32-volte"
+COMMERCIAL_EMAIL = "octoooo@octoooo.com"
 
 PALETTE = {
     "canvas": "#f4f5f0",
@@ -60,7 +61,7 @@ STRINGS = {
         "title": f"Qcom32 VoLTE · 高通 32 位 Android 11 原生通话栈工具 v{APP_VERSION}",
         "eyebrow": "32-BIT QUALCOMM SNAPDRAGON (MSM8974) · ANDROID 11 · CLEAN-ROOM IMS",
         "headline": "高通 32 位平台 Android 11 原生 4G VoLTE 通话栈",
-        "subhead": "通用 QCRIL rild_ims0 ↔ Android 11 ImsService 开源实现（首发完整验证机型 Profile：BlackBerry Passport wolverine）。免装 Magisk，先备份基带原值再写入，支持一键完整回滚。",
+        "subhead": "通用 QCRIL rild_ims0 ↔ Android 11 ImsService 源码公开实现（首发验证机型：BlackBerry Passport wolverine）。免装 Magisk、先备份再写入；个人自用免费，商业代刷/预刷售机需付费授权。",
         "lang_btn": "English",
         "web_btn": "官方网站",
         "bb10_btn": "BB10 原生系统项目",
@@ -79,7 +80,7 @@ STRINGS = {
         "btn_manager": "安装手机端管理 App（无 su 可查状态 / Magisk 可激活）",
         "btn_rollback": "恢复出厂基带配置并卸载",
         "btn_export": "导出脱敏诊断报告",
-        "btn_notices": "离线说明与开源许可",
+        "btn_notices": "离线说明与使用许可",
         "log_box": "执行进度与诊断输出（自动隐去手机号/ICCID）",
         "confirm_deploy_title": "确认备份并激活 VoLTE",
         "confirm_deploy_msg": (
@@ -102,7 +103,7 @@ STRINGS = {
         "title": f"Qcom32 VoLTE · 32-Bit Qualcomm Android 11 IMS Stack v{APP_VERSION}",
         "eyebrow": "32-BIT QUALCOMM SNAPDRAGON (MSM8974) · ANDROID 11 · CLEAN-ROOM IMS",
         "headline": "Clean-Room 4G VoLTE & IMS Stack for 32-Bit Qualcomm Platforms",
-        "subhead": "Generic QCRIL rild_ims0 <-> Android 11 ImsService stack (First verified profile: BlackBerry Passport wolverine). No Magisk needed, automatic local EFS backup, and full factory rollback.",
+        "subhead": "Generic QCRIL rild_ims0 <-> Android 11 ImsService stack (First verified profile: BlackBerry Passport wolverine). Free for personal non-commercial use; paid license required for commercial use.",
         "lang_btn": "中文",
         "web_btn": "Website",
         "bb10_btn": "Sister Project (BB10 OS)",
@@ -121,7 +122,7 @@ STRINGS = {
         "btn_manager": "Install Mobile Companion App (Read-Only / Magisk)",
         "btn_rollback": "Restore Factory Modem EFS & Uninstall",
         "btn_export": "Export Redacted Report",
-        "btn_notices": "Offline Guide & Notices",
+        "btn_notices": "Guide & License",
         "log_box": "Progress & Redacted Telemetry Log",
         "confirm_deploy_title": "Confirm Backup & VoLTE Activation",
         "confirm_deploy_msg": (
@@ -551,13 +552,21 @@ class PassportVolteApp:
             "  3. Connect via USB, accept the RSA prompt on the phone, and click:\n"
             "       [1. Check Status] -> [2. Backup & Activate VoLTE].\n"
             "  4. After automatic reboot, verify native incoming & outgoing 4G calls.\n\n"
-            "License: Apache License 2.0.\n"
+            "License / 使用许可声明:\n"
+            "  - Personal & Non-Commercial Use: FREE under PolyForm Noncommercial License 1.0.0.\n"
+            f"  - Commercial Use: Requires a prior paid commercial license from OctoLab ({COMMERCIAL_EMAIL}).\n"
+            "    (Includes paid flashing/remote activation, repair-shop services, selling phones/boards\n"
+            "     pre-flashed with this stack, paid ROMs, or commercial flashing toolkits.)\n"
+            f"  - 个人自用与纯公益免费社区 ROM 免费；商业代刷、预装售机或收费分发须联系 {COMMERCIAL_EMAIL} 获取付费授权。\n"
         )
-        for cand_name in ("THIRD-PARTY-NOTICES.txt", "NOTICE.md"):
-            cand = volte_ctl.REPO_ROOT / cand_name
-            if cand.is_file():
-                notices_text += "\n" + ("=" * 64) + "\n" + cand.read_text(encoding="utf-8", errors="replace")
-                break
+        bundled_notices = volte_ctl.REPO_ROOT / "THIRD-PARTY-NOTICES.txt"
+        if bundled_notices.is_file():
+            notices_text += "\n" + ("=" * 64) + "\n" + bundled_notices.read_text(encoding="utf-8", errors="replace")
+        else:
+            for cand_name in ("NOTICE.md", "COMMERCIAL-LICENSE.md", "LICENSE"):
+                cand = volte_ctl.REPO_ROOT / cand_name
+                if cand.is_file():
+                    notices_text += "\n" + ("=" * 64) + "\n" + cand.read_text(encoding="utf-8", errors="replace")
         win = tk.Toplevel(self.root)
         win.title(self._t("btn_notices"))
         win.geometry("760x540")

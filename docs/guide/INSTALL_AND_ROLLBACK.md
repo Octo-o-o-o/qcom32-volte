@@ -54,7 +54,7 @@ python3 cli/build_all.py
 
 ## 3. 一键激活部署 VoLTE
 
-将手机通过 USB 连接电脑，确认手机无正在进行的通话后执行（普通 Windows 用户也可直接运行单文件 `qcom32-volte-1.2.1-r1-windows-x64.exe`）：
+将手机通过 USB 连接电脑，确认手机无正在进行的通话后执行（普通 Windows 用户也可直接运行单文件 `qcom32-volte-1.2.2-r1-windows-x64.exe`）：
 
 ```bash
 # 先运行 CLI 本地自检

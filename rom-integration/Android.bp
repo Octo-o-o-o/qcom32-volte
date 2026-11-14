@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Free for personal & 100% noncommercial community ROMs; commercial use (paid ROMs or pre-flashed phone sales) requires a paid license from OctoLab (octoooo@octoooo.com).
 // Drop into packages/services/Qcom32VolteIms/Android.bp inside a LineageOS 18.1 (Android 11) 32-bit Qualcomm tree.
 
 cc_binary {

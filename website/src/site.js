@@ -1,6 +1,6 @@
 export const REPOSITORY_URL = 'https://github.com/Octo-o-o-o/qcom32-volte';
 export const SISTER_REPOSITORY_URL = 'https://github.com/Octo-o-o-o/bb10-volte';
-export const RELEASE_TAG = 'v1.2.1-r1';
+export const RELEASE_TAG = 'v1.2.2-r1';
 export const MIRROR_BASE = 'https://qcom32-downloads.octoooo.com';
 export const RELEASE_KEYS = [
   'windows',

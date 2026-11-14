@@ -2,7 +2,8 @@
 
 **简体中文** · **[English (`README.en.md`)](README.en.md)** · **[官方网站 (`qcom32-volte.octoooo.com`)](https://qcom32-volte.octoooo.com/)** · **[完整使用指南](https://qcom32-volte.octoooo.com/guide)** · **[已验证设备库 (`devices/`)](devices/README.md)** · **[Releases 下载](https://github.com/Octo-o-o-o/qcom32-volte/releases)**
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-PolyForm_Noncommercial_1.0.0_%7C_Commercial-2e654d.svg)](LICENSE)
+[![Commercial License](https://img.shields.io/badge/Commercial_Use-Paid_License_Required-984b3e.svg)](COMMERCIAL-LICENSE.md)
 [![Platform](https://img.shields.io/badge/Platform-Qualcomm_32--bit_(MSM8974)-black.svg)](docs/guide/ARCHITECTURE.md)
 [![OS](https://img.shields.io/badge/Android-11_(LineageOS_18.1)-2e654d.svg)](docs/guide/INSTALL_AND_ROLLBACK.md)
 [![Verified](https://img.shields.io/badge/First_Verified_Profile-BlackBerry_Passport_(wolverine)-brightgreen.svg)](devices/blackberry-passport-wolverine/profile.json)
@@ -23,20 +24,20 @@
 - **开机 / 换卡 / 待重启自动系统状态通知与电信 EPS-only 防掉网（v1.2.0+）**：每次开机、插拔更换三网 SIM 卡或刚完成配置写入/回滚时，Android 11 系统通知栏会自动弹出中英文状态提示（如 **`VoLTE 已激活就绪 · 中国联通 / 中国电信`**、**`检测到已换卡 — 请重启手机激活 VoLTE`**、**`未驻留 4G 网络 · VoLTE 待机中 (中国移动)`** 或 **`VoLTE 配置已就绪 — 请重启手机生效`**），点按通知可直接打开管理面板；同时针对 Passport (`wolverine`) 原厂 `libril.so` `fallback_thread` 在中国电信纯 4G (`EPS-only`) 卡下每 3 秒反复切网掉线的问题，自动对齐 `LTE_GSM_WCDMA (9)` 与 `persist.radio.fallbackmode=9`（换回联通/移动卡或回滚时自动还原原值）。
 - **按机型隔离的基带 `EFSmodem` 供给、多机多卡兼容与确定性回滚 (`devices/*/profile.json`)**：只对通过硬件指纹校验的已建档机型开放 `/dev/diag` 基带写入（杜绝跨机型盲写 PDP 槽位风险），兼容高通 `libqdp.so` 针对不同运营商数据 APN（`3gnet`/`cmnet`/`ctnet`/海外卡）或全新 `fsg` 恢复动态维护的 `/pdp_profiles/profile3` 与结构化 `profile1/2` 校验，强制先备份原值，支持一键 `--rollback-all` 100% 还原出厂基带基线。
 - **免刷 Magisk + 拔掉 USB 换三网 SIM 卡零电脑自愈**：首次通过 LineageOS 原生「开发者选项 → Root 调试」激活后即可关闭 Root 调试并拔线独立运行；`CarrierConfigBootstrapReceiver` 自动监听新卡广播并为新 `subId` 绑定持久化 VoLTE 配置。
-- **免 `su` 手机屏幕实时状态面板 (`Qcom32VolteManager.apk` v1.2.1)**：通过零隐私泄露的只读 `VolteStatusProvider` (`content://org.octolab.qcom32ims.status`)，无需安装 Magisk、无需连电脑即可在手机屏幕上实时查看三网/广电运营商、`rild_ims0`、`QMI_IMSA` 承载与框架注册状态；若装有 Magisk (`su`) 更可机内直接激活或回滚。
+- **免 `su` 手机屏幕实时状态面板 (`Qcom32VolteManager.apk` v1.2.2)**：通过零隐私泄露的只读 `VolteStatusProvider` (`content://org.octolab.qcom32ims.status`)，无需安装 Magisk、无需连电脑即可在手机屏幕上实时查看三网/广电运营商、`rild_ims0`、`QMI_IMSA` 承载与框架注册状态；若装有 Magisk (`su`) 更可机内直接激活或回滚。
 
 ---
 
-## 四种使用方式与直接下载（`v1.2.1-r1`）
+## 四种使用方式与直接下载（`v1.2.2-r1`）
 
-默认提供 **Cloudflare R2 高速直连**（国内无需代理即可满速下载）与 **GitHub Releases** 双镜像，SHA-256 校验码完全一致（汇总见 [`SHA256SUMS.txt`](https://qcom32-downloads.octoooo.com/v1.2.1-r1/SHA256SUMS.txt)）：
+默认提供 **Cloudflare R2 高速直连**（国内无需代理即可满速下载）与 **GitHub Releases** 双镜像，SHA-256 校验码完全一致（汇总见 [`SHA256SUMS.txt`](https://qcom32-downloads.octoooo.com/v1.2.2-r1/SHA256SUMS.txt)）：
 
 | 方式 | 适用人群 | 下载入口（Cloudflare R2 直连 / GitHub） | 使用简述 |
 | --- | --- | --- | --- |
-| **1. Windows 桌面一键版（最推荐）** | 绝大多数用户（**无需安装 Magisk**、无需装 Python/ADB） | [R2 下载 EXE](https://qcom32-downloads.octoooo.com/v1.2.1-r1/qcom32-volte-1.2.1-r1-windows-x64.exe) · [GitHub](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.1-r1/qcom32-volte-1.2.1-r1-windows-x64.exe) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.1-r1/qcom32-volte-1.2.1-r1-windows-x64.exe.sha256) | 手机开启「USB 调试 + Root 调试」，双击 EXE 点击「备份并一键激活 VoLTE」即可 |
-| **2. 手机端状态与管理 App** | 拔线换卡实时看状态（**免 Magisk**）或已刷 **Magisk** 机内管理用户 | [R2 下载 APK](https://qcom32-downloads.octoooo.com/v1.2.1-r1/Qcom32VolteManager-1.2.1-r1.apk) · [GitHub](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.1-r1/Qcom32VolteManager-1.2.1-r1.apk) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.1-r1/Qcom32VolteManager-1.2.1-r1.apk.sha256) | 安装至手机桌面；免 `su` 实时查看三网/IMS/`QMI_IMSA` 状态，有 Magisk 可机内激活/回滚 |
-| **3. 跨平台便携包（CLI + GUI）** | macOS / Linux / 命令行用户 | [R2 下载便携 ZIP](https://qcom32-downloads.octoooo.com/v1.2.1-r1/qcom32-volte-1.2.1-r1-portable.zip) · [GitHub](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.1-r1/qcom32-volte-1.2.1-r1-portable.zip) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.1-r1/qcom32-volte-1.2.1-r1-portable.zip.sha256) | 内含签名 ARM32 工具、双 APK 与 `devices/`，运行 `python3 cli/volte_ctl.py deploy` 或 `cli/gui.py` |
-| **4. LineageOS 18.1 ROM 源码集成** | 自定义 ROM 维护者与同代 32 位高通移植开发者 | [`rom-integration/`](rom-integration/README.md) · [系统签名通话栈 APK](https://qcom32-downloads.octoooo.com/v1.2.1-r1/Qcom32VolteIms-2.6-r1-platform.apk) · [源码 ZIP](https://qcom32-downloads.octoooo.com/v1.2.1-r1/qcom32-volte-1.2.1-r1-source.zip) | 通过 `Android.bp` + `device-qcom32-volte.mk` 直接编译进 `/system_ext/priv-app/` |
+| **1. Windows 桌面一键版（最推荐）** | 绝大多数用户（**无需安装 Magisk**、无需装 Python/ADB） | [R2 下载 EXE](https://qcom32-downloads.octoooo.com/v1.2.2-r1/qcom32-volte-1.2.2-r1-windows-x64.exe) · [GitHub](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.2-r1/qcom32-volte-1.2.2-r1-windows-x64.exe) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.2-r1/qcom32-volte-1.2.2-r1-windows-x64.exe.sha256) | 手机开启「USB 调试 + Root 调试」，双击 EXE 点击「备份并一键激活 VoLTE」即可 |
+| **2. 手机端状态与管理 App** | 拔线换卡实时看状态（**免 Magisk**）或已刷 **Magisk** 机内管理用户 | [R2 下载 APK](https://qcom32-downloads.octoooo.com/v1.2.2-r1/Qcom32VolteManager-1.2.2-r1.apk) · [GitHub](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.2-r1/Qcom32VolteManager-1.2.2-r1.apk) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.2-r1/Qcom32VolteManager-1.2.2-r1.apk.sha256) | 安装至手机桌面；免 `su` 实时查看三网/IMS/`QMI_IMSA` 状态，有 Magisk 可机内激活/回滚 |
+| **3. 跨平台便携包（CLI + GUI）** | macOS / Linux / 命令行用户 | [R2 下载便携 ZIP](https://qcom32-downloads.octoooo.com/v1.2.2-r1/qcom32-volte-1.2.2-r1-portable.zip) · [GitHub](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.2-r1/qcom32-volte-1.2.2-r1-portable.zip) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.2-r1/qcom32-volte-1.2.2-r1-portable.zip.sha256) | 内含签名 ARM32 工具、双 APK 与 `devices/`，运行 `python3 cli/volte_ctl.py deploy` 或 `cli/gui.py` |
+| **4. LineageOS 18.1 ROM 源码集成** | 自定义 ROM 维护者与同代 32 位高通移植开发者 | [`rom-integration/`](rom-integration/README.md) · [系统签名通话栈 APK](https://qcom32-downloads.octoooo.com/v1.2.2-r1/Qcom32VolteIms-2.6-r1-platform.apk) · [源码 ZIP](https://qcom32-downloads.octoooo.com/v1.2.2-r1/qcom32-volte-1.2.2-r1-source.zip) | 通过 `Android.bp` + `device-qcom32-volte.mk` 直接编译进 `/system_ext/priv-app/` |
 
 详细图文与命令行步骤请查阅 **[官网完整指南 (`qcom32-volte.octoooo.com/guide`)](https://qcom32-volte.octoooo.com/guide)** 或 **[`docs/guide/INSTALL_AND_ROLLBACK.md`](docs/guide/INSTALL_AND_ROLLBACK.md)**。
 
@@ -73,7 +74,7 @@
 │   └── blackberry-passport-wolverine/profile.json
 ├── src/                             # 【正式生产源码】100% 从源码编译验证，零预编译黑盒
 │   ├── android-ims-service/         # Qcom32VolteIms.apk (通用 32 位 Android 11 ImsService + 状态通知, v2.6)
-│   ├── android-volte-manager/       # Qcom32VolteManager.apk (免 su 实时状态面板 & Magisk 伴侣 App, v1.2.1)
+│   ├── android-volte-manager/       # Qcom32VolteManager.apk (免 su 实时状态面板 & Magisk 伴侣 App, v1.2.2)
 │   ├── modem-efs-provisioner/       # pp_regconfig_provision_v6 (ARM32 DIAG/EFS2 供给与回滚器)
 │   └── qmi-imsa-probe/              # libimsa_probe.so (ARM32 QMI_IMSA/IMSS 只读状态自检探针)
 ├── cli/                             # 【桌面端、跨平台 CLI 与打包工具】
@@ -86,7 +87,8 @@
 ├── website/                         # 【双语官方网站源码】qcom32-volte.octoooo.com (Cloudflare Workers)
 ├── docs/guide/                      # 【正式技术文档】架构、安装回滚、参考项目对比、换卡与 32 位移植指南
 ├── archive/                         # 【研发归档】八大核心踩坑复盘 (LESSONS_LEARNED.md) 与历史目录索引
-└── LICENSE                          # Apache License 2.0
+├── COMMERCIAL-LICENSE.md            # 【商业授权声明】个人免费边界与商业代刷/预刷售机付费授权说明
+└── LICENSE                          # PolyForm Noncommercial License 1.0.0 + OctoLab 商业双重许可
 ```
 
 ---
@@ -104,6 +106,19 @@ python3 cli/build_all.py
 # 3. 构建并校验官方网站静态产物
 cd website && npm test
 ```
+
+---
+
+## 许可协议与商业授权声明（个人非商用免费 · 商业用途需付费授权）
+
+本项目由 **OctoLab (`Octo-o-o-o`)** 采用**双重许可（Dual-Licensing）**发布（详见 [`LICENSE`](LICENSE) 与 [`COMMERCIAL-LICENSE.md`](COMMERCIAL-LICENSE.md)）：
+
+1. **个人玩家与纯公益社区免费**：个人机友在自有设备上使用、研究学习、提交新机型适配，以及**100% 免费公开、无任何收费/进群/打赏门槛的纯公益第三方社区 ROM 集成**（保留署名与相同非商用协议），均免费适用 **[PolyForm Noncommercial License 1.0.0](LICENSE)**。
+2. **商业用途必须事先获得付费授权**：未经 **OctoLab** 书面付费授权，**严禁将本项目的代码、EXE/APK 发行包、基带配置或教程用于任何商业营利行为**，包括但不限于：
+   - 在闲鱼、淘宝、转转、拼多多、维修档口等渠道开展**有偿代刷 VoLTE、远程激活、收费技术服务或倒卖安装包/教程**；
+   - 二手机商或翻新商**售卖预刷本方案或以 4G VoLTE 通话为卖点的整机/主板**（含“买二手机免费送刷 VoLTE”等捆绑销售）；
+   - 合入收费 ROM、付费群解锁包或商业刷机工具箱。
+3. **商业合作与授权联系邮箱**：[`octoooo@octoooo.com`](mailto:octoooo@octoooo.com)
 
 ---
 

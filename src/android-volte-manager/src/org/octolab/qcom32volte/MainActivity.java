@@ -71,6 +71,7 @@ public final class MainActivity extends Activity {
     private TextView statusBadgeView;
     private TextView statusDetailsView;
     private TextView logView;
+    private TextView licenseNoteView;
     private Button refreshButton;
     private Button deployButton;
     private Button upgradeButton;
@@ -231,6 +232,15 @@ public final class MainActivity extends Activity {
         logView.setPadding(dp(14), dp(12), dp(14), dp(12));
         root.addView(logView);
 
+        licenseNoteView = new TextView(this);
+        licenseNoteView.setTextColor(COLOR_MUTED);
+        licenseNoteView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        LinearLayout.LayoutParams licLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        licLp.topMargin = dp(10);
+        licenseNoteView.setLayoutParams(licLp);
+        root.addView(licenseNoteView);
+
         scroll.addView(root);
         setContentView(scroll);
     }
@@ -245,6 +255,7 @@ public final class MainActivity extends Activity {
             upgradeButton.setText("Update Qcom32VolteIms Bridge APK Only (Zero EFS Write)");
             rollbackButton.setText("Restore Factory Modem EFS & Uninstall");
             copyButton.setText("Copy Redacted Diagnostic Report");
+            licenseNoteView.setText("License: Free for personal non-commercial use (PolyForm-Noncommercial-1.0.0). Paid license required for commercial flashing or pre-flashed phone sales: octoooo@octoooo.com");
         } else {
             titleView.setText("Qcom32 VoLTE 通话栈管理端");
             subtitleView.setText("OCTOLAB · 高通 32 位平台 Android 11 原生 IMS 栈 v2.6");
@@ -254,6 +265,7 @@ public final class MainActivity extends Activity {
             upgradeButton.setText("仅原位更新 Qcom32VolteIms 桥接 APK（零 EFS 写入）");
             rollbackButton.setText("一键恢复出厂基带配置并卸载桥接服务");
             copyButton.setText("复制脱敏诊断摘要");
+            licenseNoteView.setText("许可声明：个人自用与纯公益非商用免费（PolyForm-Noncommercial-1.0.0）；有偿代刷、预刷售卖二手机等商业用途须联系 octoooo@octoooo.com 获取付费授权。");
         }
     }
 

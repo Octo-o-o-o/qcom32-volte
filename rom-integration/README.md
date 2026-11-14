@@ -29,3 +29,8 @@
    ```
 
 各 `MSM8974` 机型基带 PDP Profile 与音频路由适配详见 [`docs/guide/MSM8974_PORTING_GUIDE.md`](../docs/guide/MSM8974_PORTING_GUIDE.md) 与 [`devices/README.md`](../devices/README.md)。
+
+## 三、社区公益 ROM 与商业授权边界
+
+- **100% 免费纯公益社区 ROM 允许免费合入**：遵循 [`LICENSE`](../LICENSE) 中的 **PolyForm Noncommercial License 1.0.0**，完全免费向公众开放、无付费群/打赏门槛的第三方非商业社区 ROM 可直接集成，分发时须在源码与发布说明中保留原作者署名、`LICENSE`、`COMMERCIAL-LICENSE.md` 及 `Required Notice:` 非商用声明。
+- **收费 ROM 与预刷售机须取得商业授权**：将本组件合入收费刷机包、会员/赞助解锁包，或预装于对外销售的二手机/翻新机整机中，均属于商业用途，须事先联系 **OctoLab**（`octoooo@octoooo.com`）获取书面付费授权（详见 [`COMMERCIAL-LICENSE.md`](../COMMERCIAL-LICENSE.md)）。

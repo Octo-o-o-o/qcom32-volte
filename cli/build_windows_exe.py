@@ -67,11 +67,11 @@ VSVersionInfo(
       StringTable(
         '040904B0',
         [
-          StringStruct('CompanyName', 'OctoLab Open Source'),
+          StringStruct('CompanyName', 'OctoLab'),
           StringStruct('FileDescription', 'Qcom32 VoLTE — 32-Bit Qualcomm Android 11 Native IMS Stack Activator'),
           StringStruct('FileVersion', '{version_label}'),
           StringStruct('InternalName', 'qcom32-volte'),
-          StringStruct('LegalCopyright', 'Copyright (c) 2026 OctoLab (Apache-2.0)'),
+          StringStruct('LegalCopyright', 'Copyright (c) 2026 OctoLab (Personal Non-Commercial Free / Commercial Paid)'),
           StringStruct('OriginalFilename', 'qcom32-volte-{version_label}-windows-x64.exe'),
           StringStruct('ProductName', 'Qcom32 VoLTE & IMS Stack'),
           StringStruct('ProductVersion', '{version_label}')
@@ -167,6 +167,8 @@ def main() -> int:
     notices_file = stage_dir / "THIRD-PARTY-NOTICES.txt"
     notice_parts = [
         (REPO_ROOT / "NOTICE.md").read_text(encoding="utf-8"),
+        "\n" + ("=" * 72) + "\n",
+        (REPO_ROOT / "COMMERCIAL-LICENSE.md").read_text(encoding="utf-8"),
         "\n" + ("=" * 72) + "\n",
         (REPO_ROOT / "LICENSE").read_text(encoding="utf-8"),
     ]

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Export the standalone public open-source Git repository bundle AND package v1.2.1-r1 release assets
+"""Export the standalone public source-available Git repository bundle AND package v1.2.2-r1 release assets
 for `qcom32-volte`.
 
 Outputs:
   1. `dist/qcom32-volte-opensource/` — Clean public Git repository tree (zero research clutter, zero keys, zero PII)
-  2. `dist/release-v1.2.1-r1/` (when built artifacts exist under `build/release/` & `build/windows/`):
-       - `qcom32-volte-1.2.1-r1-windows-x64.exe` (+ `.sha256`)
-       - `Qcom32VolteManager-1.2.1-r1.apk` (+ `.sha256`)
+  2. `dist/release-v1.2.2-r1/` (when built artifacts exist under `build/release/` & `build/windows/`):
+       - `qcom32-volte-1.2.2-r1-windows-x64.exe` (+ `.sha256`)
+       - `Qcom32VolteManager-1.2.2-r1.apk` (+ `.sha256`)
        - `Qcom32VolteIms-2.6-r1-platform.apk` (+ `.sha256`)
-       - `qcom32-volte-1.2.1-r1-portable.zip` (+ `.sha256`)
-       - `qcom32-volte-1.2.1-r1-source.zip` (+ `.sha256`)
+       - `qcom32-volte-1.2.2-r1-portable.zip` (+ `.sha256`)
+       - `qcom32-volte-1.2.2-r1-source.zip` (+ `.sha256`)
        - `SHA256SUMS.txt`
 """
 from __future__ import annotations
@@ -28,6 +28,7 @@ EXPORT_TREE_ENTRIES = (
     "README.md",
     "README.en.md",
     "LICENSE",
+    "COMMERCIAL-LICENSE.md",
     "NOTICE.md",
     "project.json",
     "Start-GUI.cmd",
@@ -94,6 +95,7 @@ def build_portable_zip(opensource_dir: Path, release_dir: Path, dst_zip: Path, v
         "README.md",
         "README.en.md",
         "LICENSE",
+        "COMMERCIAL-LICENSE.md",
         "NOTICE.md",
         "project.json",
         "Start-GUI.cmd",
