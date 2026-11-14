@@ -1,4 +1,4 @@
-package org.passport.voltemanager;
+package org.octolab.qcom32volte;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -11,11 +11,12 @@ import android.content.res.AssetManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.telephony.TelephonyManager;
 import android.util.TypedValue;
 import android.view.Gravity;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -39,8 +40,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Companion on-device status & Magisk Root manager UI optimized for the 1440x1440 square display
- * of BlackBerry Passport running LineageOS 18.1 (Android 11).
+ * Companion on-device status & Magisk Root manager UI for the Qcom32 VoLTE Android 11 IMS Stack.
+ * First verified modem EFS profile: BlackBerry Passport (wolverine / MSM8974 / LineageOS 18.1).
  */
 public final class MainActivity extends Activity {
     private static final int COLOR_CANVAS = Color.parseColor("#F4F5F0");
@@ -50,6 +51,10 @@ public final class MainActivity extends Activity {
     private static final int COLOR_LINE = Color.parseColor("#D7DDD4");
     private static final int COLOR_ACCENT = Color.parseColor("#2E654D");
     private static final int COLOR_DANGER = Color.parseColor("#984B3E");
+
+    private static final String[] BUNDLED_ASSET_NAMES = new String[]{
+            "pp_regconfig_provision_v6", "libimsa_probe.so", "Qcom32VolteIms.apk"
+    };
 
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private boolean englishMode = false;
@@ -72,7 +77,7 @@ public final class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         englishMode = !Locale.getDefault().getLanguage().toLowerCase(Locale.ROOT).startsWith("zh");
-        buildSquareUi();
+        buildResponsiveUi();
         refreshLabels();
         runCheckStatus();
     }
@@ -121,7 +126,7 @@ public final class MainActivity extends Activity {
         return b;
     }
 
-    private void buildSquareUi() {
+    private void buildResponsiveUi() {
         ScrollView scroll = new ScrollView(this);
         scroll.setBackgroundColor(COLOR_CANVAS);
 
@@ -130,7 +135,6 @@ public final class MainActivity extends Activity {
         int pad = dp(18);
         root.setPadding(pad, pad, pad, pad);
 
-        // Header row
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
@@ -167,7 +171,6 @@ public final class MainActivity extends Activity {
         header.addView(langButton);
         root.addView(header);
 
-        // Status Card
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setBackground(roundedBox(COLOR_SURFACE, COLOR_LINE, 6));
@@ -195,7 +198,6 @@ public final class MainActivity extends Activity {
         card.addView(statusDetailsView);
         root.addView(card);
 
-        // Action buttons
         refreshButton = createActionButton("", false, false);
         refreshButton.setOnClickListener(v -> runCheckStatus());
         root.addView(refreshButton);
@@ -216,7 +218,6 @@ public final class MainActivity extends Activity {
         copyButton.setOnClickListener(v -> copyReportToClipboard());
         root.addView(copyButton);
 
-        // Log output box
         logView = new TextView(this);
         logView.setTextColor(COLOR_MUTED);
         logView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
@@ -231,21 +232,21 @@ public final class MainActivity extends Activity {
 
     private void refreshLabels() {
         if (englishMode) {
-            titleView.setText("Passport Android 11 VoLTE");
-            subtitleView.setText("OCTOLAB · Native Stage 6A + ImsService v2.3 Companion");
+            titleView.setText("Qcom32 VoLTE & IMS Stack");
+            subtitleView.setText("OCTOLAB · 32-bit Qualcomm Android 11 VoLTE Stack v2.4");
             langButton.setText("中文");
             refreshButton.setText("Check Live VoLTE & SIM Status");
             deployButton.setText("Backup EFS & Activate VoLTE (Requires Magisk Root)");
-            upgradeButton.setText("Update ImsService Bridge APK Only (Zero EFS Write)");
+            upgradeButton.setText("Update Qcom32VolteIms Bridge APK Only (Zero EFS Write)");
             rollbackButton.setText("Restore Factory Modem EFS & Uninstall");
             copyButton.setText("Copy Redacted Diagnostic Report");
         } else {
-            titleView.setText("Passport Android 11 VoLTE");
-            subtitleView.setText("OCTOLAB · 原生基带 Stage 6A + ImsService v2.3 伴侣管理端");
+            titleView.setText("Qcom32 VoLTE 通话栈管理端");
+            subtitleView.setText("OCTOLAB · 高通 32 位平台 Android 11 原生 IMS 栈 v2.4");
             langButton.setText("English");
             refreshButton.setText("检查当前 SIM / 4G / VoLTE 状态");
             deployButton.setText("备份原值并一键激活 VoLTE（需手机本地 Magisk Root）");
-            upgradeButton.setText("仅原位更新桥接服务 APK（零基带 EFS 写入）");
+            upgradeButton.setText("仅原位更新 Qcom32VolteIms 桥接 APK（零 EFS 写入）");
             rollbackButton.setText("一键恢复出厂基带配置并卸载桥接服务");
             copyButton.setText("复制脱敏诊断摘要");
         }
@@ -263,28 +264,81 @@ public final class MainActivity extends Activity {
         if (busy) return;
         setBusy(true);
         statusBadgeView.setText(englishMode ? "Checking device & IMS state..." : "正在读取设备与 IMS 状态…");
+        final boolean stageForTest = getIntent() != null
+                && getIntent().getBooleanExtra("stage_assets_for_test", false);
         worker.execute(() -> {
             String model = Build.MODEL;
             String device = Build.DEVICE;
             int sdk = Build.VERSION.SDK_INT;
-            String simNum = readSystemProp("gsm.sim.operator.numeric");
+            String simNum = readLocalSimOperator();
             String netType = readSystemProp("gsm.network.type");
 
             boolean imsInstalled = false;
             String imsVer = null;
+            for (String pkgName : new String[]{VolteManagerLogic.IMS_PKG, VolteManagerLogic.LEGACY_IMS_PKG}) {
+                try {
+                    PackageInfo pi = getPackageManager().getPackageInfo(pkgName, 0);
+                    imsInstalled = true;
+                    imsVer = pi.versionName;
+                    break;
+                } catch (PackageManager.NameNotFoundException ignored) {}
+            }
+
+            boolean assetsVerified = false;
+            String stagedTestNote = "";
             try {
-                PackageInfo pi = getPackageManager().getPackageInfo(VolteManagerLogic.IMS_PKG, 0);
-                imsInstalled = true;
-                imsVer = pi.versionName;
-            } catch (PackageManager.NameNotFoundException ignored) {}
+                if (stageForTest) {
+                    File stagedDir = stageVerifiedAssets();
+                    assetsVerified = stagedDir.isDirectory();
+                    stagedTestNote = "STAGED_PAYLOADS_OK=" + assetsVerified + "\n";
+                } else {
+                    assetsVerified = verifyBundledAssetsOnly();
+                }
+            } catch (Exception e) {
+                stagedTestNote = "ASSET_VERIFY_ERR=" + e.getClass().getSimpleName() + "\n";
+            }
 
             boolean suOk = checkSuAvailable();
-            String svcDump = imsInstalled ? "package=org.passport.volteims\nversion=" + imsVer : "";
+            String svcDump = imsInstalled ? "package=" + VolteManagerLogic.IMS_PKG + "\nversion=" + imsVer : "";
             String qmiOut = "";
             String phoneDump = "";
 
-            if (suOk) {
-                svcDump = execRoot("dumpsys activity service org.passport.volteims/.PassportVolteImsService || true")
+            Bundle providerStatus = queryReadOnlyStatusProvider();
+            if (providerStatus != null) {
+                imsInstalled = true;
+                String pv = providerStatus.getString("version");
+                if (pv != null && !pv.isEmpty()) {
+                    imsVer = pv;
+                }
+                String pSim = providerStatus.getString("sim_operator", "");
+                if (!pSim.isEmpty()) {
+                    simNum = pSim;
+                }
+                String pNet = providerStatus.getString("network_type", "");
+                if (!pNet.isEmpty()) {
+                    netType = pNet;
+                }
+                boolean rilConn = providerStatus.getBoolean("ril_connected", false);
+                boolean voiceReady = providerStatus.getBoolean("voice_ims_ready", false);
+                boolean featReady = providerStatus.getBoolean("feature_ready", false);
+                int pubReg = providerStatus.getInt("published_framework_reg", -1);
+                svcDump = "QCOM32_VOLTE_IMS_V1\n"
+                        + "version=" + (imsVer != null ? imsVer : "unknown") + "\n"
+                        + "rilConnected=" + rilConn + "\n"
+                        + "voiceImsReady=" + voiceReady + "\n"
+                        + "featureReadyCalled=" + featReady + "\n"
+                        + "publishedFrameworkReg=" + pubReg;
+                qmiOut = "pdp_connected=" + providerStatus.getInt("pdp_connected", -1)
+                        + " reg_status=" + providerStatus.getInt("reg_status", -1)
+                        + " legacy_reg=" + providerStatus.getInt("legacy_reg", -1)
+                        + " voip=" + providerStatus.getInt("voip", -1)
+                        + " voip_rat=" + providerStatus.getInt("voip_rat", -1)
+                        + " test_mode=" + providerStatus.getInt("test_mode", -1);
+                if (pubReg == 1) {
+                    phoneDump = "mImsRegistered=true";
+                }
+            } else if (suOk) {
+                svcDump = execRoot("dumpsys activity service org.octolab.qcom32ims/.Qcom32VolteImsService || true")
                         + "\n" + svcDump;
                 phoneDump = execRoot("dumpsys activity service com.android.phone/.TelephonyDebugService | grep -E 'mImsRegistered=' | head -n 4 || true");
                 try {
@@ -300,15 +354,18 @@ public final class MainActivity extends Activity {
                     model, device, sdk, suOk, svcDump, qmiOut, phoneDump, simNum, netType);
 
             String details = "Model / Device : " + model + " (" + device + ", SDK " + sdk + ")\n"
+                    + "Device Profile : " + snap.matchedProfileId + "\n"
                     + "SIM / Network  : " + snap.carrierSummary + "\n"
                     + "Local Root (su): " + (snap.suAvailable ? "YES (UID 0)" : "NO (Use PC ADB Root tool)") + "\n"
+                    + "Bundled Assets : " + (assetsVerified ? "Verified (3 payloads SHA-256 OK)" : "Unverified") + "\n"
                     + "ImsService APK : " + (snap.imsServicePresent ? ("Installed (" + snap.imsServiceVersion + ")") : "Not installed") + "\n"
-                    + "rild_ims0 Link : " + (snap.suAvailable ? String.valueOf(snap.rilConnected) : "Requires su / PC") + "\n"
-                    + "QMI_IMSA VoIP  : " + (snap.suAvailable ? String.valueOf(snap.qmiRegistered) : "Requires su / PC") + "\n"
-                    + "Framework IMS  : " + (snap.suAvailable ? String.valueOf(snap.frameworkRegistered) : "Requires su / PC");
+                    + "rild_ims0 Link : " + (snap.telemetryAvailable ? String.valueOf(snap.rilConnected) : "Requires su / PC") + "\n"
+                    + "QMI_IMSA VoIP  : " + (snap.telemetryAvailable ? String.valueOf(snap.qmiRegistered) : "Requires su / PC") + "\n"
+                    + "Framework IMS  : " + (snap.telemetryAvailable ? String.valueOf(snap.frameworkRegistered) : "Requires su / PC");
 
             String rawLog = "[Sanitized Diagnostic Log]\n"
                     + details + "\n"
+                    + stagedTestNote
                     + (!qmiOut.isEmpty() ? ("QMI: " + qmiOut.trim() + "\n") : "")
                     + (!phoneDump.isEmpty() ? ("Phone: " + phoneDump.trim() + "\n") : "");
             String cleanLog = VolteManagerLogic.redactSensitiveDigits(rawLog);
@@ -328,8 +385,8 @@ public final class MainActivity extends Activity {
         if (busy) return;
         String title = englishMode ? "Backup & Activate VoLTE" : "备份原值并激活 VoLTE";
         String msg = englishMode
-                ? "This will:\n1. Verify SHA-256 of bundled Stage 6A payloads;\n2. Save original EFS backups locally;\n3. Provision Stage 6A modem EFS + EFS_SYNC;\n4. Install PassportVolteIms v2.3 & apply persistent CarrierConfig.\n\nA normal phone reboot is required afterwards. Proceed?"
-                : "即将执行：\n1. 校验内置 Stage 6A 载荷 SHA-256；\n2. 备份本机基带原始 EFS 配置到本地安全目录；\n3. 写入 Stage 6A 基带配置并完成 EFS_SYNC；\n4. 安装 PassportVolteIms v2.3 并写入跨重启绑定。\n\n完成后需正常重启一次手机生效。确认继续？";
+                ? "This will:\n1. Verify SHA-256 of bundled Stage 6A payloads;\n2. Save original EFS backups locally;\n3. Provision Stage 6A modem EFS + EFS_SYNC;\n4. Install Qcom32VolteIms v2.4 & apply persistent CarrierConfig.\n\nA normal phone reboot is required afterwards. Proceed?"
+                : "即将执行：\n1. 校验内置载荷 SHA-256；\n2. 备份本机基带原始 EFS 配置到本地安全目录；\n3. 写入 Stage 6A 基带配置并完成 EFS_SYNC；\n4. 安装 Qcom32VolteIms v2.4 并写入跨重启绑定。\n\n完成后需正常重启一次手机生效。确认继续？";
         new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(msg)
@@ -341,10 +398,10 @@ public final class MainActivity extends Activity {
     private void confirmAndRunUpgrade() {
         if (busy) return;
         new AlertDialog.Builder(this)
-                .setTitle(englishMode ? "Update ImsService APK" : "更新桥接服务 APK")
+                .setTitle(englishMode ? "Update Qcom32VolteIms APK" : "更新桥接服务 APK")
                 .setMessage(englishMode
-                        ? "Updates PassportVolteIms.apk v2.3 in place without touching modem EFS."
-                        : "仅原位更新 PassportVolteIms.apk v2.3，不写入任何基带 EFS 项。")
+                        ? "Updates Qcom32VolteIms.apk v2.4 in place without touching modem EFS."
+                        : "仅原位更新 Qcom32VolteIms.apk v2.4，不写入任何基带 EFS 项。")
                 .setPositiveButton(englishMode ? "Update" : "确认更新", (d, w) -> executeRootOperation("upgrade"))
                 .setNegativeButton(englishMode ? "Cancel" : "取消", null)
                 .show();
@@ -355,8 +412,8 @@ public final class MainActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle(englishMode ? "Restore Factory Modem EFS" : "恢复出厂基带并卸载")
                 .setMessage(englishMode
-                        ? "Clears CarrierConfig overrides, uninstalls PassportVolteIms, deletes all 52 Stage 6A EFS files, and restores IMS_enable=00 & voice_domain_pref=00."
-                        : "将清除 CarrierConfig 持久覆盖、卸载 PassportVolteIms，删除全部 52 项新建 EFS 文件，并将 IMS_enable 与 voice_domain_pref 恢复为 00。")
+                        ? "Clears CarrierConfig overrides, uninstalls Qcom32VolteIms, deletes all 52 Stage 6A EFS files, and restores IMS_enable=00 & voice_domain_pref=00."
+                        : "将清除 CarrierConfig 持久覆盖、卸载 Qcom32VolteIms，删除全部 52 项新建 EFS 文件，并将 IMS_enable 与 voice_domain_pref 恢复为 00。")
                 .setPositiveButton(englishMode ? "Restore" : "确认恢复", (d, w) -> executeRootOperation("rollback"))
                 .setNegativeButton(englishMode ? "Cancel" : "取消", null)
                 .show();
@@ -367,13 +424,14 @@ public final class MainActivity extends Activity {
         statusBadgeView.setText(englishMode ? "Running guarded root operation..." : "正在执行受控 Root 操作，请勿断开电源…");
         worker.execute(() -> {
             try {
-                if (!VolteManagerLogic.verifyPassportIdentity(Build.MODEL, Build.DEVICE, Build.VERSION.SDK_INT)) {
-                    throw new IllegalStateException("Unsupported hardware: " + Build.MODEL + " / " + Build.DEVICE);
+                if ((!"upgrade".equals(mode))
+                        && !VolteManagerLogic.verifyPassportIdentity(Build.MODEL, Build.DEVICE, Build.VERSION.SDK_INT)) {
+                    throw new IllegalStateException("Unverified modem EFS profile for " + Build.MODEL + " / " + Build.DEVICE);
                 }
                 if (!checkSuAvailable()) {
                     throw new IllegalStateException(englishMode
-                            ? "Local su (Magisk) is not available. Please connect USB and use the Windows/Desktop tool via ADB Root."
-                            : "当前手机没有本地 su (Magisk) 权限。若是纯净 LineageOS 18.1，请连电脑使用桌面一键激活器（走自带 ADB Root）。");
+                            ? "Local su (Magisk) is not available. Please connect USB and use the Qcom32 VoLTE Desktop tool via ADB Root."
+                            : "当前手机没有本地 su (Magisk) 权限。若是纯净 LineageOS 18.1，请连电脑使用 Qcom32 VoLTE 桌面激活器（走自带 ADB Root）。");
                 }
                 File staged = stageVerifiedAssets();
                 String script;
@@ -424,9 +482,45 @@ public final class MainActivity extends Activity {
         }
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm != null) {
-            cm.setPrimaryClip(ClipData.newPlainText("PassportVoLTE", lastSanitizedReport));
+            cm.setPrimaryClip(ClipData.newPlainText("Qcom32VoLTE", lastSanitizedReport));
             Toast.makeText(this, englishMode ? "Redacted report copied" : "已复制脱敏诊断摘要", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private Bundle queryReadOnlyStatusProvider() {
+        try {
+            Uri uri = Uri.parse("content://" + VolteManagerLogic.STATUS_AUTHORITY);
+            return getContentResolver().call(uri, VolteManagerLogic.STATUS_METHOD, null, null);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String readLocalSimOperator() {
+        try {
+            TelephonyManager tm = getSystemService(TelephonyManager.class);
+            if (tm != null) {
+                String op = tm.getSimOperator();
+                if (op != null && !op.trim().isEmpty()) {
+                    return op.trim();
+                }
+            }
+        } catch (Exception ignored) {}
+        return readSystemProp("gsm.sim.operator.numeric");
+    }
+
+    private boolean verifyBundledAssetsOnly() throws Exception {
+        AssetManager am = getAssets();
+        JSONObject manifest = new JSONObject(new String(readAssetBytes(am, "payload-manifest.json"), StandardCharsets.UTF_8));
+        for (String name : BUNDLED_ASSET_NAMES) {
+            String expectedSha = manifest.getString(name);
+            byte[] raw = readAssetBytes(am, name);
+            String actualSha = VolteManagerLogic.sha256Hex(raw);
+            if (!expectedSha.equalsIgnoreCase(actualSha)) {
+                throw new SecurityException("Asset SHA-256 mismatch for " + name);
+            }
+        }
+        return true;
     }
 
     private File stageVerifiedAssets() throws Exception {
@@ -436,8 +530,7 @@ public final class MainActivity extends Activity {
         if (!dir.exists() && !dir.mkdirs()) {
             throw new IOException("Could not create staged-payloads directory");
         }
-        String[] names = new String[]{"pp_regconfig_provision_v6", "libimsa_probe.so", "PassportVolteIms.apk"};
-        for (String name : names) {
+        for (String name : BUNDLED_ASSET_NAMES) {
             String expectedSha = manifest.getString(name);
             byte[] raw = readAssetBytes(am, name);
             String actualSha = VolteManagerLogic.sha256Hex(raw);

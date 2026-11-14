@@ -18,7 +18,7 @@
   const media = window.matchMedia('(prefers-color-scheme: dark)');
   let preference = 'system';
   try {
-    const saved = localStorage.getItem('passport-volte-theme');
+    const saved = localStorage.getItem('qcom32-volte-theme') || localStorage.getItem('passport-volte-theme');
     if (['system', 'light', 'dark'].includes(saved)) preference = saved;
   } catch {}
   const resolved = preference === 'system' ? (media.matches ? 'dark' : 'light') : preference;

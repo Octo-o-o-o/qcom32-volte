@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Drop into packages/services/PassportVolteIms/Android.bp inside a LineageOS 18.1 (Android 11) tree.
+// Drop into packages/services/Qcom32VolteIms/Android.bp inside a LineageOS 18.1 (Android 11) 32-bit Qualcomm tree.
 
 cc_binary {
     name: "libimsa_probe.so",
@@ -23,7 +23,7 @@ cc_binary {
 }
 
 android_app {
-    name: "PassportVolteIms",
+    name: "Qcom32VolteIms",
     srcs: ["src/**/*.java"],
     manifest: "AndroidManifest.xml",
     platform_apis: true,

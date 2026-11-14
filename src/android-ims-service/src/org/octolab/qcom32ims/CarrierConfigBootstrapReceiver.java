@@ -1,4 +1,4 @@
-package org.passport.volteims;
+package org.octolab.qcom32ims;
 
 import android.content.Context;
 import android.content.Intent;
@@ -21,8 +21,8 @@ import java.util.concurrent.TimeUnit;
  * before reboot, and deletes the persistent -override XML cleanly on clear_override.
  */
 public final class CarrierConfigBootstrapReceiver extends android.content.BroadcastReceiver {
-    static final String TAG = "PassportVolteBootstrap";
-    static final String PACKAGE_NAME = "org.passport.volteims";
+    static final String TAG = "Qcom32VolteBootstrap";
+    static final String PACKAGE_NAME = "org.octolab.qcom32ims";
     private static final String PREFS_NAME = "volte_bootstrap_state";
     private static final String KEY_SEEDED_PREFIX = "seeded_advanced_calling_sub_";
     private static final String KEY_ROLLBACK_DISABLED = "rollback_disabled";
@@ -65,7 +65,7 @@ public final class CarrierConfigBootstrapReceiver extends android.content.Broadc
         }
         String action = intent != null ? intent.getAction() : "null";
         applyOverrideIfNeeded(context, "rx:" + action, false);
-        if (!PassportVolteImsService.isFeatureBound()) {
+        if (!Qcom32VolteImsService.isFeatureBound()) {
             startBootstrapWatcherQuietly(context);
         }
     }
@@ -73,7 +73,7 @@ public final class CarrierConfigBootstrapReceiver extends android.content.Broadc
     static String adminEnableAndApply(Context context) {
         setBootstrapDisabled(context, false);
         String res = applyOverrideIfNeeded(context, "admin_apply", true);
-        if (!PassportVolteImsService.isFeatureBound()) {
+        if (!Qcom32VolteImsService.isFeatureBound()) {
             startBootstrapWatcherQuietly(context);
         }
         return res;

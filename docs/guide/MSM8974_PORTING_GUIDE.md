@@ -27,11 +27,11 @@ Passport 的基带中，`profile1..3` 为普通数据业务，`profile4` 原厂�
 ```sh
 ls -lZ /dev/socket/qmux_radio/
 ```
-如果存在 `rild_ims0`（由高通 `libril-qc-qmi-1.so` 启动创建），那么本项目的 **[`src/android-ims-service/`](../../src/android-ims-service/)（`PassportVolteIms.apk`）几乎可以直接原样复用**！
+如果存在 `rild_ims0`（由高通 `libril-qc-qmi-1.so` 启动创建），那么本项目的通用 **[`src/android-ims-service/`](../../src/android-ims-service/)（`Qcom32VolteIms.apk`，包名 `org.octolab.qcom32ims`）可以直接零修改复用**！
 
 您只需：
-1. 检查 [`CarrierConfigBootstrapReceiver.java`](../../src/android-ims-service/src/org/passport/volteims/CarrierConfigBootstrapReceiver.java) 或日志，确认无需额外机型白名单限制；
-2. 使用目标 LineageOS 18.1 ROM 对应的 `platform` 密钥对 `PassportVolteIms.apk` 重新签名（或按 [`rom-integration/README.md`](../../rom-integration/README.md) 直接放进源码树编译）。
+1. 在 [`devices/`](../../devices/README.md) 下为目标机型新建 `devices/<device-id>/profile.json` 登记核验后的基带 PDP 槽位；
+2. 使用目标 LineageOS 18.1 ROM 对应的 `platform` 密钥对 `Qcom32VolteIms.apk` 重新签名（或按 [`rom-integration/README.md`](../../rom-integration/README.md) 通过 `device-qcom32-volte.mk` 直接放进源码树编译）。
 
 ## 第四步：音频路由（Voice-MMode1 / CSD）核验
 

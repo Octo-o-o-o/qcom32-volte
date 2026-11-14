@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """Standalone deployment, health-status, APK upgrade, companion-app install, and factory-rollback CLI
-for BlackBerry Passport Android 11 VoLTE.
+for the Qcom32 VoLTE & IMS Stack (32-bit Qualcomm Legacy Platforms on Android 11; first verified
+device profile: BlackBerry Passport `wolverine` / `MSM8974` on LineageOS 18.1).
 
 Works identically in the research monorepo, standalone open-source export, portable ZIP,
 and PyInstaller single-file Windows EXE (`zero` third-party Python dependencies).
 
 Commands:
-  python3 cli/volte_ctl.py self-test        # Run offline parser, guard & PII-redaction unit tests
+  python3 cli/volte_ctl.py self-test        # Run offline parser, profile-guard & PII-redaction unit tests
   python3 cli/volte_ctl.py status           # Read-only live VoLTE / QMI_IMSA / ImsResolver health check
-  python3 cli/volte_ctl.py deploy           # Guarded Stage 6A modem EFS provisioning + APK install + reboot verification
+  python3 cli/volte_ctl.py deploy           # Guarded modem EFS provisioning + APK install + reboot verification
   python3 cli/volte_ctl.py upgrade-apk      # Zero-EFS-write in-place APK upgrade + optional reboot verification
-  python3 cli/volte_ctl.py install-manager  # Install optional on-device companion app (PassportVolteManager.apk)
+  python3 cli/volte_ctl.py install-manager  # Install optional on-device companion app (Qcom32VolteManager.apk)
   python3 cli/volte_ctl.py rollback         # Full factory modem EFS restoration + APK uninstall + reboot verification
 """
 from __future__ import annotations
@@ -28,16 +29,27 @@ import sys
 import time
 from typing import Callable
 
-FROZEN_ROOT: Path | None = Path(getattr(sys, "_MEIPASS")) if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS") else None
+FROZEN_ROOT: Path | None = (
+    Path(getattr(sys, "_MEIPASS"))
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
+    else None
+)
 REPO_ROOT = FROZEN_ROOT if FROZEN_ROOT is not None else Path(__file__).resolve().parents[1]
 
-IMS_PKG = "org.passport.volteims"
-MANAGER_PKG = "org.passport.voltemanager"
-IMS_SERVICE = f"{IMS_PKG}/.PassportVolteImsService"
+IMS_PKG = "org.octolab.qcom32ims"
+LEGACY_IMS_PKG = "org.passport.volteims"
+MANAGER_PKG = "org.octolab.qcom32volte"
+LEGACY_MANAGER_PKG = "org.passport.voltemanager"
+
+IMS_SERVICE = f"{IMS_PKG}/.Qcom32VolteImsService"
+LEGACY_IMS_SERVICE = f"{LEGACY_IMS_PKG}/.PassportVolteImsService"
 IMS_ADMIN_RECEIVER = f"{IMS_PKG}/.VolteAdminReceiver"
-IMS_ADMIN_ACTION = "org.passport.volteims.ACTION_ADMIN"
+IMS_ADMIN_ACTION = "org.octolab.qcom32ims.ACTION_ADMIN"
+LEGACY_ADMIN_RECEIVER = f"{LEGACY_IMS_PKG}/.VolteAdminReceiver"
+LEGACY_ADMIN_ACTION = "org.passport.volteims.ACTION_ADMIN"
+
 REMOTE_TMP_PROVISIONER = "/data/local/tmp/pp_regconfig_provision_v6"
-EXPECTED_VERSION = "2.3-passport-volte"
+EXPECTED_VERSION = "2.4-qcom32-volte"
 
 PII_REDACT_RE = re.compile(r"\b\d{11,20}\b")
 
@@ -50,24 +62,59 @@ def sanitize_text(text: str) -> str:
     return PII_REDACT_RE.sub("<REDACTED_DIGITS>", text)
 
 
+def emit_json(payload: dict[str, object], out_json: str | None = None) -> None:
+    rendered = json.dumps(payload, indent=2, ensure_ascii=False)
+    if out_json:
+        out_path = Path(out_json).expanduser().resolve()
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(rendered + "\n", encoding="utf-8")
+    if sys.stdout is not None:
+        print(rendered)
+
+
 def persistent_backup_root() -> Path:
     """Store backups in %LOCALAPPDATA% when running from a frozen EXE, never in %TEMP%."""
     if FROZEN_ROOT is not None:
         if os.name == "nt":
             base = Path(os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData/Local"))
-            target = base / "passport-android11-volte" / "backups"
+            target = base / "qcom32-volte" / "backups"
         elif sys.platform == "darwin":
-            target = Path.home() / "Library/Application Support/passport-android11-volte/backups"
+            target = Path.home() / "Library/Application Support/qcom32-volte/backups"
         else:
-            target = Path.home() / ".local/share/passport-android11-volte/backups"
+            target = Path.home() / ".local/share/qcom32-volte/backups"
     else:
         target = REPO_ROOT / "private"
     target.mkdir(parents=True, exist_ok=True)
     return target
 
 
+def load_device_profiles() -> list[dict[str, object]]:
+    profiles: list[dict[str, object]] = []
+    dev_dir = REPO_ROOT / "devices"
+    if dev_dir.is_dir():
+        for p in sorted(dev_dir.glob("*/profile.json")):
+            profiles.append(json.loads(p.read_text(encoding="utf-8")))
+    return profiles
+
+
+def match_verified_profile(device: str, model: str, sdk_int: int) -> dict[str, object] | None:
+    for prof in load_device_profiles():
+        if prof.get("status") != "verified":
+            continue
+        m = prof.get("match", {})
+        if not isinstance(m, dict):
+            continue
+        if (
+            str(m.get("ro_product_device", "")).lower() == device.strip().lower()
+            and str(m.get("ro_product_model_contains", "")).lower() in model.strip().lower()
+            and int(m.get("android_sdk", 30)) == sdk_int
+        ):
+            return prof
+    return None
+
+
 def parse_service_dump(raw: str) -> dict[str, object]:
-    present = "PASSPORT_VOLTE_IMS_V1" in raw
+    present = ("QCOM32_VOLTE_IMS_V1" in raw) or ("PASSPORT_VOLTE_IMS_V1" in raw)
     version = None
     ril_connected = "rilConnected=true" in raw
     voice_ready = "voiceImsReady=true" in raw
@@ -92,8 +139,11 @@ def parse_service_dump(raw: str) -> dict[str, object]:
 
 def parse_qmi_probe(raw: str) -> dict[str, int | None]:
     def grab(key: str) -> int | None:
-        m = re.search(rf"\b{re.escape(key)}=(-?\d+)", raw)
-        return int(m.group(1)) if m else None
+        m_json = re.search(rf'"{re.escape(key)}"\s*:\s*(-?\d+)', raw)
+        if m_json:
+            return int(m_json.group(1))
+        m_kv = re.search(rf"\b{re.escape(key)}=(-?\d+)", raw)
+        return int(m_kv.group(1)) if m_kv else None
 
     return {
         "pdp_connected": grab("pdp_connected"),
@@ -139,7 +189,9 @@ class AdbClient:
             **subprocess_no_window_kwargs(),
         )
         if check and proc.returncode != 0:
-            raise RuntimeError(f"adb {' '.join(args)} failed (rc={proc.returncode}): {proc.stderr.strip() or proc.stdout.strip()}")
+            raise RuntimeError(
+                f"adb {' '.join(args)} failed (rc={proc.returncode}): {proc.stderr.strip() or proc.stdout.strip()}"
+            )
         return proc
 
     def list_devices(self) -> list[tuple[str, str]]:
@@ -190,7 +242,7 @@ class AdbClient:
                 if boot_done == "1" and new_boot and new_boot != old_boot_id:
                     return new_boot
             time.sleep(3.0)
-        raise TimeoutError("Timed out waiting for BlackBerry Passport to complete normal reboot")
+        raise TimeoutError("Timed out waiting for device to complete normal reboot")
 
 
 def resolve_adb(explicit: str | None = None) -> str:
@@ -235,32 +287,62 @@ def resolve_artifact(explicit: str | None, release_name: str, fallback_glob: str
     )
 
 
-def verify_passport_identity(adb: AdbClient) -> dict[str, str]:
+def verify_device_identity(adb: AdbClient, require_verified_efs_profile: bool = True) -> dict[str, object]:
     device = adb.shell("getprop ro.product.device").strip()
     model = adb.shell("getprop ro.product.model").strip()
+    sdk_str = adb.shell("getprop ro.build.version.sdk").strip()
+    sdk_int = int(sdk_str) if sdk_str.isdigit() else 0
     selinux = adb.shell("getenforce").strip()
     boot_id = adb.shell("cat /proc/sys/kernel/random/boot_id").strip()
     sim_state = adb.shell("getprop gsm.sim.state").strip()
     operator = adb.shell("getprop gsm.sim.operator.numeric").strip()
     net_type = adb.shell("getprop gsm.network.type").strip()
-    if device != "wolverine" or "Passport" not in model:
-        raise RuntimeError(f"Refusing to run: target device is {model!r} ({device!r}), expected BlackBerry Passport (`wolverine`).")
+
+    matched_prof = match_verified_profile(device, model, sdk_int)
+    if require_verified_efs_profile and matched_prof is None:
+        raise RuntimeError(
+            f"Refusing modem EFS write: connected device is {model!r} ({device!r}, SDK {sdk_int}), "
+            "which does not match any verified profile under `devices/*/profile.json`."
+        )
     if selinux != "Enforcing":
         raise RuntimeError(f"Unexpected SELinux mode {selinux!r}; expected `Enforcing`.")
+
     return {
         "device": device,
         "model": model,
+        "sdk": sdk_int,
         "selinux": selinux,
         "boot_id": boot_id,
         "sim_state": sim_state,
         "sim_operator_numeric": operator,
         "network_type": net_type,
+        "matched_profile": matched_prof["profile_id"] if matched_prof else "generic-qcom32-readonly",
+        "verified_efs_profile": matched_prof is not None,
     }
 
 
+def cleanup_legacy_packages(adb: AdbClient, include_manager: bool = False) -> None:
+    pm_out = adb.shell("pm list packages", timeout=20, check=False)
+    pkgs = {ln.strip().replace("package:", "") for ln in pm_out.splitlines() if ln.strip().startswith("package:")}
+    if LEGACY_IMS_PKG in pkgs:
+        adb.shell(
+            f"am broadcast -n {LEGACY_ADMIN_RECEIVER} -a {LEGACY_ADMIN_ACTION} "
+            "--es op clear_override --es cmd clear_override --include-stopped-packages",
+            timeout=20,
+            check=False,
+        )
+        adb.run(["uninstall", LEGACY_IMS_PKG], timeout=30, check=False)
+    if include_manager and LEGACY_MANAGER_PKG in pkgs:
+        adb.run(["uninstall", LEGACY_MANAGER_PKG], timeout=30, check=False)
+
+
 def query_live_volte_status(adb: AdbClient) -> dict[str, object]:
-    ident = verify_passport_identity(adb)
+    ident = verify_device_identity(adb, require_verified_efs_profile=False)
     svc_raw = adb.shell(f"dumpsys activity service {IMS_SERVICE} --qmi-probe", timeout=30, check=False)
+    if "QCOM32_VOLTE_IMS_V1" not in svc_raw:
+        legacy_raw = adb.shell(f"dumpsys activity service {LEGACY_IMS_SERVICE} --qmi-probe", timeout=30, check=False)
+        if "PASSPORT_VOLTE_IMS_V1" in legacy_raw:
+            svc_raw = legacy_raw
     svc = parse_service_dump(svc_raw)
     qmi = parse_qmi_probe(svc_raw)
     tel_dbg = adb.shell("dumpsys activity service com.android.phone/.TelephonyDebugService", timeout=30, check=False)
@@ -300,31 +382,40 @@ def poll_until_volte_ready(adb: AdbClient, timeout_sec: int = 90) -> dict[str, o
         if last_status.get("volte_stack_healthy") is True:
             return last_status
         time.sleep(4.0)
-    raise RuntimeError(f"VoLTE stack did not reach healthy REGISTERED state within {timeout_sec}s: {json.dumps(last_status)}")
+    raise RuntimeError(
+        f"VoLTE stack did not reach healthy REGISTERED state within {timeout_sec}s: {json.dumps(last_status)}"
+    )
 
 
-def cmd_self_test() -> int:
+def cmd_self_test(out_json: str | None = None) -> int:
     sample_dump = (
-        "SERVICE org.passport.volteims/.PassportVolteImsService\n"
-        "  PASSPORT_VOLTE_IMS_V1\n"
+        "SERVICE org.octolab.qcom32ims/.Qcom32VolteImsService\n"
+        "  QCOM32_VOLTE_IMS_V1\n"
         f"  version={EXPECTED_VERSION}\n"
         "  rilConnected=true modemRegState=1\n"
         "  engine voiceImsReady=true publishedFrameworkReg=1\n"
         "  featureReadyCalled=true\n"
-        "  qmiProbe pdp_connected=1 reg_status=2 legacy_reg=1 voip=2 voip_rat=1\n"
+        "  qmi_probe={\"event\":\"imsa_pdp\",\"pdp_connected\":1}\n"
+        "  qmi_probe={\"event\":\"imsa_reg\",\"legacy_reg\":1,\"reg_status\":2}\n"
+        "  qmi_probe={\"event\":\"imsa_svc\",\"voip\":2,\"voip_rat\":1}\n"
     )
     svc = parse_service_dump(sample_dump)
     qmi = parse_qmi_probe(sample_dump)
+    qmi_kv = parse_qmi_probe("pdp_connected=1 reg_status=2 legacy_reg=1 voip=2 voip_rat=1")
     assert svc["present"] is True and svc["version"] == EXPECTED_VERSION
     assert svc["ril_connected"] is True and svc["voice_ims_ready"] is True and svc["published_framework_reg"] == 1
     assert qmi == {"pdp_connected": 1, "reg_status": 2, "legacy_reg": 1, "voip": 2, "voip_rat": 1}
+    assert qmi_kv == qmi
+    prof = match_verified_profile("wolverine", "Passport", 30)
+    assert prof is not None and prof["profile_id"] == "blackberry-passport-wolverine"
+    assert match_verified_profile("bacon", "A0001", 30) is None
     assert parse_package_stopped("User 0: installed=true stopped=false") is False
     assert parse_package_stopped("User 0: installed=true stopped=true") is True
     fake_msisdn = "1" * 11
     fake_iccid = "8" * 20
     redacted = sanitize_text(f"num={fake_msisdn} iccid={fake_iccid} ok")
     assert fake_msisdn not in redacted and fake_iccid not in redacted
-    print(json.dumps({"self_test": "PASS", "assertions": 9}, indent=2))
+    emit_json({"self_test": "PASS", "assertions": 12}, out_json)
     return 0
 
 
@@ -338,11 +429,14 @@ def run_deploy_flow(
         if on_progress:
             on_progress(msg)
 
-    step("Enabling ADB Root (UID 0) & verifying BlackBerry Passport identity...")
+    step("Enabling ADB Root (UID 0) & verifying target device profile...")
     adb.ensure_root()
-    ident = verify_passport_identity(adb)
-    if "LOADED" not in ident["sim_state"]:
+    ident = verify_device_identity(adb, require_verified_efs_profile=True)
+    if "LOADED" not in str(ident["sim_state"]):
         raise RuntimeError(f"SIM must be LOADED before deployment (got {ident['sim_state']!r}).")
+
+    step("Cleaning up any superseded legacy IMS package...")
+    cleanup_legacy_packages(adb, include_manager=False)
 
     backup_dir = persistent_backup_root() / ("volte-ctl-deploy-" + dt.datetime.now().strftime("%Y%m%d-%H%M%S"))
     backup_dir.mkdir(parents=True, exist_ok=True)
@@ -361,10 +455,11 @@ def run_deploy_flow(
     finally:
         adb.shell(f"rm -f {REMOTE_TMP_PROVISIONER}", check=False)
 
-    step("Installing PassportVolteIms.apk v2.3 & applying persistent CarrierConfig...")
+    step("Installing Qcom32VolteIms.apk v2.4 & applying persistent CarrierConfig...")
     adb.run(["install", "-r", str(apk_path)], timeout=60)
     adb.shell(
-        f"am broadcast -n {IMS_ADMIN_RECEIVER} -a {IMS_ADMIN_ACTION} --es cmd apply_override --include-stopped-packages",
+        f"am broadcast -n {IMS_ADMIN_RECEIVER} -a {IMS_ADMIN_ACTION} "
+        "--es op apply_override --es cmd apply_override --include-stopped-packages",
         timeout=30,
     )
     pkg_dump = adb.shell(f"dumpsys package {IMS_PKG}", timeout=30)
@@ -372,7 +467,7 @@ def run_deploy_flow(
         raise RuntimeError(f"{IMS_PKG} remained stopped=true after apply_override broadcast")
 
     step("Rebooting phone normally & waiting for hands-free IMS / VoLTE registration...")
-    new_boot = adb.wait_after_reboot(ident["boot_id"])
+    new_boot = adb.wait_after_reboot(str(ident["boot_id"]))
     ready_status = poll_until_volte_ready(adb, timeout_sec=90)
     ready_status["post_reboot_boot_id"] = new_boot
     ready_status["backup_directory"] = str(backup_dir)
@@ -388,17 +483,19 @@ def run_upgrade_apk_flow(
     on_progress: Callable[[str], None] | None = None,
 ) -> dict[str, object]:
     if on_progress:
-        on_progress("Verifying Passport identity & upgrading PassportVolteIms.apk in-place...")
-    ident = verify_passport_identity(adb)
+        on_progress("Verifying device identity & upgrading Qcom32VolteIms.apk in-place (zero EFS writes)...")
+    ident = verify_device_identity(adb, require_verified_efs_profile=False)
+    cleanup_legacy_packages(adb, include_manager=False)
     adb.run(["install", "-r", str(apk_path)], timeout=60)
     adb.shell(
-        f"am broadcast -n {IMS_ADMIN_RECEIVER} -a {IMS_ADMIN_ACTION} --es cmd apply_override --include-stopped-packages",
+        f"am broadcast -n {IMS_ADMIN_RECEIVER} -a {IMS_ADMIN_ACTION} "
+        "--es op apply_override --es cmd apply_override --include-stopped-packages",
         timeout=30,
     )
     if do_reboot:
         if on_progress:
             on_progress("Rebooting phone normally & verifying hands-free VoLTE restoration...")
-        adb.wait_after_reboot(ident["boot_id"])
+        adb.wait_after_reboot(str(ident["boot_id"]))
     status = poll_until_volte_ready(adb, timeout_sec=90)
     status["upgraded_apk_sha256"] = sha256_bytes(apk_path.read_bytes())
     return status
@@ -410,8 +507,9 @@ def run_install_manager_flow(
     on_progress: Callable[[str], None] | None = None,
 ) -> dict[str, object]:
     if on_progress:
-        on_progress("Verifying Passport identity & installing PassportVolteManager.apk...")
-    ident = verify_passport_identity(adb)
+        on_progress("Verifying device identity & installing Qcom32VolteManager.apk...")
+    ident = verify_device_identity(adb, require_verified_efs_profile=False)
+    cleanup_legacy_packages(adb, include_manager=True)
     adb.run(["install", "-r", str(manager_apk_path)], timeout=60)
     return {
         "installed_package": MANAGER_PKG,
@@ -431,14 +529,17 @@ def run_rollback_flow(
 
     step("Enabling ADB Root & clearing persistent CarrierConfig overrides...")
     adb.ensure_root()
-    ident = verify_passport_identity(adb)
+    ident = verify_device_identity(adb, require_verified_efs_profile=True)
 
+    cleanup_legacy_packages(adb, include_manager=True)
     adb.shell(
-        f"am broadcast -n {IMS_ADMIN_RECEIVER} -a {IMS_ADMIN_ACTION} --es cmd clear_override --include-stopped-packages",
+        f"am broadcast -n {IMS_ADMIN_RECEIVER} -a {IMS_ADMIN_ACTION} "
+        "--es op clear_override --es cmd clear_override --include-stopped-packages",
         timeout=30,
         check=False,
     )
     adb.run(["uninstall", IMS_PKG], timeout=30, check=False)
+    adb.run(["uninstall", MANAGER_PKG], timeout=30, check=False)
 
     backup_dir = persistent_backup_root() / ("volte-ctl-rollback-" + dt.datetime.now().strftime("%Y%m%d-%H%M%S"))
     backup_dir.mkdir(parents=True, exist_ok=True)
@@ -452,8 +553,8 @@ def run_rollback_flow(
         adb.shell(f"rm -f {REMOTE_TMP_PROVISIONER}", check=False)
 
     step("Rebooting phone normally to finalize factory baseline...")
-    new_boot = adb.wait_after_reboot(ident["boot_id"])
-    post_ident = verify_passport_identity(adb)
+    new_boot = adb.wait_after_reboot(str(ident["boot_id"]))
+    post_ident = verify_device_identity(adb, require_verified_efs_profile=True)
     return {
         "rollback": "COMPLETE",
         "post_reboot_boot_id": new_boot,
@@ -462,53 +563,54 @@ def run_rollback_flow(
     }
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--adb", default=None, help="Path to adb binary")
     ap.add_argument("--serial", default=None, help="Optional ADB device serial")
+    ap.add_argument("--out-json", default=None, help="Optional file path to write JSON output")
     sub = ap.add_subparsers(dest="subcmd", required=True)
 
-    sub.add_parser("self-test", help="Run offline unit tests for parsers, guards, and PII redaction")
+    sub.add_parser("self-test", help="Run offline unit tests for parsers, profile guards, and PII redaction")
     sub.add_parser("status", help="Read-only live VoLTE, ImsResolver & QMI_IMSA status check")
 
     p_deploy = sub.add_parser("deploy", help="Guarded Stage 6A modem EFS provisioning + APK install + reboot verification")
-    p_deploy.add_argument("--apk", default=None, help="Path to signed PassportVolteIms.apk")
+    p_deploy.add_argument("--apk", default=None, help="Path to signed Qcom32VolteIms.apk")
     p_deploy.add_argument("--provisioner", default=None, help="Path to ARM32 pp_regconfig_provision_v6")
 
-    p_upg = sub.add_parser("upgrade-apk", help="In-place PassportVolteIms.apk upgrade (zero EFS writes)")
-    p_upg.add_argument("--apk", default=None, help="Path to signed PassportVolteIms.apk")
+    p_upg = sub.add_parser("upgrade-apk", help="In-place Qcom32VolteIms.apk upgrade (zero EFS writes)")
+    p_upg.add_argument("--apk", default=None, help="Path to signed Qcom32VolteIms.apk")
     p_upg.add_argument("--reboot", action="store_true", help="Reboot and verify hands-free VoLTE restoration")
 
-    p_mgr = sub.add_parser("install-manager", help="Install optional on-device companion app PassportVolteManager.apk")
-    p_mgr.add_argument("--manager-apk", default=None, help="Path to signed PassportVolteManager.apk")
+    p_mgr = sub.add_parser("install-manager", help="Install optional on-device companion app Qcom32VolteManager.apk")
+    p_mgr.add_argument("--manager-apk", default=None, help="Path to signed Qcom32VolteManager.apk")
 
     p_rb = sub.add_parser("rollback", help="Restore factory modem EFS baseline, uninstall APK, and reboot")
     p_rb.add_argument("--provisioner", default=None, help="Path to ARM32 pp_regconfig_provision_v6")
 
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     if args.subcmd == "self-test":
-        return cmd_self_test()
+        return cmd_self_test(args.out_json)
 
     adb = AdbClient(resolve_adb(args.adb), args.serial)
     if args.subcmd == "status":
-        print(json.dumps(query_live_volte_status(adb), indent=2))
+        emit_json(query_live_volte_status(adb), args.out_json)
         return 0
     if args.subcmd == "deploy":
-        apk = resolve_artifact(args.apk, "PassportVolteIms.apk", "build/passport-volte-ims-v2r3/*/PassportVolteIms.apk")
+        apk = resolve_artifact(args.apk, "Qcom32VolteIms.apk")
         prov = resolve_artifact(args.provisioner, "pp_regconfig_provision_v6", "build/regconfig-provision-v6/*/pp_regconfig_provision_v6")
-        print(json.dumps(run_deploy_flow(adb, apk, prov), indent=2))
+        emit_json(run_deploy_flow(adb, apk, prov), args.out_json)
         return 0
     if args.subcmd == "upgrade-apk":
-        apk = resolve_artifact(args.apk, "PassportVolteIms.apk", "build/passport-volte-ims-v2r3/*/PassportVolteIms.apk")
-        print(json.dumps(run_upgrade_apk_flow(adb, apk, args.reboot), indent=2))
+        apk = resolve_artifact(args.apk, "Qcom32VolteIms.apk")
+        emit_json(run_upgrade_apk_flow(adb, apk, args.reboot), args.out_json)
         return 0
     if args.subcmd == "install-manager":
-        mgr = resolve_artifact(args.manager_apk, "PassportVolteManager.apk")
-        print(json.dumps(run_install_manager_flow(adb, mgr), indent=2))
+        mgr = resolve_artifact(args.manager_apk, "Qcom32VolteManager.apk")
+        emit_json(run_install_manager_flow(adb, mgr), args.out_json)
         return 0
     if args.subcmd == "rollback":
         prov = resolve_artifact(args.provisioner, "pp_regconfig_provision_v6", "build/regconfig-provision-v6/*/pp_regconfig_provision_v6")
-        print(json.dumps(run_rollback_flow(adb, prov), indent=2))
+        emit_json(run_rollback_flow(adb, prov), args.out_json)
         return 0
     return 1
 

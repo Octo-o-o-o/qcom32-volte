@@ -15,7 +15,7 @@
 | 步骤 | 所需运行身份与权限 | 普通用户态 App 能否做到？ | 原因说明 |
 | --- | --- | --- | --- |
 | **① 首次写入基带 Stage 6A EFS 配置** (`pp_regconfig_provision_v6`) | **`UID 0` (`root`)** 访问 `/dev/diag` 并切换 `DIAG_IOCTL_SWITCH_LOGGING` | **取决于系统是否装有 `su` (Magisk)** | 原版 LineageOS 18.1 默认**没有内置 `/system/xbin/su`**，App 在手机本地调不到 `su`；系统只开放了 USB `adb root`（即连电脑时的调试 Root）。即便 `UID 1001` (`radio`) 直接打开 `/dev/diag` 也会被内核拒绝 (`EACCES errno=13`)。 |
-| **② 常驻运行 `PassportVolteImsService`** (`PassportVolteIms.apk`) | **`UID 1001` (`android.uid.phone` / `u:r:radio:s0`)** + **ROM `platform` 签名** | **可作为签名 APK 直接安装** | 连接 `/dev/socket/qmux_radio/rild_ims0` 与调用 `CarrierConfigManager.overrideConfig(..., true)` 必须是 `radio` 身份。由于社区流通的 Passport LineageOS 18.1 使用统一 AOSP `platform` 签名，我们的 `PassportVolteIms.apk` 可以直接通过 `pm install` 安装到 `/data/app/`，甚至无需挂载改写 `/system` 分区！ |
+| **② 常驻运行 `Qcom32VolteImsService`** (`Qcom32VolteIms.apk`) | **`UID 1001` (`android.uid.phone` / `u:r:radio:s0`)** + **ROM `platform` 签名** | **可作为签名 APK 直接安装** | 连接 `/dev/socket/qmux_radio/rild_ims0` 与调用 `CarrierConfigManager.overrideConfig(..., true)` 必须是 `radio` 身份。由于社区流通的 LineageOS 18.1 使用统一 AOSP `platform` 签名，我们的 `Qcom32VolteIms.apk` 可以直接通过 `pm install` 安装到 `/data/app/`，甚至无需挂载改写 `/system` 分区！ |
 
 ### 1.2 三种分发形态的工程对比
 

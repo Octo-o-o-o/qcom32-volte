@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Build standalone Windows x64 single-file desktop activator EXE for BlackBerry Passport Android 11 VoLTE.
+"""Build standalone Windows x64 single-file desktop activator EXE for the Qcom32 VoLTE & IMS Stack.
 
 Bundles:
   - Python 3 + Tcl/Tk runtime (via PyInstaller `--onefile --windowed --noupx`)
   - Official Android Platform-Tools (`adb.exe`, `AdbWinApi.dll`, `AdbWinUsbApi.dll`, `NOTICE.txt`)
-  - Verified phone release payloads (`pp_regconfig_provision_v6`, `libimsa_probe.so`, `PassportVolteIms.apk`, `PassportVolteManager.apk`, `release-manifest.json`)
+  - Verified phone release payloads (`pp_regconfig_provision_v6`, `libimsa_probe.so`, `Qcom32VolteIms.apk`, `Qcom32VolteManager.apk`, `release-manifest.json`)
+  - Device profile registry (`devices/*/profile.json`)
   - Brand icons (`assets/app.ico`, `assets/icon.png`, `assets/icon-96.png`) & `THIRD-PARTY-NOTICES.txt`
 
 Performs post-build PyInstaller archive inspection (rejecting any `.pem`, `.key`, `.pk8`, `.jks`, `.keystore`, or `private/`)
-and runs `passport-android11-volte-<ver>-windows-x64.exe --self-test` offline to guarantee startup & SHA-256 payload integrity.
+and runs `qcom32-volte-<ver>-windows-x64.exe --self-test` offline to guarantee startup & SHA-256 payload integrity.
 """
 from __future__ import annotations
 
@@ -67,12 +68,12 @@ VSVersionInfo(
         '040904B0',
         [
           StringStruct('CompanyName', 'OctoLab Open Source'),
-          StringStruct('FileDescription', 'BlackBerry Passport Android 11 Native VoLTE Activator'),
+          StringStruct('FileDescription', 'Qcom32 VoLTE — 32-Bit Qualcomm Android 11 Native IMS Stack Activator'),
           StringStruct('FileVersion', '{version_label}'),
-          StringStruct('InternalName', 'passport-android11-volte'),
+          StringStruct('InternalName', 'qcom32-volte'),
           StringStruct('LegalCopyright', 'Copyright (c) 2026 OctoLab (Apache-2.0)'),
-          StringStruct('OriginalFilename', 'passport-android11-volte-{version_label}-windows-x64.exe'),
-          StringStruct('ProductName', 'Passport Android 11 VoLTE'),
+          StringStruct('OriginalFilename', 'qcom32-volte-{version_label}-windows-x64.exe'),
+          StringStruct('ProductName', 'Qcom32 VoLTE & IMS Stack'),
           StringStruct('ProductVersion', '{version_label}')
         ]
       )
@@ -97,9 +98,10 @@ def inspect_pyinstaller_archive(exe_path: Path) -> int:
     required = {
         "payloads/pp_regconfig_provision_v6",
         "payloads/libimsa_probe.so",
-        "payloads/PassportVolteIms.apk",
-        "payloads/PassportVolteManager.apk",
+        "payloads/Qcom32VolteIms.apk",
+        "payloads/Qcom32VolteManager.apk",
         "payloads/release-manifest.json",
+        "devices/blackberry-passport-wolverine/profile.json",
         "vendor/platform-tools/adb.exe",
         "THIRD-PARTY-NOTICES.txt",
     }
@@ -126,7 +128,7 @@ def main() -> int:
     ver_parts = [int(x) for x in ver.split(".")]
     ver_tuple = (ver_parts[0], ver_parts[1], ver_parts[2], rev)
     version_label = f"{ver}-r{rev}"
-    exe_name = f"passport-android11-volte-{version_label}-windows-x64"
+    exe_name = f"qcom32-volte-{version_label}-windows-x64"
 
     release_dir = Path(args.release_dir).expanduser().resolve()
     out_dir = Path(args.out_dir).expanduser().resolve()
@@ -153,8 +155,8 @@ def main() -> int:
     for fname in (
         "pp_regconfig_provision_v6",
         "libimsa_probe.so",
-        "PassportVolteIms.apk",
-        "PassportVolteManager.apk",
+        "Qcom32VolteIms.apk",
+        "Qcom32VolteManager.apk",
         "release-manifest.json",
     ):
         src = release_dir / fname
@@ -163,10 +165,17 @@ def main() -> int:
         shutil.copy2(src, staged_payloads / fname)
 
     notices_file = stage_dir / "THIRD-PARTY-NOTICES.txt"
-    notice_parts = [(REPO_ROOT / "NOTICE.md").read_text(encoding="utf-8"), "\n" + ("=" * 72) + "\n", (REPO_ROOT / "LICENSE").read_text(encoding="utf-8")]
+    notice_parts = [
+        (REPO_ROOT / "NOTICE.md").read_text(encoding="utf-8"),
+        "\n" + ("=" * 72) + "\n",
+        (REPO_ROOT / "LICENSE").read_text(encoding="utf-8"),
+    ]
     adb_notice = staged_pt / "NOTICE.txt"
     if adb_notice.is_file():
-        notice_parts.extend(["\n" + ("=" * 72) + "\nAndroid SDK Platform-Tools Notice:\n", adb_notice.read_text(encoding="utf-8", errors="replace")])
+        notice_parts.extend([
+            "\n" + ("=" * 72) + "\nAndroid SDK Platform-Tools Notice:\n",
+            adb_notice.read_text(encoding="utf-8", errors="replace"),
+        ])
     notices_file.write_text("".join(notice_parts), encoding="utf-8")
 
     ver_file = stage_dir / "file_version_info.txt"
@@ -197,6 +206,8 @@ def main() -> int:
         "volte_ctl",
         "--add-data",
         f"{staged_payloads}{os.pathsep}payloads",
+        "--add-data",
+        f"{REPO_ROOT / 'devices'}{os.pathsep}devices",
         "--add-data",
         f"{staged_pt}{os.pathsep}vendor/platform-tools",
         "--add-data",

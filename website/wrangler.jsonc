@@ -1,11 +1,18 @@
 {
   "name": "passport-volte-site",
   "compatibility_date": "2025-11-01",
+  "main": "./worker.mjs",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "404-page"
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": true
   },
   "routes": [
+    {
+      "pattern": "qcom32-volte.octoooo.com",
+      "custom_domain": true
+    },
     {
       "pattern": "passport-volte.octoooo.com",
       "custom_domain": true

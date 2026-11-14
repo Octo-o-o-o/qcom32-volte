@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""OctoLab Desktop Activator & Health Inspector GUI for BlackBerry Passport Android 11 VoLTE.
+"""OctoLab Desktop Activator & Health Inspector GUI for the Qcom32 VoLTE & IMS Stack.
 
 Runs identically:
   - From source (`python cli/gui.py` or `Start-GUI.cmd`)
   - From portable ZIP (`python3 cli/gui.py`)
-  - From standalone Windows x64 EXE (`passport-android11-volte-1.0.0-r1-windows-x64.exe`, with bundled Python/Tk/ADB/Payloads)
+  - From standalone Windows x64 EXE (`qcom32-volte-1.1.0-r1-windows-x64.exe`, with bundled Python/Tk/ADB/Payloads)
 
-Supports `--self-test <report.json>` for automated offline build & packaging verification without touching any connected phone.
+Supports:
+  - `--self-test <report.json>` for automated offline build & packaging verification without touching any connected phone
+  - `--cli <volte_ctl args...>` to invoke bundled CLI operations (`status`, `deploy`, `upgrade-apk`, `install-manager`, `rollback`) directly from the standalone EXE
+  - `--live-gui-check <report.json>` to exercise the live Tkinter GUI + ADB worker thread against a connected device
 """
 from __future__ import annotations
 
@@ -31,10 +34,10 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import volte_ctl  # noqa: E402
 
-APP_VERSION = "1.0.0-r1"
-WEBSITE_URL = "https://passport-volte.octoooo.com/"
+APP_VERSION = "1.1.0-r1"
+WEBSITE_URL = "https://qcom32-volte.octoooo.com/"
 SISTER_URL = "https://bb10-volte.octoooo.com/"
-GITHUB_URL = "https://github.com/Octo-o-o-o/passport-android11-volte"
+GITHUB_URL = "https://github.com/Octo-o-o-o/qcom32-volte"
 
 PALETTE = {
     "canvas": "#f4f5f0",
@@ -54,10 +57,10 @@ PALETTE = {
 
 STRINGS = {
     "zh": {
-        "title": f"Passport Android 11 VoLTE 激活与管理工具 v{APP_VERSION}",
-        "eyebrow": "BLACKBERRY PASSPORT · LINEAGEOS 18.1 · NATIVE VOLTE",
-        "headline": "黑莓 Passport Android 11 原生 4G 高清通话",
-        "subhead": "无需安装 Magisk（直接使用 LineageOS 开发者选项中的 Root 调试），先备份基带原值再写入，支持一键完整回滚。",
+        "title": f"Qcom32 VoLTE · 高通 32 位 Android 11 原生通话栈工具 v{APP_VERSION}",
+        "eyebrow": "32-BIT QUALCOMM SNAPDRAGON (MSM8974) · ANDROID 11 · CLEAN-ROOM IMS",
+        "headline": "高通 32 位平台 Android 11 原生 4G VoLTE 通话栈",
+        "subhead": "通用 QCRIL rild_ims0 ↔ Android 11 ImsService 开源实现（首发完整验证机型 Profile：BlackBerry Passport wolverine）。免装 Magisk，先备份基带原值再写入，支持一键完整回滚。",
         "lang_btn": "English",
         "web_btn": "官方网站",
         "bb10_btn": "BB10 原生系统项目",
@@ -68,38 +71,38 @@ STRINGS = {
         "status_box": "当前检测状态",
         "state_idle": "待检测（连接手机并开启 USB 调试后点击“只读检查状态”）",
         "state_healthy": "VoLTE 栈运行正常（IMS 已注册 + LTE 语音就绪）",
-        "state_unhealthy": "已连接 Passport，但 VoLTE 尚未完成激活或尚未注册",
-        "actions_box": "操作流程（所有写操作均先保存本地备份）",
+        "state_unhealthy": "已连接设备，但 VoLTE 尚未完成激活或当前 SIM 尚未注册",
+        "actions_box": "操作流程（所有写操作均校验机型 Profile 并先保存本地备份）",
         "btn_status": "1. 只读检查状态",
         "btn_deploy": "2. 备份并一键激活 VoLTE（推荐）",
-        "btn_upgrade": "仅升级通话桥接 APK（零 EFS 写入）",
-        "btn_manager": "安装手机端管理 App（Magisk 可选）",
+        "btn_upgrade": "仅升级 Qcom32VolteIms 桥接 APK（零 EFS 写入）",
+        "btn_manager": "安装手机端管理 App（无 su 可查状态 / Magisk 可激活）",
         "btn_rollback": "恢复出厂基带配置并卸载",
         "btn_export": "导出脱敏诊断报告",
         "btn_notices": "离线说明与开源许可",
         "log_box": "执行进度与诊断输出（自动隐去手机号/ICCID）",
         "confirm_deploy_title": "确认备份并激活 VoLTE",
         "confirm_deploy_msg": (
-            "即将对连接的 BlackBerry Passport (wolverine / LineageOS 18.1) 执行：\n\n"
+            "即将对连接的已验证 32 位高通机型（如 BlackBerry Passport wolverine / LineageOS 18.1）执行：\n\n"
             "1. 通过 ADB Root 读取并保存当前基带 EFS 原始状态到本地备份目录；\n"
-            "2. 写入 Stage 6A 协同基带配置（54 项 EFS/DS + 789B IPV4V6 profile4）并执行 EFS_SYNC；\n"
-            "3. 安装 PassportVolteIms.apk v2.3 并写入持久化 CarrierConfig；\n"
+            "2. 写入机型专属 Stage 6A 协同基带配置并执行 EFS_SYNC；\n"
+            "3. 安装 Qcom32VolteIms.apk v2.4 并写入持久化 CarrierConfig；\n"
             "4. 正常重启手机并自动核验 QMI_IMSA / ImsResolver 注册状态。\n\n"
             "请确认手机已插入开通 VoLTE 的 SIM 卡且当前无正在进行的通话。是否继续？"
         ),
         "confirm_rollback_title": "确认恢复出厂基带配置",
         "confirm_rollback_msg": (
-            "即将清除持久化 CarrierConfig、卸载 PassportVolteIms.apk，并将全部 54 项基带 EFS 条目精确回滚至出厂基线后正常重启手机。\n\n"
+            "即将清除持久化 CarrierConfig、卸载 Qcom32VolteIms.apk，并将全部基带 EFS 条目精确回滚至出厂基线后正常重启手机。\n\n"
             "是否确认执行回滚？"
         ),
         "busy_msg": "正在执行任务，请等待当前操作完成……",
         "saved_report": "脱敏诊断报告已保存至：\n",
     },
     "en": {
-        "title": f"Passport Android 11 VoLTE Activator & Manager v{APP_VERSION}",
-        "eyebrow": "BLACKBERRY PASSPORT · LINEAGEOS 18.1 · NATIVE VOLTE",
-        "headline": "Native 4G VoLTE for BlackBerry Passport (Android 11)",
-        "subhead": "No Magisk required (uses LineageOS Rooted Debugging over USB). Automatically backs up modem EFS before provisioning and supports full factory rollback.",
+        "title": f"Qcom32 VoLTE · 32-Bit Qualcomm Android 11 IMS Stack v{APP_VERSION}",
+        "eyebrow": "32-BIT QUALCOMM SNAPDRAGON (MSM8974) · ANDROID 11 · CLEAN-ROOM IMS",
+        "headline": "Clean-Room 4G VoLTE & IMS Stack for 32-Bit Qualcomm Platforms",
+        "subhead": "Generic QCRIL rild_ims0 <-> Android 11 ImsService stack (First verified profile: BlackBerry Passport wolverine). No Magisk needed, automatic local EFS backup, and full factory rollback.",
         "lang_btn": "中文",
         "web_btn": "Website",
         "bb10_btn": "Sister Project (BB10 OS)",
@@ -108,30 +111,30 @@ STRINGS = {
         "serial_lbl": "ADB Device:",
         "refresh_devs": "Refresh",
         "status_box": "Live Telemetry Summary",
-        "state_idle": "Ready (Connect Passport with USB Debugging enabled and click 'Check Status')",
+        "state_idle": "Ready (Connect device with USB Debugging enabled and click 'Check Status')",
         "state_healthy": "VoLTE Stack Healthy (IMS REGISTERED + LTE Voice Ready)",
-        "state_unhealthy": "Passport connected, but VoLTE is not yet provisioned or registered",
-        "actions_box": "Operations (All write actions save local EFS backups first)",
+        "state_unhealthy": "Device connected, but VoLTE is not yet provisioned or registered",
+        "actions_box": "Operations (All EFS writes verify device profile & save local backups first)",
         "btn_status": "1. Check Status (Read-Only)",
         "btn_deploy": "2. Backup & Activate VoLTE (Recommended)",
-        "btn_upgrade": "Upgrade Bridge APK Only (Zero EFS Writes)",
-        "btn_manager": "Install Mobile Companion App (Magisk Optional)",
+        "btn_upgrade": "Upgrade Qcom32VolteIms APK Only (Zero EFS Writes)",
+        "btn_manager": "Install Mobile Companion App (Read-Only / Magisk)",
         "btn_rollback": "Restore Factory Modem EFS & Uninstall",
         "btn_export": "Export Redacted Report",
         "btn_notices": "Offline Guide & Notices",
         "log_box": "Progress & Redacted Telemetry Log",
         "confirm_deploy_title": "Confirm Backup & VoLTE Activation",
         "confirm_deploy_msg": (
-            "This will run the guarded activation flow on the connected BlackBerry Passport (wolverine / LineageOS 18.1):\n\n"
+            "This will run the guarded activation flow on the connected verified device profile (e.g. BlackBerry Passport wolverine / LineageOS 18.1):\n\n"
             "1. Enable ADB Root (UID 0) and save a pre-deployment modem EFS snapshot locally;\n"
-            "2. Provision Stage 6A modem EFS items (54 items + 789B IPV4V6 profile4) + EFS_SYNC;\n"
-            "3. Install PassportVolteIms.apk v2.3 & apply persistent CarrierConfig overrides;\n"
+            "2. Provision Stage 6A modem EFS items + EFS_SYNC;\n"
+            "3. Install Qcom32VolteIms.apk v2.4 & apply persistent CarrierConfig overrides;\n"
             "4. Reboot normally and verify QMI_IMSA / ImsResolver registration.\n\n"
             "Ensure a VoLTE-provisioned SIM card is inserted and no call is active. Continue?"
         ),
         "confirm_rollback_title": "Confirm Factory Modem Rollback",
         "confirm_rollback_msg": (
-            "This will clear CarrierConfig overrides, uninstall PassportVolteIms.apk, restore all 54 modem EFS items to factory baseline, and reboot normally.\n\n"
+            "This will clear CarrierConfig overrides, uninstall Qcom32VolteIms.apk, restore all managed modem EFS items to factory baseline, and reboot normally.\n\n"
             "Proceed with factory rollback?"
         ),
         "busy_msg": "Working... please keep the USB cable connected.",
@@ -174,27 +177,33 @@ def verify_embedded_payloads() -> dict[str, object]:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     artifacts = manifest.get("artifacts", {})
     checked: dict[str, str] = {}
-    for name in ("pp_regconfig_provision_v6", "libimsa_probe.so", "PassportVolteIms.apk", "PassportVolteManager.apk"):
+    for name in ("pp_regconfig_provision_v6", "libimsa_probe.so", "Qcom32VolteIms.apk", "Qcom32VolteManager.apk"):
         art_path = volte_ctl.resolve_artifact(None, name)
         actual_sha = hashlib.sha256(art_path.read_bytes()).hexdigest()
         expected_sha = artifacts.get(name, {}).get("sha256")
         if expected_sha and actual_sha != expected_sha:
             raise RuntimeError(f"SHA-256 mismatch for {name}: expected {expected_sha}, got {actual_sha}")
         checked[name] = actual_sha
+    profiles = volte_ctl.load_device_profiles()
+    if not profiles:
+        raise RuntimeError("Missing device profiles under devices/*/profile.json")
     return {
         "manifest": str(manifest_path),
         "adb_path": volte_ctl.resolve_adb(None),
         "backup_root": str(volte_ctl.persistent_backup_root()),
+        "verified_profiles": [p.get("profile_id") for p in profiles],
         "verified_artifacts": checked,
     }
 
 
 class PassportVolteApp:
-    def __init__(self, root: tk.Tk, auto_refresh_devices: bool = True):
+    def __init__(self, root: tk.Tk, auto_refresh_devices: bool = True, headless: bool = False):
         self.root = root
+        self.headless = headless
         self.lang = "zh"
         self.busy = False
         self.last_result: dict[str, object] | None = None
+        self.last_error: str | None = None
         self.msg_queue: queue.Queue[tuple[str, object]] = queue.Queue()
 
         self.root.configure(bg=PALETTE["canvas"])
@@ -469,19 +478,22 @@ class PassportVolteApp:
             elif kind == "error":
                 self._set_busy(False)
                 err_txt = volte_ctl.sanitize_text(str(payload))
+                self.last_error = err_txt
                 self._append_log(f"ERROR: {err_txt}")
                 self.lbl_status_banner.configure(text=f"Error: {err_txt[:72]}", bg="#fceaea", fg=PALETTE["danger"])
-                messagebox.showerror("Passport VoLTE", err_txt)
+                if not self.headless:
+                    messagebox.showerror("Qcom32 VoLTE", err_txt)
         self.root.after(50, self._poll_queue)
 
     def _run_bg(self, worker) -> None:
         if self.busy:
             return
+        selected_serial = self._selected_serial()
         self._set_busy(True)
 
         def _target() -> None:
             try:
-                adb = volte_ctl.AdbClient(volte_ctl.resolve_adb(None), self._selected_serial())
+                adb = volte_ctl.AdbClient(volte_ctl.resolve_adb(None), selected_serial)
                 out = worker(adb, lambda msg: self.msg_queue.put(("progress", msg)))
                 self.msg_queue.put(("done", out))
             except Exception as exc:
@@ -490,21 +502,21 @@ class PassportVolteApp:
         threading.Thread(target=_target, daemon=True).start()
 
     def on_status(self) -> None:
-        self._run_bg(lambda adb, prog: (prog("Querying Passport VoLTE / QMI_IMSA / ImsResolver state..."), volte_ctl.query_live_volte_status(adb))[1])
+        self._run_bg(lambda adb, prog: (prog("Querying Qcom32 VoLTE / QMI_IMSA / ImsResolver state..."), volte_ctl.query_live_volte_status(adb))[1])
 
     def on_deploy(self) -> None:
         if not messagebox.askyesno(self._t("confirm_deploy_title"), self._t("confirm_deploy_msg")):
             return
-        apk = volte_ctl.resolve_artifact(None, "PassportVolteIms.apk", "build/passport-volte-ims-v2r3/*/PassportVolteIms.apk")
+        apk = volte_ctl.resolve_artifact(None, "Qcom32VolteIms.apk")
         prov = volte_ctl.resolve_artifact(None, "pp_regconfig_provision_v6", "build/regconfig-provision-v6/*/pp_regconfig_provision_v6")
         self._run_bg(lambda adb, prog: volte_ctl.run_deploy_flow(adb, apk, prov, on_progress=prog))
 
     def on_upgrade_apk(self) -> None:
-        apk = volte_ctl.resolve_artifact(None, "PassportVolteIms.apk", "build/passport-volte-ims-v2r3/*/PassportVolteIms.apk")
+        apk = volte_ctl.resolve_artifact(None, "Qcom32VolteIms.apk")
         self._run_bg(lambda adb, prog: volte_ctl.run_upgrade_apk_flow(adb, apk, do_reboot=False, on_progress=prog))
 
     def on_install_manager(self) -> None:
-        mgr = volte_ctl.resolve_artifact(None, "PassportVolteManager.apk")
+        mgr = volte_ctl.resolve_artifact(None, "Qcom32VolteManager.apk")
         self._run_bg(lambda adb, prog: volte_ctl.run_install_manager_flow(adb, mgr, on_progress=prog))
 
     def on_rollback(self) -> None:
@@ -515,7 +527,7 @@ class PassportVolteApp:
 
     def on_export_report(self) -> None:
         content = volte_ctl.sanitize_text(self.txt_log.get("1.0", tk.END))
-        default_name = f"passport-volte-report-{dt.datetime.now().strftime('%Y%m%d-%H%M%S')}.txt"
+        default_name = f"qcom32-volte-report-{dt.datetime.now().strftime('%Y%m%d-%H%M%S')}.txt"
         target = filedialog.asksaveasfilename(
             defaultextension=".txt",
             initialfile=default_name,
@@ -523,16 +535,16 @@ class PassportVolteApp:
         )
         if target:
             Path(target).write_text(content, encoding="utf-8")
-            messagebox.showinfo("Passport VoLTE", self._t("saved_report") + target)
+            messagebox.showinfo("Qcom32 VoLTE", self._t("saved_report") + target)
 
     def on_show_notices(self) -> None:
         notices_text = (
-            f"Passport Android 11 VoLTE v{APP_VERSION}\n"
+            f"Qcom32 VoLTE & IMS Stack v{APP_VERSION}\n"
             f"Website: {WEBSITE_URL}\n"
             f"GitHub:  {GITHUB_URL}\n"
             f"Sister Project (BB10 OS 10.3.3): {SISTER_URL}\n\n"
-            "Quick Steps (No Magisk Needed):\n"
-            "  1. Insert a VoLTE-enabled SIM card into BlackBerry Passport (LineageOS 18.1).\n"
+            "Quick Steps (No Magisk Needed — Verified Profile: BlackBerry Passport wolverine):\n"
+            "  1. Insert a VoLTE-enabled SIM card into your LineageOS 18.1 (Android 11) device.\n"
             "  2. Open Settings -> System -> Developer options:\n"
             "       - Enable 'Android debugging' (USB debugging)\n"
             "       - Set 'Rooted debugging' ON\n"
@@ -560,7 +572,7 @@ def run_self_test(out_json: str) -> int:
     enable_windows_dpi_awareness()
     root = tk.Tk()
     root.withdraw()
-    app = PassportVolteApp(root, auto_refresh_devices=False)
+    app = PassportVolteApp(root, auto_refresh_devices=False, headless=True)
     app.toggle_language()
     app.toggle_language()
     root.update_idletasks()
@@ -579,16 +591,90 @@ def run_self_test(out_json: str) -> int:
     out_path = Path(out_json).expanduser().resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps(report, indent=2))
+    if sys.stdout is not None:
+        print(json.dumps(report, indent=2))
     return 0
 
 
+def run_live_gui_check(out_json: str, serial: str | None = None) -> int:
+    """Exercise the real Tkinter GUI + live ADB status worker against a connected Passport."""
+    import time
+
+    enable_windows_dpi_awareness()
+    root = tk.Tk()
+    root.withdraw()
+    app = PassportVolteApp(root, auto_refresh_devices=True, headless=True)
+    if serial:
+        app.serial_var.set(serial)
+    root.update()
+    app.on_status()
+    deadline = time.time() + 45.0
+    while time.time() < deadline:
+        root.update()
+        if not app.busy and (app.last_result is not None or app.last_error is not None):
+            break
+        time.sleep(0.05)
+
+    banner_text = str(app.lbl_status_banner.cget("text"))
+    healthy = bool(app.last_result and app.last_result.get("volte_stack_healthy") is True)
+    selected_serial = app._selected_serial()
+    last_err = app.last_error
+    root.destroy()
+
+    report = {
+        "live_gui_check": "PASS" if healthy else "UNHEALTHY",
+        "app_version": APP_VERSION,
+        "website_url": WEBSITE_URL,
+        "frozen": bool(volte_ctl.FROZEN_ROOT is not None),
+        "selected_serial": selected_serial,
+        "banner_text": banner_text,
+        "volte_stack_healthy": healthy,
+        "last_error": last_err,
+        "status_result": app.last_result,
+    }
+    out_path = Path(out_json).expanduser().resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    rendered = volte_ctl.sanitize_text(json.dumps(report, indent=2, ensure_ascii=False))
+    out_path.write_text(rendered + "\n", encoding="utf-8")
+    if sys.stdout is not None:
+        print(rendered)
+    return 0 if healthy else 2
+
+
 def main() -> int:
+    if len(sys.argv) >= 2 and sys.argv[1] == "--cli":
+        try:
+            return volte_ctl.main(sys.argv[2:])
+        except Exception as exc:
+            if sys.stderr is not None:
+                sys.stderr.write(f"ERROR: {exc}\n")
+            return 1
+
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("--self-test", default=None, help="Run offline GUI + payload integrity self-test and write JSON report")
+    ap.add_argument("--live-gui-check", default=None, help="Run live Tkinter GUI ADB status check and write JSON report")
+    ap.add_argument("--serial", default=None, help="Optional ADB serial for --live-gui-check")
     args, _ = ap.parse_known_args()
     if args.self_test:
-        return run_self_test(args.self_test)
+        try:
+            return run_self_test(args.self_test)
+        except Exception as exc:
+            err_path = Path(args.self_test).expanduser().resolve()
+            err_path.parent.mkdir(parents=True, exist_ok=True)
+            err_path.write_text(json.dumps({"self_test": "FAIL", "error": str(exc)}, indent=2) + "\n", encoding="utf-8")
+            if sys.stderr is not None:
+                sys.stderr.write(f"ERROR: {exc}\n")
+            return 1
+    if args.live_gui_check:
+        try:
+            return run_live_gui_check(args.live_gui_check, args.serial)
+        except Exception as exc:
+            err_path = Path(args.live_gui_check).expanduser().resolve()
+            err_path.parent.mkdir(parents=True, exist_ok=True)
+            err_path.write_text(json.dumps({"live_gui_check": "FAIL", "error": str(exc)}, indent=2) + "\n", encoding="utf-8")
+            if sys.stderr is not None:
+                sys.stderr.write(f"ERROR: {exc}\n")
+            return 1
 
     enable_windows_dpi_awareness()
     root = tk.Tk()

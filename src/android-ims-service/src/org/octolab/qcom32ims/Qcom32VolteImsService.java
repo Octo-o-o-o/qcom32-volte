@@ -1,13 +1,16 @@
-package org.passport.volteims;
+package org.octolab.qcom32ims;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
+import android.os.SystemClock;
 import android.telephony.CarrierConfigManager;
+import android.telephony.TelephonyManager;
 import android.telephony.ims.ImsReasonInfo;
 import android.telephony.ims.ImsService;
 import android.telephony.ims.ProvisioningManager;
@@ -28,7 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Production phone-local Android 11 ImsService v2.3 for BlackBerry Passport (wolverine / msm8974).
+ * Production phone-local Android 11 ImsService v2.4 for BlackBerry Passport (wolverine / msm8974).
  *
  * Runs in an isolated process (:volteims) under android.uid.phone (UID 1001, u:r:radio:s0)
  * with zero extra manifest permissions, bridging Android 11 Telecom / Telephony ImsPhone
@@ -37,13 +40,18 @@ import java.util.concurrent.TimeUnit;
  * Backend connection starts lazily on createMmTelFeature(0) / enableIms(0) so transient
  * ImsResolver dynamic-feature-query service instances never touch rild_ims0.
  */
-public final class PassportVolteImsService extends ImsService {
-    private static final String TAG = "PassportVolteIms";
+public final class Qcom32VolteImsService extends ImsService {
+    static final String SERVICE_VERSION = "2.4-qcom32-volte";
+    private static final String TAG = "Qcom32VolteIms";
     private static final int KEY_VOLTE_PROVISIONING_STATUS = 10;
     private static final int KEY_VT_PROVISIONING_STATUS = 11;
     private static final int KEY_WFC_PROVISIONING_STATUS = 28;
+    private static final long QMI_CACHE_TTL_MS = 2500L;
 
-    private static volatile PassportVolteImsService activeInstance;
+    private static volatile Qcom32VolteImsService activeInstance;
+    private static final Object QMI_PROBE_LOCK = new Object();
+    private static long lastQmiProbeElapsedMs = -100000L;
+    private static QmiProbeSummaryParser.Summary lastQmiSummary = QmiProbeSummaryParser.Summary.unknown();
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final Map<Integer, Integer> configInts = new ConcurrentHashMap<>();
@@ -77,29 +85,29 @@ public final class PassportVolteImsService extends ImsService {
     private final BroadcastReceiver carrierConfigGuardReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (!CarrierConfigBootstrapReceiver.isBootstrapDisabled(PassportVolteImsService.this)) {
+            if (!CarrierConfigBootstrapReceiver.isBootstrapDisabled(Qcom32VolteImsService.this)) {
                 String act = intent != null ? intent.getAction() : "null";
                 CarrierConfigBootstrapReceiver.applyOverrideIfNeeded(
-                        PassportVolteImsService.this, "svc_guard:" + act, false);
+                        Qcom32VolteImsService.this, "svc_guard:" + act, false);
             }
         }
     };
 
     private RilImsCoreClient rilClient;
     private CallStateEngine callEngine;
-    private volatile PassportMmTelFeature mmTelFeature;
+    private volatile Qcom32MmTelFeature mmTelFeature;
     private volatile boolean backendStarted;
     private volatile boolean guardRegistered;
     private volatile String selinuxIdentity = "unknown";
     private volatile int lastPublishedFrameworkReg = -1;
 
     static boolean isFeatureBound() {
-        PassportVolteImsService inst = activeInstance;
+        Qcom32VolteImsService inst = activeInstance;
         return inst != null && inst.mmTelFeature != null;
     }
 
     static String triggerActiveInstanceRefresh() {
-        PassportVolteImsService inst = activeInstance;
+        Qcom32VolteImsService inst = activeInstance;
         if (inst == null || inst.rilClient == null || !inst.backendStarted) {
             return "no_active_service";
         }
@@ -120,7 +128,7 @@ public final class PassportVolteImsService extends ImsService {
 
         rilClient = new RilImsCoreClient(LocalSocketTransport::new, new BackendBridge());
         callEngine = new CallStateEngine(rilClient, (handle, isWaiting) -> {
-            PassportMmTelFeature feat = mmTelFeature;
+            Qcom32MmTelFeature feat = mmTelFeature;
             if (feat != null) {
                 feat.dispatchIncomingCall(handle, isWaiting);
             } else {
@@ -137,9 +145,9 @@ public final class PassportVolteImsService extends ImsService {
             rilClient.start();
             Log.i(TAG, "backendStarted " + selinuxIdentity);
             mainHandler.post(() -> {
-                if (!CarrierConfigBootstrapReceiver.isBootstrapDisabled(PassportVolteImsService.this)) {
+                if (!CarrierConfigBootstrapReceiver.isBootstrapDisabled(Qcom32VolteImsService.this)) {
                     CarrierConfigBootstrapReceiver.applyOverrideIfNeeded(
-                            PassportVolteImsService.this, "ims_service_bound", false);
+                            Qcom32VolteImsService.this, "ims_service_bound", false);
                 }
             });
         }
@@ -195,9 +203,9 @@ public final class PassportVolteImsService extends ImsService {
         Log.i(TAG, "createMmTelFeature slotId=" + slotId);
         if (slotId != 0) return null;
         ensureBackendStarted();
-        PassportMmTelFeature feat = mmTelFeature;
+        Qcom32MmTelFeature feat = mmTelFeature;
         if (feat == null) {
-            feat = new PassportMmTelFeature(
+            feat = new Qcom32MmTelFeature(
                     this,
                     callEngine,
                     mainHandler,
@@ -206,7 +214,7 @@ public final class PassportVolteImsService extends ImsService {
         } else {
             feat.markReadyPostSetup();
         }
-        final PassportMmTelFeature boundFeat = feat;
+        final Qcom32MmTelFeature boundFeat = feat;
         mainHandler.post(() -> {
             boundFeat.markReadyPostSetup();
             syncFrameworkRegistrationAndCapabilities();
@@ -280,7 +288,7 @@ public final class PassportVolteImsService extends ImsService {
             Log.w(TAG, "registration sync err=" + ex.getClass().getSimpleName());
         }
 
-        PassportMmTelFeature feat = mmTelFeature;
+        Qcom32MmTelFeature feat = mmTelFeature;
         if (feat != null) {
             feat.publishCurrentCapabilities();
         }
@@ -288,8 +296,8 @@ public final class PassportVolteImsService extends ImsService {
 
     @Override
     protected void dump(FileDescriptor fd, PrintWriter out, String[] args) {
-        out.println("PASSPORT_VOLTE_IMS_V1");
-        out.println("version=2.3-passport-volte");
+        out.println("QCOM32_VOLTE_IMS_V1");
+        out.println("version=" + SERVICE_VERSION);
         out.println("identity=" + selinuxIdentity);
         out.println("bootstrap=" + CarrierConfigBootstrapReceiver.getLastBootstrapSummary());
         out.println("backendStarted=" + backendStarted);
@@ -311,7 +319,7 @@ public final class PassportVolteImsService extends ImsService {
                     + " activeSessions=" + callEngine.getActiveSessionCount()
                     + " publishedFrameworkReg=" + lastPublishedFrameworkReg);
         }
-        PassportMmTelFeature feat = mmTelFeature;
+        Qcom32MmTelFeature feat = mmTelFeature;
         out.println("mmTelFeatureCreated=" + (feat != null)
                 + " featureReadyCalled=" + (feat != null && feat.isFeatureReadyCalled()));
 
@@ -338,11 +346,87 @@ public final class PassportVolteImsService extends ImsService {
         }
     }
 
-    private void dumpOnDemandQmiProbe(PrintWriter out) {
+    static Bundle buildSanitizedStatusBundle(Context context) {
+        Bundle b = new Bundle();
+        b.putString("version", SERVICE_VERSION);
+
+        Qcom32VolteImsService inst = activeInstance;
+        boolean serviceRunning = inst != null;
+        boolean rilConnected = false;
+        int modemRegState = RilImsWire.REG_STATE_NOT_REGISTERED;
+        boolean modemVoiceLte = false;
+        boolean voiceImsReady = false;
+        boolean featureReady = false;
+        int publishedReg = -1;
+
+        if (inst != null) {
+            RilImsCoreClient rc = inst.rilClient;
+            if (rc != null && inst.backendStarted) {
+                rilConnected = rc.isConnected();
+                modemRegState = rc.getLastRegState();
+                modemVoiceLte = rc.isLastVoiceEnabledOnLte();
+            }
+            CallStateEngine ce = inst.callEngine;
+            if (ce != null) {
+                voiceImsReady = ce.isVoiceImsReady();
+            }
+            Qcom32MmTelFeature feat = inst.mmTelFeature;
+            featureReady = feat != null && feat.isFeatureReadyCalled();
+            publishedReg = inst.lastPublishedFrameworkReg;
+        }
+
+        QmiProbeSummaryParser.Summary qmi = queryCachedQmiSummary(context);
+        String simOp = readSafeSimOperator(context);
+        String netType = readSafeNetworkType();
+        boolean fwRegistered = publishedReg == RilImsWire.REG_STATE_REGISTERED;
+        boolean healthy = serviceRunning
+                && rilConnected
+                && voiceImsReady
+                && featureReady
+                && fwRegistered
+                && qmi.isRegisteredVoipReady();
+
+        b.putBoolean("service_running", serviceRunning);
+        b.putBoolean("ril_connected", rilConnected);
+        b.putInt("modem_reg_state", modemRegState);
+        b.putBoolean("modem_voice_lte", modemVoiceLte);
+        b.putBoolean("voice_ims_ready", voiceImsReady);
+        b.putBoolean("feature_ready", featureReady);
+        b.putInt("published_framework_reg", publishedReg);
+        b.putInt("pdp_connected", qmi.pdpConnected);
+        b.putInt("reg_status", qmi.regStatus);
+        b.putInt("legacy_reg", qmi.legacyReg);
+        b.putInt("voip", qmi.voip);
+        b.putInt("voip_rat", qmi.voipRat);
+        b.putInt("sms", qmi.sms);
+        b.putInt("test_mode", qmi.testMode);
+        b.putBoolean("qmi_voip_ready", qmi.isRegisteredVoipReady());
+        b.putString("sim_operator", simOp);
+        b.putString("network_type", netType);
+        b.putBoolean("volte_healthy", healthy);
+        return b;
+    }
+
+    private static QmiProbeSummaryParser.Summary queryCachedQmiSummary(Context context) {
+        if (context == null) {
+            return QmiProbeSummaryParser.Summary.unknown();
+        }
+        synchronized (QMI_PROBE_LOCK) {
+            long now = SystemClock.elapsedRealtime();
+            if ((now - lastQmiProbeElapsedMs) < QMI_CACHE_TTL_MS) {
+                return lastQmiSummary;
+            }
+            String raw = runNativeQmiProbeRaw(context.getApplicationInfo().nativeLibraryDir + "/libimsa_probe.so");
+            lastQmiSummary = QmiProbeSummaryParser.parse(raw);
+            lastQmiProbeElapsedMs = SystemClock.elapsedRealtime();
+            return lastQmiSummary;
+        }
+    }
+
+    private static String runNativeQmiProbeRaw(String binPath) {
         java.lang.Process p = null;
         try {
-            String bin = getApplicationInfo().nativeLibraryDir + "/libimsa_probe.so";
-            p = new ProcessBuilder(bin, "--probe-all").redirectErrorStream(true).start();
+            p = new ProcessBuilder(binPath, "--probe-all").redirectErrorStream(true).start();
             final java.lang.Process proc = p;
             final StringBuilder buf = new StringBuilder();
             Thread reader = new Thread(() -> {
@@ -357,30 +441,75 @@ public final class PassportVolteImsService extends ImsService {
                         }
                     }
                 } catch (Exception ignored) { }
-            }, "volte-qmi-dump");
+            }, "volte-qmi-status");
             reader.setDaemon(true);
             reader.start();
-            boolean done = p.waitFor(15L, TimeUnit.SECONDS);
+            boolean done = p.waitFor(12L, TimeUnit.SECONDS);
             if (!done) {
                 p.destroyForcibly();
                 p.waitFor(1L, TimeUnit.SECONDS);
             }
             reader.join(1000L);
-            String raw;
             synchronized (buf) {
-                raw = buf.toString();
-            }
-            for (String line : raw.split("\\r?\\n")) {
-                String t = line.trim();
-                if (!t.isEmpty()) {
-                    out.println("qmi_probe=" + RilImsWire.redactPii(t));
-                }
+                return buf.toString();
             }
         } catch (Exception ex) {
-            out.println("qmi_probe_err=" + ex.getClass().getSimpleName());
+            return "";
         } finally {
             if (p != null && p.isAlive()) {
                 p.destroyForcibly();
+            }
+        }
+    }
+
+    private static String readSafeSimOperator(Context context) {
+        try {
+            if (context != null) {
+                TelephonyManager tm = context.getSystemService(TelephonyManager.class);
+                if (tm != null) {
+                    String op = QmiProbeSummaryParser.sanitizeSimOperator(tm.getSimOperator());
+                    if (!op.isEmpty()) {
+                        return op;
+                    }
+                }
+            }
+        } catch (Exception ignored) { }
+        return QmiProbeSummaryParser.sanitizeSimOperator(readQuickProp("gsm.sim.operator.numeric"));
+    }
+
+    private static String readSafeNetworkType() {
+        return QmiProbeSummaryParser.sanitizeNetworkType(readQuickProp("gsm.network.type"));
+    }
+
+    private static String readQuickProp(String key) {
+        java.lang.Process p = null;
+        try {
+            p = new ProcessBuilder("getprop", key).redirectErrorStream(true).start();
+            byte[] buf = new byte[64];
+            int n = p.getInputStream().read(buf);
+            p.waitFor(2L, TimeUnit.SECONDS);
+            if (n > 0) {
+                return new String(buf, 0, n, StandardCharsets.UTF_8).trim();
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (p != null && p.isAlive()) {
+                p.destroyForcibly();
+            }
+        }
+        return "";
+    }
+
+    private void dumpOnDemandQmiProbe(PrintWriter out) {
+        String raw = runNativeQmiProbeRaw(getApplicationInfo().nativeLibraryDir + "/libimsa_probe.so");
+        if (raw.isEmpty()) {
+            out.println("qmi_probe_err=EmptyOrFailed");
+            return;
+        }
+        for (String line : raw.split("\\r?\\n")) {
+            String t = line.trim();
+            if (!t.isEmpty()) {
+                out.println("qmi_probe=" + RilImsWire.redactPii(t));
             }
         }
     }
@@ -407,13 +536,13 @@ public final class PassportVolteImsService extends ImsService {
             if (!connected && callEngine != null) {
                 callEngine.onBackendDisconnected();
             }
-            mainHandler.post(PassportVolteImsService.this::syncFrameworkRegistrationAndCapabilities);
+            mainHandler.post(Qcom32VolteImsService.this::syncFrameworkRegistrationAndCapabilities);
         }
 
         @Override
         public void onRegistrationAndCapabilityChanged(
                 int regState, boolean voiceEnabledOnLte, String serviceSummary) {
-            mainHandler.post(PassportVolteImsService.this::syncFrameworkRegistrationAndCapabilities);
+            mainHandler.post(Qcom32VolteImsService.this::syncFrameworkRegistrationAndCapabilities);
         }
 
         @Override

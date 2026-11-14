@@ -46,26 +46,30 @@ python3 cli/build_all.py
 构建完成后产物位于 `build/release/`：
 - `build/release/pp_regconfig_provision_v6`
 - `build/release/libimsa_probe.so`
-- `build/release/PassportVolteIms.apk`
+- `build/release/Qcom32VolteIms.apk`
+- `build/release/Qcom32VolteManager.apk`
 - `build/release/release-manifest.json`
 
 ---
 
 ## 3. 一键激活部署 VoLTE
 
-将手机通过 USB 连接电脑，确认手机无正在进行的通话后执行：
+将手机通过 USB 连接电脑，确认手机无正在进行的通话后执行（普通 Windows 用户也可直接运行单文件 `qcom32-volte-1.1.0-r1-windows-x64.exe`）：
 
 ```bash
 # 先运行 CLI 本地自检
 python3 cli/volte_ctl.py self-test
 
-# 执行受控部署（自动备份原始 EFS 状态 -> 写入 Stage 6A 配置 -> 安装 APK -> 自动重启并核验注册）
+# 执行受控部署（自动匹配设备 Profile -> 备份原始 EFS -> 写入 Stage 6A -> 安装 Qcom32VolteIms -> 自动重启并核验注册）
 python3 cli/volte_ctl.py deploy
+
+# （推荐）安装手机端实时状态与管理伴侣 App，拔线换卡后可在手机屏幕免 su 查看实时状态
+python3 cli/volte_ctl.py install-manager
 ```
 
 部署成功时终端会输出 JSON，其中关键指标如下：
 - `"volte_stack_healthy": true`
-- `"ims_service": { "present": true, "version": "2.3-passport-volte", "ril_connected": true, "voice_ims_ready": true, "published_framework_reg": 1 }`
+- `"ims_service": { "present": true, "version": "2.4-qcom32-volte", "ril_connected": true, "voice_ims_ready": true, "published_framework_reg": 1 }`
 - `"qmi_imsa": { "pdp_connected": 1, "reg_status": 2, "legacy_reg": 1, "voip": 2, "voip_rat": 1 }`
 - `"framework_ims_registered": ["true"]`
 
@@ -79,7 +83,7 @@ python3 cli/volte_ctl.py deploy
 # 只读查看当前 VoLTE 注册、ImsService 与基带 QMI_IMSA 状态（不修改任何配置）
 python3 cli/volte_ctl.py status
 
-# 仅升级 Android 侧 PassportVolteIms.apk（零基带 EFS 写入）
+# 仅升级 Android 侧 Qcom32VolteIms.apk（零基带 EFS 写入，自动清理旧包 org.passport.volteims）
 python3 cli/volte_ctl.py upgrade-apk --reboot
 ```
 
@@ -87,10 +91,10 @@ python3 cli/volte_ctl.py upgrade-apk --reboot
 
 ## 5. 一键完整回滚（恢复出厂基带与系统状态）
 
-如果需要彻底卸载本方案并将基带 EFS 恢复至部署前的出厂基线（`IMS_enable=00`, `voice_domain_pref=00`，清理全部新建 IMS/PDP 条目并卸载 `org.passport.volteims`）：
+如果需要彻底卸载本方案并将基带 EFS 恢复至部署前的出厂基线（`IMS_enable=00`, `voice_domain_pref=00`，清理全部新建 IMS/PDP 条目并卸载 `org.octolab.qcom32ims`）：
 
 ```bash
 python3 cli/volte_ctl.py rollback
 ```
 
-回滚脚本会自动清除持久化 `CarrierConfig` 覆盖、卸载 `PassportVolteIms.apk`、调用 `pp_regconfig_provision_v6 --rollback-all` 执行 EFS2 删除与 `SYNC` 落盘，随后正常重启手机恢复至纯 CSFB 出厂状态。
+回滚脚本会自动清除持久化 `CarrierConfig` 覆盖、卸载 `Qcom32VolteIms.apk`、调用 `pp_regconfig_provision_v6 --rollback-all` 执行 EFS2 删除与 `SYNC` 落盘，随后正常重启手机恢复至纯 CSFB 出厂状态。

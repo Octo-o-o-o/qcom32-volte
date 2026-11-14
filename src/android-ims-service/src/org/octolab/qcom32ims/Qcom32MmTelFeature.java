@@ -1,4 +1,4 @@
-package org.passport.volteims;
+package org.octolab.qcom32ims;
 
 import android.content.Context;
 import android.os.Bundle;
@@ -18,14 +18,14 @@ import java.util.List;
  * Truthfully advertises ONLY CAPABILITY_TYPE_VOICE when LTE VoLTE is registered and enabled
  * (never claiming CAPABILITY_TYPE_SMS, CAPABILITY_TYPE_VIDEO, or CAPABILITY_TYPE_UT).
  */
-public final class PassportMmTelFeature extends MmTelFeature {
+public final class Qcom32MmTelFeature extends MmTelFeature {
     private final Context context;
     private final CallStateEngine engine;
     private final Handler mainHandler;
     private final Runnable stateSyncCallback;
     private volatile boolean featureReadyActive;
 
-    PassportMmTelFeature(
+    Qcom32MmTelFeature(
             Context context,
             CallStateEngine engine,
             Handler mainHandler,
@@ -59,9 +59,9 @@ public final class PassportMmTelFeature extends MmTelFeature {
 
     void dispatchIncomingCall(CallStateEngine.SessionHandle handle, boolean isCallWaiting) {
         mainHandler.post(() -> {
-            ImsCallProfile profile = PassportCallSession.buildDefaultVoiceProfile(
+            ImsCallProfile profile = Qcom32CallSession.buildDefaultVoiceProfile(
                     ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VOICE);
-            PassportCallSession session = new PassportCallSession(handle, profile, mainHandler);
+            Qcom32CallSession session = new Qcom32CallSession(handle, profile, mainHandler);
             Bundle extras = new Bundle();
             extras.putBoolean(MmTelFeature.EXTRA_IS_USSD, false);
             extras.putBoolean(MmTelFeature.EXTRA_IS_UNKNOWN_CALL, false);
@@ -109,13 +109,13 @@ public final class PassportMmTelFeature extends MmTelFeature {
 
     @Override
     public ImsCallProfile createCallProfile(int callSessionType, int callType) {
-        return PassportCallSession.buildDefaultVoiceProfile(callSessionType, callType);
+        return Qcom32CallSession.buildDefaultVoiceProfile(callSessionType, callType);
     }
 
     @Override
     public ImsCallSessionImplBase createCallSession(ImsCallProfile profile) {
         CallStateEngine.SessionHandle handle = engine.createOutgoingSession();
-        return new PassportCallSession(handle, profile, mainHandler);
+        return new Qcom32CallSession(handle, profile, mainHandler);
     }
 
     @Override

@@ -1,6 +1,6 @@
-# Passport Android 11 VoLTE Website (`passport-volte.octoooo.com`)
+# Qcom32 VoLTE Website (`qcom32-volte.octoooo.com`)
 
-Static bilingual (`zh-CN` / `en`) website deployed on Cloudflare Pages (`passport-volte`), paired with Cloudflare R2 release downloads (`passport-downloads.octoooo.com`) and GitHub Releases (`Octo-o-o-o/passport-android11-volte`).
+Static bilingual (`zh-CN` / `en`) website deployed on Cloudflare Workers Static Assets (`passport-volte-site`), serving canonical domain `https://qcom32-volte.octoooo.com/` (with a permanent `301` redirect from legacy `passport-volte.octoooo.com`), paired with Cloudflare R2 release downloads (`qcom32-downloads.octoooo.com`) and GitHub Releases (`Octo-o-o-o/qcom32-volte`).
 
 ## Build & Verify
 

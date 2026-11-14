@@ -1,7 +1,7 @@
-export const REPOSITORY_URL = 'https://github.com/Octo-o-o-o/passport-android11-volte';
+export const REPOSITORY_URL = 'https://github.com/Octo-o-o-o/qcom32-volte';
 export const SISTER_REPOSITORY_URL = 'https://github.com/Octo-o-o-o/bb10-volte';
-export const RELEASE_TAG = 'v1.0.0-r1';
-export const MIRROR_BASE = 'https://passport-downloads.octoooo.com';
+export const RELEASE_TAG = 'v1.1.0-r1';
+export const MIRROR_BASE = 'https://qcom32-downloads.octoooo.com';
 export const RELEASE_KEYS = [
   'windows',
   'windows-sha',
@@ -17,17 +17,19 @@ export const RELEASE_KEYS = [
 
 export function buildReleaseAssetNames(tag) {
   const ver = tag.replace(/^v/, '');
+  const revMatch = ver.match(/-r(\d+)$/);
+  const rev = revMatch ? revMatch[1] : '1';
   return {
-    windows: `passport-android11-volte-${ver}-windows-x64.exe`,
-    'windows-sha': `passport-android11-volte-${ver}-windows-x64.exe.sha256`,
-    manager: `PassportVolteManager-${ver}.apk`,
-    'manager-sha': `PassportVolteManager-${ver}.apk.sha256`,
-    portable: `passport-android11-volte-${ver}-portable.zip`,
-    'portable-sha': `passport-android11-volte-${ver}-portable.zip.sha256`,
-    'rom-apk': 'PassportVolteIms-2.3-r1-platform.apk',
-    'rom-apk-sha': 'PassportVolteIms-2.3-r1-platform.apk.sha256',
-    source: `passport-android11-volte-${ver}-source.zip`,
-    'source-sha': `passport-android11-volte-${ver}-source.zip.sha256`,
+    windows: `qcom32-volte-${ver}-windows-x64.exe`,
+    'windows-sha': `qcom32-volte-${ver}-windows-x64.exe.sha256`,
+    manager: `Qcom32VolteManager-${ver}.apk`,
+    'manager-sha': `Qcom32VolteManager-${ver}.apk.sha256`,
+    portable: `qcom32-volte-${ver}-portable.zip`,
+    'portable-sha': `qcom32-volte-${ver}-portable.zip.sha256`,
+    'rom-apk': `Qcom32VolteIms-2.4-r${rev}-platform.apk`,
+    'rom-apk-sha': `Qcom32VolteIms-2.4-r${rev}-platform.apk.sha256`,
+    source: `qcom32-volte-${ver}-source.zip`,
+    'source-sha': `qcom32-volte-${ver}-source.zip.sha256`,
     checksums: 'SHA256SUMS.txt',
   };
 }
@@ -89,7 +91,7 @@ function initializeAppearance() {
     const themeColor = document.querySelector('meta[name="theme-color"]');
     if (themeColor) themeColor.content = resolved === 'dark' ? '#171d19' : '#f4f5f0';
     if (save) {
-      try { localStorage.setItem('passport-volte-theme', preference); } catch {}
+      try { localStorage.setItem('qcom32-volte-theme', preference); } catch {}
     }
   };
   apply(['system', 'light', 'dark'].includes(root.dataset.appearance) ? root.dataset.appearance : 'system');
@@ -169,8 +171,9 @@ async function fetchJson(url, timeout = 6000) {
 }
 
 function initializeGithubData() {
+  const repoApi = REPOSITORY_URL.replace('https://github.com/', 'https://api.github.com/repos/');
   if (document.querySelector('[data-download]')) {
-    fetchJson('https://api.github.com/repos/Octo-o-o-o/passport-android11-volte/releases?per_page=10')
+    fetchJson(`${repoApi}/releases?per_page=10`)
       .then((releases) => applyRelease(
         document,
         selectRelease(Array.isArray(releases) ? releases.filter((r) => r.tag_name === RELEASE_TAG) : [])
@@ -178,7 +181,7 @@ function initializeGithubData() {
       .catch(() => {});
   }
   if (!document.querySelector('[data-star-count]')) return;
-  fetchJson(REPOSITORY_URL.replace('https://github.com/', 'https://api.github.com/repos/'))
+  fetchJson(repoApi)
     .then((repository) => {
       if (!Number.isSafeInteger(repository?.stargazers_count) || repository.stargazers_count < 0) return;
       document.querySelectorAll('[data-star-count]').forEach((el) => {

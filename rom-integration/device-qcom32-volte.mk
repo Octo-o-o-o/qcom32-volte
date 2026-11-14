@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
-# Inherit from device/blackberry/wseries/device.mk when building LineageOS 18.1 from source.
+# Inherit from your 32-bit Qualcomm LineageOS 18.1 device.mk (e.g. device/blackberry/wseries/device.mk).
 
 PRODUCT_PACKAGES += \
-    PassportVolteIms \
+    Qcom32VolteIms \
     libimsa_probe.so
 
 PRODUCT_PROPERTY_OVERRIDES += \

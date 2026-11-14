@@ -24,7 +24,7 @@ jobs:
           sudo mkdir -p /opt/zig
           sudo tar -xJf /tmp/zig.tar.xz -C /opt/zig --strip-components=1
           echo "/opt/zig" >> $GITHUB_PATH
-      - name: Run C & Java Host Unit Tests (699 Assertions)
+      - name: Run C & Java Host Unit Tests
         run: python3 cli/build_all.py --host-tests-only
       - name: Run CLI Self-Test
         run: python3 cli/volte_ctl.py self-test

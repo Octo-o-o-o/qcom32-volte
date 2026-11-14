@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://passport-volte.octoooo.com/sitemap.xml
+Sitemap: https://qcom32-volte.octoooo.com/sitemap.xml

@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Export the standalone public open-source Git repository bundle AND package v1.0.0-r1 release assets.
+"""Export the standalone public open-source Git repository bundle AND package v1.1.0-r1 release assets
+for `qcom32-volte`.
 
 Outputs:
-  1. `dist/passport-android11-volte-opensource/` — Clean public Git repository tree (zero research clutter, zero keys, zero PII)
-  2. `dist/release-v1.0.0-r1/` (when built artifacts exist under `build/release/` & `build/windows/`):
-       - `passport-android11-volte-1.0.0-r1-windows-x64.exe` (+ `.sha256`)
-       - `PassportVolteManager-1.0.0-r1.apk` (+ `.sha256`)
-       - `PassportVolteIms-2.3-r1-platform.apk` (+ `.sha256`)
-       - `passport-android11-volte-1.0.0-r1-portable.zip` (+ `.sha256`)
-       - `passport-android11-volte-1.0.0-r1-source.zip` (+ `.sha256`)
+  1. `dist/qcom32-volte-opensource/` — Clean public Git repository tree (zero research clutter, zero keys, zero PII)
+  2. `dist/release-v1.1.0-r1/` (when built artifacts exist under `build/release/` & `build/windows/`):
+       - `qcom32-volte-1.1.0-r1-windows-x64.exe` (+ `.sha256`)
+       - `Qcom32VolteManager-1.1.0-r1.apk` (+ `.sha256`)
+       - `Qcom32VolteIms-2.4-r1-platform.apk` (+ `.sha256`)
+       - `qcom32-volte-1.1.0-r1-portable.zip` (+ `.sha256`)
+       - `qcom32-volte-1.1.0-r1-source.zip` (+ `.sha256`)
        - `SHA256SUMS.txt`
 """
 from __future__ import annotations
@@ -33,6 +34,7 @@ EXPORT_TREE_ENTRIES = (
     ".gitignore",
     ".github/workflows/ci.yml",
     "assets",
+    "devices",
     "src",
     "cli",
     "rom-integration",
@@ -42,6 +44,7 @@ EXPORT_TREE_ENTRIES = (
     "archive/catalog.json",
     "website/package.json",
     "website/wrangler.jsonc",
+    "website/worker.mjs",
     "website/README.md",
     "website/scripts",
     "website/tests",
@@ -79,14 +82,14 @@ def zip_directory_deterministic(src_dir: Path, dst_zip: Path, prefix: str) -> No
             if not fpath.is_file():
                 continue
             arcname = f"{prefix}/{fpath.relative_to(src_dir).as_posix()}"
-            zi = zipfile.ZipInfo(arcname, date_time=(2026, 11, 14, 12, 0, 0))
+            zi = zipfile.ZipInfo(arcname, date_time=(2026, 11, 14, 14, 0, 0))
             zi.compress_type = zipfile.ZIP_DEFLATED
             zi.external_attr = 0o100644 << 16
             zf.writestr(zi, fpath.read_bytes())
 
 
 def build_portable_zip(opensource_dir: Path, release_dir: Path, dst_zip: Path, ver_label: str) -> None:
-    prefix = f"passport-android11-volte-{ver_label}-portable"
+    prefix = f"qcom32-volte-{ver_label}-portable"
     portable_entries = (
         "README.md",
         "README.en.md",
@@ -95,6 +98,7 @@ def build_portable_zip(opensource_dir: Path, release_dir: Path, dst_zip: Path, v
         "project.json",
         "Start-GUI.cmd",
         "assets",
+        "devices",
         "cli/volte_ctl.py",
         "cli/gui.py",
         "docs/guide",
@@ -102,8 +106,8 @@ def build_portable_zip(opensource_dir: Path, release_dir: Path, dst_zip: Path, v
     payload_names = (
         "pp_regconfig_provision_v6",
         "libimsa_probe.so",
-        "PassportVolteIms.apk",
-        "PassportVolteManager.apk",
+        "Qcom32VolteIms.apk",
+        "Qcom32VolteManager.apk",
         "release-manifest.json",
     )
     with zipfile.ZipFile(dst_zip, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
@@ -112,13 +116,13 @@ def build_portable_zip(opensource_dir: Path, release_dir: Path, dst_zip: Path, v
             files = sorted(p for p in src.rglob("*") if p.is_file()) if src.is_dir() else [src]
             for fp in files:
                 arc_rel = fp.relative_to(opensource_dir).as_posix()
-                zi = zipfile.ZipInfo(f"{prefix}/{arc_rel}", date_time=(2026, 11, 14, 12, 0, 0))
+                zi = zipfile.ZipInfo(f"{prefix}/{arc_rel}", date_time=(2026, 11, 14, 14, 0, 0))
                 zi.compress_type = zipfile.ZIP_DEFLATED
                 zi.external_attr = (0o100755 if fp.suffix == ".py" else 0o100644) << 16
                 zf.writestr(zi, fp.read_bytes())
         for pname in payload_names:
             psrc = release_dir / pname
-            zi = zipfile.ZipInfo(f"{prefix}/payloads/{pname}", date_time=(2026, 11, 14, 12, 0, 0))
+            zi = zipfile.ZipInfo(f"{prefix}/payloads/{pname}", date_time=(2026, 11, 14, 14, 0, 0))
             zi.compress_type = zipfile.ZIP_DEFLATED
             zi.external_attr = 0o100644 << 16
             zf.writestr(zi, psrc.read_bytes())
@@ -128,7 +132,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument(
         "--out",
-        default=str(REPO_ROOT / "dist/passport-android11-volte-opensource"),
+        default=str(REPO_ROOT / "dist/qcom32-volte-opensource"),
         help="Destination directory for clean public Git repository bundle",
     )
     ap.add_argument(
@@ -160,7 +164,7 @@ def main() -> int:
             shutil.copytree(
                 src,
                 dst,
-                ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo", "node_modules", "dist"),
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo", "node_modules", "dist", ".wrangler"),
             )
         else:
             dst.parent.mkdir(parents=True, exist_ok=True)
@@ -196,24 +200,25 @@ def main() -> int:
 
     release_summary: dict[str, object] = {"packaged": False}
     build_rel_dir = REPO_ROOT / "build/release"
-    win_exe = REPO_ROOT / f"build/windows/passport-android11-volte-{ver_label}-windows-x64.exe"
-    if (build_rel_dir / "PassportVolteIms.apk").is_file() and (build_rel_dir / "PassportVolteManager.apk").is_file() and win_exe.is_file():
+    win_exe = REPO_ROOT / f"build/windows/qcom32-volte-{ver_label}-windows-x64.exe"
+    if (build_rel_dir / "Qcom32VolteIms.apk").is_file() and (build_rel_dir / "Qcom32VolteManager.apk").is_file() and win_exe.is_file():
         rel_out = Path(args.release_out).expanduser().resolve() if args.release_out else (REPO_ROOT / f"dist/release-{tag}")
         if rel_out.exists():
             shutil.rmtree(rel_out)
         rel_out.mkdir(parents=True, exist_ok=True)
 
-        dst_win = rel_out / f"passport-android11-volte-{ver_label}-windows-x64.exe"
-        dst_mgr = rel_out / f"PassportVolteManager-{ver_label}.apk"
-        dst_ims = rel_out / "PassportVolteIms-2.3-r1-platform.apk"
-        dst_port = rel_out / f"passport-android11-volte-{ver_label}-portable.zip"
-        dst_src = rel_out / f"passport-android11-volte-{ver_label}-source.zip"
+        ims_short = proj["ims_service_version"].split("-", 1)[0]
+        dst_win = rel_out / f"qcom32-volte-{ver_label}-windows-x64.exe"
+        dst_mgr = rel_out / f"Qcom32VolteManager-{ver_label}.apk"
+        dst_ims = rel_out / f"Qcom32VolteIms-{ims_short}-r{proj['desktop_revision']}-platform.apk"
+        dst_port = rel_out / f"qcom32-volte-{ver_label}-portable.zip"
+        dst_src = rel_out / f"qcom32-volte-{ver_label}-source.zip"
 
         shutil.copy2(win_exe, dst_win)
-        shutil.copy2(build_rel_dir / "PassportVolteManager.apk", dst_mgr)
-        shutil.copy2(build_rel_dir / "PassportVolteIms.apk", dst_ims)
+        shutil.copy2(build_rel_dir / "Qcom32VolteManager.apk", dst_mgr)
+        shutil.copy2(build_rel_dir / "Qcom32VolteIms.apk", dst_ims)
         build_portable_zip(dst_root, build_rel_dir, dst_port, ver_label)
-        zip_directory_deterministic(dst_root, dst_src, f"passport-android11-volte-{ver_label}")
+        zip_directory_deterministic(dst_root, dst_src, f"qcom32-volte-{ver_label}")
 
         primary_assets = [dst_win, dst_mgr, dst_ims, dst_port, dst_src]
         sums_lines: list[str] = []

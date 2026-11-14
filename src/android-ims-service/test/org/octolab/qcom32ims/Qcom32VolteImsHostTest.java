@@ -1,4 +1,4 @@
-package org.passport.volteims;
+package org.octolab.qcom32ims;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -23,13 +23,13 @@ import org.passport.imsbridge.legacy.RegistrationObservation;
 import org.passport.imsbridge.legacy.ServiceStatusObservation;
 
 /**
- * Pure-Java JDK-17 host qualification suite for PassportVolteIms v2.3.
+ * Pure-Java JDK-17 host qualification suite for Qcom32VolteIms v2.3.
  *
  * Exercises the exact production bytecode of RilImsWire, RilImsCoreClient, and CallStateEngine,
  * cross-checks wire frames byte-for-byte against frozen org.passport.imsbridge.legacy codecs,
  * and verifies incoming Caller ID CLIP->OIR mapping, TOA=145 E.164 formatting, and mid-ring updates.
  */
-public final class PassportVolteImsHostTest {
+public final class Qcom32VolteImsHostTest {
     private static int assertions = 0;
 
     private static void check(boolean cond, String msg) {
@@ -52,6 +52,7 @@ public final class PassportVolteImsHostTest {
         testCallerIdClipToOirAndToaCodec();
         testCoreClientUnsolCoalescingAndReconnect();
         testCallStateEngineLifecycles();
+        testQmiProbeSummaryParserAndZeroPiiSanitizer();
         System.out.println("PASS; assertions=" + assertions + "; forbidden_26_30=0");
     }
 
@@ -925,5 +926,31 @@ public final class PassportVolteImsHostTest {
                 }
             } catch (Exception ignored) { }
         }
+    }
+
+    private static void testQmiProbeSummaryParserAndZeroPiiSanitizer() {
+        String realJson = "{\"event\":\"imss_reg_mgr\",\"tag\":\"probe\",\"matched\":true,\"test_mode\":0}\n"
+                + "{\"event\":\"imsa_pdp\",\"tag\":\"probe\",\"matched\":true,\"pdp_connected\":1,\"pdp_fail_code\":-1}\n"
+                + "{\"event\":\"imsa_reg\",\"tag\":\"probe\",\"matched\":true,\"legacy_reg\":1,\"reg_status\":2}\n"
+                + "{\"event\":\"imsa_svc\",\"tag\":\"probe\",\"matched\":true,\"sms\":2,\"sms_rat\":1,\"voip\":2,\"voip_rat\":1}\n";
+        QmiProbeSummaryParser.Summary sJson = QmiProbeSummaryParser.parse(realJson);
+        check(sJson.pdpConnected == 1 && sJson.regStatus == 2 && sJson.legacyReg == 1, "JSON QMI reg parsed");
+        check(sJson.voip == 2 && sJson.voipRat == 1 && sJson.sms == 2 && sJson.testMode == 0, "JSON QMI svc parsed");
+        check(sJson.isRegisteredVoipReady(), "JSON QMI healthy ready");
+
+        QmiProbeSummaryParser.Summary sKv = QmiProbeSummaryParser.parse(
+                "pdp_connected=1 reg_status=2 legacy_reg=1 voip=2 voip_rat=1 test_mode=0");
+        check(sKv.isRegisteredVoipReady() && sKv.voipRat == 1, "key=val QMI parsed");
+
+        QmiProbeSummaryParser.Summary sDown = QmiProbeSummaryParser.parse("{\"event\":\"imsa_pdp\",\"pdp_connected\":0}");
+        check(!sDown.isRegisteredVoipReady() && sDown.regStatus == -1, "unregistered QMI is not ready");
+
+        check("46001".equals(QmiProbeSummaryParser.sanitizeSimOperator("46001")), "Unicom PLMN allowed");
+        check("46000".equals(QmiProbeSummaryParser.sanitizeSimOperator("46000,")), "Mobile PLMN comma trimmed");
+        check("46011".equals(QmiProbeSummaryParser.sanitizeSimOperator(" 46011 ")), "Telecom PLMN trimmed");
+        check("".equals(QmiProbeSummaryParser.sanitizeSimOperator("460011234567890")), "IMSI rejected by PLMN sanitizer");
+        check("".equals(QmiProbeSummaryParser.sanitizeSimOperator("18612345678")), "MSISDN rejected by PLMN sanitizer");
+        check("LTE".equals(QmiProbeSummaryParser.sanitizeNetworkType("LTE")), "LTE RAT allowed");
+        check("".equals(QmiProbeSummaryParser.sanitizeNetworkType("18612345678")), "Digits-only rejected by RAT sanitizer");
     }
 }

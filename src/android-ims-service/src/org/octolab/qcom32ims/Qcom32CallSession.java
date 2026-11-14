@@ -1,4 +1,4 @@
-package org.passport.volteims;
+package org.octolab.qcom32ims;
 
 import android.os.Bundle;
 import android.os.Handler;
@@ -19,7 +19,7 @@ import java.util.Objects;
  * getNameOir() -> ImsCallProfile.OIR_* (1..4) so LineageOS 18.1 ImsPhoneConnection
  * (ImsCallProfile.OIRToPresentation) resolves incoming Caller ID as PRESENTATION_ALLOWED (1).
  */
-public final class PassportCallSession extends ImsCallSessionImplBase {
+public final class Qcom32CallSession extends ImsCallSessionImplBase {
     private final CallStateEngine.SessionHandle handle;
     private final Handler mainHandler;
     private final ImsCallProfile callProfile;
@@ -27,7 +27,7 @@ public final class PassportCallSession extends ImsCallSessionImplBase {
     private final ImsCallProfile remoteCallProfile;
     private volatile ImsCallSessionListener sessionListener;
 
-    PassportCallSession(
+    Qcom32CallSession(
             CallStateEngine.SessionHandle handle,
             ImsCallProfile initialProfile,
             Handler mainHandler) {

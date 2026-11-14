@@ -1,4 +1,4 @@
-package org.passport.volteims;
+package org.octolab.qcom32ims;
 
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
@@ -17,7 +17,7 @@ import java.util.Locale;
  * msm8974 QCRIL IMS socket (/dev/socket/qmux_radio/rild_ims0, imsIF.proto).
  *
  * Deliberately free of Android runtime dependencies so host JVM tests exercise
- * the exact production bytecode packaged into PassportVolteIms.apk.
+ * the exact production bytecode packaged into Qcom32VolteIms.apk.
  */
 public final class RilImsWire {
     public static final int MAX_FRAME_BYTES = 16384;

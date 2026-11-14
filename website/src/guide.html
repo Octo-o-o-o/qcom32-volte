@@ -3,18 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>完整使用与集成指南 | Passport Android 11 VoLTE</title>
-  <meta name="description" content="黑莓 Passport Android 11（LineageOS 18.1）原生 VoLTE 分步教程：开启 Root 调试、Windows 一键版、Magisk 手机管理版、跨平台 CLI、ROM 源码集成、换卡、真机通话验收与出厂基带回滚。">
+  <title>完整使用与集成指南 | Qcom32 VoLTE</title>
+  <meta name="description" content="Qcom32 VoLTE（高通 32 位 Android 11 原生 VoLTE 通话栈，首发黑莓 Passport LineageOS 18.1）分步教程：Root 调试、Windows 一键版、免 Root 状态面板 App、跨平台 CLI、ROM 源码集成、三网换卡与出厂回滚。">
   <meta name="theme-color" content="#f4f5f0">
   <link rel="icon" type="image/png" href="assets/icon.png">
-  <link rel="canonical" href="https://passport-volte.octoooo.com/guide">
-  <link rel="alternate" hreflang="zh-CN" href="https://passport-volte.octoooo.com/guide">
-  <link rel="alternate" hreflang="en" href="https://passport-volte.octoooo.com/en/guide">
-  <link rel="alternate" hreflang="x-default" href="https://passport-volte.octoooo.com/guide">
-  <meta property="og:title" content="完整使用与集成指南 | Passport Android 11 VoLTE">
-  <meta property="og:description" content="四种激活与集成方式的完整分步手册、通话验收清单与一键基带回滚说明。">
+  <link rel="canonical" href="https://qcom32-volte.octoooo.com/guide">
+  <link rel="alternate" hreflang="zh-CN" href="https://qcom32-volte.octoooo.com/guide">
+  <link rel="alternate" hreflang="en" href="https://qcom32-volte.octoooo.com/en/guide">
+  <link rel="alternate" hreflang="x-default" href="https://qcom32-volte.octoooo.com/guide">
+  <meta property="og:title" content="完整使用与集成指南 | Qcom32 VoLTE">
+  <meta property="og:description" content="四种激活与集成方式的完整分步手册、国内三网换卡说明、通话验收清单与一键基带回滚指南。">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://passport-volte.octoooo.com/guide">
+  <meta property="og:url" content="https://qcom32-volte.octoooo.com/guide">
   <script src="appearance.js"></script>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="guide.css">
@@ -24,29 +24,29 @@
 
   <div class="sister-bar">
     <div class="shell">
-      <span><strong>系统确认：</strong>本指南仅适用于刷了 <strong>Android 11（LineageOS 18.1）</strong> 的黑莓 Passport。</span>
+      <span><strong>系统确认：</strong>本指南适用于高通 32 位 <strong>Android 11（首发黑莓 Passport LineageOS 18.1）</strong>。</span>
       <span>原厂 BB10 OS 10.3.3 用户请前往 <a href="https://bb10-volte.octoooo.com/guide" target="_blank" rel="noopener noreferrer">BB10 VoLTE 使用指南 →</a></span>
     </div>
   </div>
 
   <header class="site-header">
     <div class="shell">
-      <a class="brand" href="index.html" aria-label="Passport VoLTE 首页">
+      <a class="brand" href="index.html" aria-label="Qcom32 VoLTE 首页">
         <img class="brand-mark" src="assets/icon.png" alt="" width="38" height="38">
-        <span class="brand-name">Passport VoLTE</span>
-        <span class="brand-edition">ANDROID 11 · OCTOLAB</span>
+        <span class="brand-name">Qcom32 VoLTE</span>
+        <span class="brand-edition">ANDROID 11 · MSM8974 · OCTOLAB</span>
       </a>
       <nav class="site-nav" id="site-nav" aria-label="主导航">
-        <a href="index.html#how">工作原理</a>
+        <a href="index.html#how">分层架构</a>
         <a href="index.html#methods">四种用法</a>
         <a href="index.html#comparison">方案对比</a>
         <a href="guide.html" aria-current="page">完整指南</a>
-        <a href="index.html#compatibility">兼容与移植</a>
+        <a href="index.html#compatibility">已验证机型与移植</a>
         <a href="index.html#download">下载</a>
       </nav>
       <div class="header-actions">
         <a class="language-switch" data-language-switch="en" href="en/guide.html" lang="en" hreflang="en" aria-label="Switch to English">English</a>
-        <a class="github-link" href="https://github.com/Octo-o-o-o/passport-android11-volte" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a class="github-link" href="https://github.com/Octo-o-o-o/qcom32-volte" target="_blank" rel="noopener noreferrer">GitHub</a>
         <select class="theme-select" id="appearance" aria-label="外观">
           <option value="system">跟随系统</option>
           <option value="light">浅色</option>
@@ -60,12 +60,12 @@
   <main id="main">
     <section class="guide-hero" aria-labelledby="guide-title">
       <div class="shell">
-        <p class="eyebrow">SETUP &amp; INTEGRATION GUIDE · <span data-release-version>v1.0.0-r1</span></p>
-        <h1 id="guide-title">从首次连接到拔线通话验收</h1>
-        <p class="guide-intro">按顺序完成：检查前提条件 → 开启 USB/Root 调试 → 选择四种方式之一完成备份与激活 → 使用系统自带拨号器完成真实双向通话验收。</p>
+        <p class="eyebrow">SETUP &amp; INTEGRATION GUIDE · <span data-release-version>v1.1.0-r1</span></p>
+        <h1 id="guide-title">从首次激活到拔线三网换卡验收</h1>
+        <p class="guide-intro">按顺序完成：检查前提条件 → 开启 USB/Root 调试 → 选择四种方式之一完成备份与激活 → 拔掉数据线完成真实双向通话与三网换卡验收。</p>
         <div class="guide-actions">
-          <a class="button button-primary" data-download="windows" href="https://passport-downloads.octoooo.com/v1.0.0-r1/passport-android11-volte-1.0.0-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>下载 Windows 一键版 EXE</span><small>推荐 · 无需 Magisk</small></span></a>
-          <a class="button button-secondary" data-download="manager" href="https://passport-downloads.octoooo.com/v1.0.0-r1/PassportVolteManager-1.0.0-r1.apk" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>下载手机端管理 APK</span><small>Magisk 用户可选</small></span></a>
+          <a class="button button-primary" data-download="windows" href="https://qcom32-downloads.octoooo.com/v1.1.0-r1/qcom32-volte-1.1.0-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>下载 Windows 一键版 EXE</span><small>推荐 · 无需 Magisk</small></span></a>
+          <a class="button button-secondary" data-download="manager" href="https://qcom32-downloads.octoooo.com/v1.1.0-r1/Qcom32VolteManager-1.1.0-r1.apk" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>下载手机端管理 APK</span><small>免 su 实时状态面板 + Magisk 可选</small></span></a>
         </div>
       </div>
     </section>
@@ -75,13 +75,13 @@
         <p class="guide-toc-title" id="toc-title">本页目录</p>
         <nav aria-label="指南章节">
           <ol>
-            <li><a href="#prepare">前提条件与风险说明</a></li>
+            <li><a href="#prepare">前提条件与设备 Profile</a></li>
             <li><a href="#root-debug">开启 USB 与 Root 调试</a></li>
             <li><a href="#method-windows">方式一：Windows 一键版</a></li>
-            <li><a href="#method-manager">方式二：手机端管理 App</a></li>
+            <li><a href="#method-manager">方式二：手机端状态/管理 App</a></li>
             <li><a href="#method-cli">方式三：跨平台 CLI / GUI</a></li>
-            <li><a href="#method-rom">方式四：ROM 集成与移植</a></li>
-            <li><a href="#sim-swap">换 SIM 卡与多运营商说明</a></li>
+            <li><a href="#method-rom">方式四：ROM 集成与新机型适配</a></li>
+            <li><a href="#sim-swap">三网换 SIM 卡零电脑自愈说明</a></li>
             <li><a href="#acceptance">真实通话验收清单</a></li>
             <li><a href="#rollback">完整回滚出厂基带配置</a></li>
             <li><a href="#verify">校验安装包 SHA-256</a></li>
@@ -91,111 +91,109 @@
 
       <div class="guide-content">
         <section class="guide-section" id="prepare">
-          <h2>01. 前提条件与安全边界</h2>
+          <h2>01. 前提条件与已验证设备 Profile</h2>
           <ol class="step-list">
-            <li><strong>目标设备与系统：</strong>黑莓 Passport（<code>SQW100-1 / SQW100-3 / SQW100-4</code>，代号 <code>wolverine</code>），运行 <code>LineageOS 18.1-UNOFFICIAL-wseries</code>（Android 11 / API 30，SELinux 保持 <code>Enforcing</code>）。工具会自动校验机型，非 <code>wolverine</code> 拒绝写入。</li>
-            <li><strong>SIM 卡要求：</strong>已插入开通了 VoLTE 高清语音业务的 4G/5G USIM 卡，且手机状态栏当前能够正常驻留 <code>LTE</code> 数据网络。</li>
+            <li><strong>已验证设备与系统：</strong>当前内置 <code>blackberry-passport-wolverine</code> 设备 Profile，支持黑莓 Passport（<code>SQW100-1 / SQW100-3 / SQW100-4</code>，代号 <code>wolverine</code>）运行 <code>LineageOS 18.1-UNOFFICIAL-wseries</code>（Android 11 / API 30，SELinux 保持 <code>Enforcing</code>）。工具会自动匹配 <code>devices/*/profile.json</code>，未建档机型自动拦截基带写入。</li>
+            <li><strong>SIM 卡要求：</strong>已插入开通了 VoLTE 高清语音业务的 4G/5G USIM 卡，且处于机身射频支持的 LTE 频段内并正常驻留 <code>LTE</code>。</li>
             <li><strong>保持空闲状态：</strong>执行写入与重启前，请确认当前没有正在进行的通话，电量建议高于 30%，并使用可靠的数据线连接电脑。</li>
           </ol>
-          <div class="callout"><strong>重要提醒：</strong>激活流程只修改指定的 54 项 IMS 相关基带配置（且先备份原值），<strong>不会清空你的照片、联系人或用户数据</strong>。但请勿将本实验性开源方案作为唯一的紧急呼叫（110/119/120/911）依赖。</div>
+          <div class="callout"><strong>数据安全说明：</strong>激活流程只修改已验证 Profile 指定的 54 项 IMS 基带配置（且强制先备份原值），<strong>不会清空你的照片、联系人或用户数据</strong>。请勿将实验性开源方案作为唯一的紧急呼叫（110/119/120/911）依赖。</div>
         </section>
 
         <section class="guide-section" id="root-debug">
           <h2>02. 开启 LineageOS 18.1 的 USB 调试与 Root 调试</h2>
-          <p>如果你使用推荐的电脑端激活方式（方式一或方式三），<strong>完全不需要刷入 Magisk</strong>，只需打开系统自带的开发者开关：</p>
+          <p>使用电脑端激活方式（方式一或方式三）<strong>完全不需要刷入 Magisk</strong>，只需打开系统自带的开发者开关：</p>
           <ol class="step-list">
-            <li>在手机上进入 <strong>设置 → 关于手机</strong>，连续点击 7 次最下方的 <strong>版本号（Build number）</strong> 启用开发者选项。</li>
-            <li>返回上一级，进入 <strong>设置 → 系统 → 高级 → 开发者选项</strong>。</li>
-            <li>开启 <strong>Android 调试（USB 调试）</strong>。</li>
-            <li>在同页面找到 <strong>Root 调试（Rooted debugging）</strong> 并开启允许。</li>
-            <li>用数据线连接电脑，在手机弹出的「允许 USB 调试吗？」对话框中勾选一律允许并点击确定。</li>
+            <li>进入 <strong>设置 → 关于手机</strong>，连续点击 7 次最下方的 <strong>版本号（Build number）</strong> 启用开发者选项。</li>
+            <li>返回进入 <strong>设置 → 系统 → 高级 → 开发者选项</strong>。</li>
+            <li>开启 <strong>Android 调试（USB 调试）</strong>，并在同页面开启 <strong>Root 调试（Rooted debugging）</strong>。</li>
+            <li>连接电脑，在手机弹出的「允许 USB 调试吗？」对话框中勾选一律允许并点击确定。</li>
           </ol>
         </section>
 
         <section class="guide-section" id="method-windows">
           <h2>03. 方式一：Windows 桌面一键激活工具（最推荐）</h2>
           <ol class="step-list">
-            <li>下载 <code>passport-android11-volte-1.0.0-r1-windows-x64.exe</code> 并双击运行（无需安装 Python 或 ADB）。</li>
-            <li>确认顶部「ADB 设备」下拉框已识别到你的手机序列号，点击 <strong>「1. 只读检查状态」</strong> 确认连接正常。</li>
+            <li>下载 <code>qcom32-volte-1.1.0-r1-windows-x64.exe</code> 并双击运行（无需安装 Python 或 ADB）。</li>
+            <li>确认顶部「ADB 设备」下拉框已识别到手机序列号，点击 <strong>「1. 只读检查状态」</strong> 确认匹配到设备 Profile。</li>
             <li>点击绿色主按钮 <strong>「2. 备份并一键激活 VoLTE」</strong> 并确认提示框。</li>
-            <li>程序将自动：切换 <code>adb root</code> → 将原始基带快照保存至电脑 <code>%LOCALAPPDATA%\passport-android11-volte\backups\</code> → 写入 Stage 6A 基带配置并执行 <code>EFS_SYNC</code> → 安装 <code>PassportVolteIms.apk</code> v2.3 并写入持久化 <code>CarrierConfig</code> → 正常重启手机并轮询确认 <code>volte_stack_healthy: true</code>。</li>
-            <li>看到绿色「VoLTE 栈运行正常」横幅后，即可拔掉 USB 数据线进行通话测试。</li>
+            <li>程序自动：切换 <code>adb root</code> → 将原始基带快照保存至电脑 <code>%LOCALAPPDATA%\qcom32-volte\backups\</code> → 写入 Stage 6A 基带配置并执行 <code>EFS_SYNC</code> → 清理旧包残留并安装 <code>Qcom32VolteIms.apk</code> v2.4 → 正常重启手机并轮询确认 <code>volte_stack_healthy: true</code>。</li>
+            <li>（推荐顺手点一下）点击 <strong>「安装手机端管理 App」</strong>，将伴侣应用推送到手机桌面，拔掉数据线后换三网 SIM 卡可直接看屏幕状态。</li>
           </ol>
         </section>
 
         <section class="guide-section" id="method-manager">
-          <h2>04. 方式二：手机端独立管理 App（适合已刷 Magisk 用户）</h2>
-          <p>如果你的 Passport 已经刷入了 Magisk（手机本地存在 <code>su</code> 超级用户守护进程），可以安装 <code>PassportVolteManager-1.0.0-r1.apk</code>，在手机屏幕上直接管理：</p>
+          <h2>04. 方式二：手机端独立状态与管理 App</h2>
+          <p>安装 <code>Qcom32VolteManager-1.1.0-r1.apk</code>（桌面图标名称 <strong>Qcom32 VoLTE</strong>）：</p>
           <ol class="step-list">
-            <li>下载 <code>PassportVolteManager-1.0.0-r1.apk</code> 到手机并点击安装（也可以在电脑桌面工具里点击「安装手机端管理 App」一键推送）。</li>
-            <li>打开桌面上的 <strong>Passport VoLTE</strong> 图标，点击「刷新状态」可随时查看 IMS 服务与基带 <code>QMI_IMSA</code> 注册状态（无需 Root 也可只读查看）。</li>
-            <li>点击「激活 / 修复原生 VoLTE（需 Magisk）」，在弹出的 Magisk 超级用户授权框中点击允许，应用会先校验内嵌载荷的 SHA-256、保存基带快照到应用私有目录，再完成 Stage 6A 配置、系统通话桥接安装与自动重启。</li>
+            <li><strong>无 Magisk 场景（免 su 实时状态面板）：</strong>打开应用点击「刷新实时状态」，应用通过只读 <code>content://org.octolab.qcom32ims.status</code> 接口直接读取并展示当前 SIM 运营商、<code>rild_ims0</code> 连接、<code>QMI_IMSA</code> 承载/语音就绪与系统 <code>mImsRegistered</code> 状态——拔掉电脑数据线换卡测试时非常直观。</li>
+            <li><strong>已刷 Magisk 场景（机内独立激活/回滚）：</strong>点击「一键激活 / 修复原生 VoLTE（需 Magisk su）」并授予超级用户权限，即可脱离电脑在手机内校验内嵌载荷 SHA-256、备份原值、写入 Stage 6A 配置或一键恢复出厂基带。</li>
           </ol>
         </section>
 
         <section class="guide-section" id="method-cli">
           <h2>05. 方式三：macOS / Linux / 跨平台便携包（CLI &amp; GUI）</h2>
-          <p>下载并解压 <code>passport-android11-volte-1.0.0-r1-portable.zip</code>（已包含预编译签名的 ARM32 工具与 APK，仅需系统装有 Python 3.9+ 与 <code>adb</code>）：</p>
+          <p>下载并解压 <code>qcom32-volte-1.1.0-r1-portable.zip</code>（内置已编译签名的 ARM32 工具、双 APK 与 <code>devices/</code> Profile 库，仅需 Python 3.9+ 与 <code>adb</code>）：</p>
           <pre class="code-block"><code># 1. 离线单元测试自检
 python3 cli/volte_ctl.py self-test
 
-# 2. 只读检查当前手机 VoLTE / QMI_IMSA / ImsResolver 状态
+# 2. 只读检查当前手机设备 Profile、QMI_IMSA 与 ImsResolver 状态
 python3 cli/volte_ctl.py status
 
-# 3. 备份基带原值 + 一键写入 Stage 6A + 安装 APK + 重启自动验收
+# 3. 备份基带原值 + 一键写入 Stage 6A + 安装通话栈 APK + 重启自动验收
 python3 cli/volte_ctl.py deploy
 
-# 4. 或启动跨平台桌面图形界面（需 Python tkinter）
+# 4. 顺手安装手机端实时状态/管理伴侣 App
+python3 cli/volte_ctl.py install-manager
+
+# 5. 或启动跨平台桌面图形界面
 python3 cli/gui.py</code></pre>
         </section>
 
         <section class="guide-section" id="method-rom">
-          <h2>06. 方式四：LineageOS 18.1 ROM 源码集成与骁龙 801 移植</h2>
-          <p>面向自定义 ROM 编译维护者，仓库内的 <code>rom-integration/</code> 目录提供了完整的 Soong <code>Android.bp</code> 与 <code>device-passport-volte.mk</code>：</p>
-          <pre class="code-block"><code># 在 LineageOS 18.1 源码树中引入通话桥接服务：
-mkdir -p packages/apps/PassportVolteIms
-cp -r src/android-ims-service/* src/qmi-imsa-probe rom-integration/Android.bp packages/apps/PassportVolteIms/
+          <h2>06. 方式四：LineageOS 18.1 ROM 源码集成与 32 位新机型适配</h2>
+          <p>面向自定义 ROM 维护者，<code>rom-integration/</code> 目录提供了通用 Soong <code>Android.bp</code> 与 <code>device-qcom32-volte.mk</code>：</p>
+          <pre class="code-block"><code># 在 LineageOS 18.1 源码树中引入通用通话栈服务：
+mkdir -p packages/apps/Qcom32VolteIms
+cp -r src/android-ims-service/* src/qmi-imsa-probe rom-integration/Android.bp packages/apps/Qcom32VolteIms/
 
-# 在 device/blackberry/wolverine/device.mk 末尾加入：
-$(call inherit-product, packages/apps/PassportVolteIms/device-passport-volte.mk)</code></pre>
-          <p>注意：ROM 刷机包只会更新 <code>/system</code> 分区，不会改写高通独立基带分区（Modem EFS），每台实体机首次仍需执行一次 Stage 6A 基带激活。针对一加 1、小米 4、索尼 Z2/Z3、三星 S5 等同代 <code>MSM8974</code> 机型的移植分析，请查阅仓库文档 <a href="https://github.com/Octo-o-o-o/passport-android11-volte/blob/main/docs/guide/MSM8974_PORTING_GUIDE.md" target="_blank" rel="noopener noreferrer">MSM8974_PORTING_GUIDE.md</a>。</p>
+# 在目标 32 位高通设备的 device.mk 末尾加入：
+$(call inherit-product, packages/apps/Qcom32VolteIms/device-qcom32-volte.mk)</code></pre>
+          <p>注意：ROM 刷机包不会改写高通独立基带分区（Modem EFS），每台实体机首次仍需执行一次基带 EFS 供给。为一加 1、小米 4、索尼 Z2/Z3、三星 S5 等同代 <code>MSM8974</code> 机型新增 <code>devices/&lt;id&gt;/profile.json</code> 的完整规范，请查阅 <a href="https://github.com/Octo-o-o-o/qcom32-volte/blob/main/docs/guide/MSM8974_PORTING_GUIDE.md" target="_blank" rel="noopener noreferrer">MSM8974_PORTING_GUIDE.md</a> 与 <a href="https://github.com/Octo-o-o-o/qcom32-volte/blob/main/devices/README.md" target="_blank" rel="noopener noreferrer">devices/README.md</a>。</p>
         </section>
 
         <section class="guide-section" id="sim-swap">
-          <h2>07. 换 SIM 卡与多运营商说明</h2>
-          <p>Stage 6A 基带配置使用 3GPP 标准 <code>ims</code> APN 与 <code>mode=0</code> 动态 PCO 地址下发（不硬编码特定省市 P-CSCF IP），且持久保存在手机基带 EFS 中。当你更换另一张已开通 VoLTE 的 SIM 卡时：</p>
+          <h2>07. 国内三网换 SIM 卡说明（拔线零电脑自愈）</h2>
           <ol class="step-list">
-            <li>无需重新刷写基带 EFS；</li>
-            <li>由于 Android 的 <code>CarrierConfig</code> 按 SIM 卡 <code>subId</code> 存储，换新卡后只需在电脑工具点击 <strong>「仅升级通话桥接 APK（零 EFS 写入）」</strong>（或运行 <code>python3 cli/volte_ctl.py upgrade-apk</code>，或在手机管理 App 点击「仅升级 / 重刷 CarrierConfig」），即可为新 SIM 卡绑定 VoLTE 开关。</li>
+            <li><strong>完全无需再连电脑：</strong>Stage 6A 基带配置采用标准 <code>ims</code> APN 与 <code>mode=0</code> 动态 PCO（自动从新 USIM 推导归属域）；同时 Android 侧 <code>CarrierConfigBootstrapReceiver</code> 监听 <code>SIM_STATE_CHANGED</code> 与 <code>CARRIER_CONFIG_CHANGED</code>，插拔或关机更换新卡开机后会自动为新卡 <code>subId</code> 写入持久化 VoLTE 配置。</li>
+            <li><strong>联通 / 电信 / 移动频段注意（Passport <code>SQW100-1</code>）：</strong>机身物理射频支持 FDD-LTE Band 1/2/3/4/5/7/8/13/17/20（不支持 TDD-LTE B38-41 与 CDMA 1x）。因此：<strong>中国联通（46001）</strong>与<strong>中国电信（46003/46011）</strong>在 FDD B1/B3/B5/B8 覆盖区可直接使用 4G VoLTE；<strong>中国移动（46000/46002/46007）</strong>在部署了 FDD B3/B8 的区域可使用 4G VoLTE，若所在小区仅有移动 TDD 频段则会自动回落 2G GSM 通话。</li>
           </ol>
         </section>
 
         <section class="guide-section" id="acceptance">
           <h2>08. 真实通话验收清单（必做）</h2>
-          <p>工具显示 <code>mImsRegistered=true</code> 仅代表信令注册成功，请务必用系统自带拨号器逐项实测：</p>
           <ol class="step-list">
-            <li><strong>拔掉 USB 数据线</strong>，确认完全脱离电脑运行；</li>
-            <li>用自带拨号器拨打外部电话，接通后确认<strong>双方声音清晰</strong>，且手机顶部信号栏全程保持 <strong>LTE / 4G</strong>（不回落 2G/3G，也不假死）；</li>
-            <li>用另一部手机拨打你的 Passport，确认<strong>响铃正常、来电号码正常显示（非“未知”）</strong>、接听与挂断干脆；</li>
-            <li><strong>正常重启一次手机</strong>，解锁后等待约 20–40 秒，再次拨打一通电话确认开机自愈生效。</li>
+            <li><strong>拔掉 USB 数据线</strong>，打开手机桌面的 <strong>Qcom32 VoLTE</strong> 确认显示绿字「VoLTE 通话栈已激活并注册就绪」；</li>
+            <li>用系统自带拨号器拨打外部电话，确认<strong>双方声音清晰</strong>，且顶部信号栏全程保持 <strong>LTE / 4G</strong>；</li>
+            <li>用外部手机回拨，确认<strong>响铃正常、来电号码完整显示（非“未知”）</strong>、挂断干脆；</li>
+            <li><strong>正常重启一次手机</strong>，等待约 20–30 秒后再次拨打电话确认开机自愈生效。</li>
           </ol>
         </section>
 
         <section class="guide-section" id="rollback">
           <h2>09. 完整恢复出厂基带配置并卸载</h2>
-          <p>如需彻底还原手机到修改前的出厂基带基线，连接电脑点击桌面工具的 <strong>「恢复出厂基带配置并卸载」</strong>，或执行：</p>
+          <p>连接电脑点击桌面工具的 <strong>「恢复出厂基带配置并卸载」</strong>，或执行：</p>
           <pre class="code-block"><code>python3 cli/volte_ctl.py rollback</code></pre>
-          <p>该流程会清除持久化 <code>CarrierConfig</code> 覆盖、卸载 <code>org.passport.volteims</code>，调用 <code>pp_regconfig_provision_v6 --rollback-all</code> 将全部 54 项基带条目恢复出厂值并执行 <code>EFS_SYNC</code>，最后正常重启验证。</p>
+          <p>该流程会清除持久化 <code>CarrierConfig</code> 覆盖、卸载 <code>org.octolab.qcom32ims</code>，调用 <code>pp_regconfig_provision_v6 --rollback-all</code> 将全部 54 项基带条目恢复出厂值并执行 <code>EFS_SYNC</code>，最后正常重启验证。</p>
         </section>
 
         <section class="guide-section" id="verify">
           <h2>10. 校验下载文件 SHA-256</h2>
-          <p>在运行安装包前，可在终端核对下载文件的哈希值是否与发布页的 <code>.sha256</code> 或 <code>SHA256SUMS.txt</code> 完全一致：</p>
           <pre class="code-block"><code># Windows PowerShell:
-Get-FileHash "$HOME\Downloads\passport-android11-volte-1.0.0-r1-windows-x64.exe" -Algorithm SHA256
+Get-FileHash "$HOME\Downloads\qcom32-volte-1.1.0-r1-windows-x64.exe" -Algorithm SHA256
 
 # macOS / Linux:
-shasum -a 256 ~/Downloads/passport-android11-volte-1.0.0-r1-portable.zip</code></pre>
+shasum -a 256 ~/Downloads/qcom32-volte-1.1.0-r1-portable.zip</code></pre>
         </section>
       </div>
     </div>
@@ -204,18 +202,18 @@ shasum -a 256 ~/Downloads/passport-android11-volte-1.0.0-r1-portable.zip</code><
   <footer class="footer">
     <div class="shell">
       <div class="footer-brand">
-        <a class="brand" href="index.html"><img class="brand-mark" src="assets/icon.png" alt="" width="38" height="38"><span class="brand-name">Passport VoLTE</span></a>
-        <p>让刷了 Android 11 的黑莓 Passport 继续留在主力信号里。</p>
+        <a class="brand" href="index.html"><img class="brand-mark" src="assets/icon.png" alt="" width="38" height="38"><span class="brand-name">Qcom32 VoLTE</span></a>
+        <p>高通 32 位平台 Android 11 原生 4G VoLTE 与 ImsService 开源通话栈。</p>
       </div>
       <div class="footer-links">
         <a href="index.html">返回首页</a>
         <a href="https://bb10-volte.octoooo.com/" target="_blank" rel="noopener noreferrer">姊妹项目：BB10 VoLTE</a>
-        <a href="https://github.com/Octo-o-o-o/passport-android11-volte" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://github.com/Octo-o-o-o/qcom32-volte" target="_blank" rel="noopener noreferrer">GitHub</a>
         <a href="https://octoooo.com" target="_blank" rel="noopener noreferrer">OctoLab</a>
       </div>
       <div class="footer-bottom">
         <span>© <span data-current-year>2026</span> OctoLab · Apache-2.0 License</span>
-        <span>独立开源硬件救援项目，与 BlackBerry Limited 或 Qualcomm 官方无关。</span>
+        <span>独立开源硬件互操作与救援项目，与 Qualcomm 或 BlackBerry 官方无关。</span>
       </div>
     </div>
   </footer>

@@ -1,4 +1,4 @@
-package org.passport.voltemanager;
+package org.octolab.qcom32volte;
 
 import java.nio.charset.StandardCharsets;
 
@@ -13,9 +13,11 @@ public final class VolteManagerLogicTest {
     }
 
     public static void main(String[] args) {
-        // 1. Hardware identity guard
-        check(VolteManagerLogic.verifyPassportIdentity("Passport", "wolverine", 30), "Passport wolverine API 30 accepted");
-        check(!VolteManagerLogic.verifyPassportIdentity("Nexus 5", "hammerhead", 30), "Non-Passport rejected");
+        // 1. Verified device profile matching
+        check(VolteManagerLogic.verifyPassportIdentity("Passport", "wolverine", 30), "Passport wolverine API 30 verified");
+        check("blackberry-passport-wolverine".equals(
+                VolteManagerLogic.matchVerifiedDeviceProfile("Passport", "wolverine", 30)), "Profile ID exact");
+        check(!VolteManagerLogic.verifyPassportIdentity("OnePlus One", "bacon", 30), "Unverified profile gated from EFS write");
         check(!VolteManagerLogic.verifyPassportIdentity("Passport", "wolverine", 29), "Non-Android-11 rejected");
 
         // 2. SHA-256 check
@@ -29,36 +31,53 @@ public final class VolteManagerLogicTest {
         check(!redacted.contains("18612345678"), "11-digit phone number redacted");
         check(redacted.contains("short=46001"), "PLMN 46001 preserved");
 
-        // 4. Healthy China Unicom status snapshot
-        VolteManagerLogic.StatusSnapshot snapOk = VolteManagerLogic.parseStatusSummary(
+        // 4. Healthy China Unicom status snapshot (JSON QMI + no local su via VolteStatusProvider)
+        VolteManagerLogic.StatusSnapshot snapProviderNoSu = VolteManagerLogic.parseStatusSummary(
                 "Passport",
                 "wolverine",
                 30,
-                true,
-                "PASSPORT_VOLTE_IMS_V1\nversion=2.3-passport-volte\nrilConnected=true\npublishedFrameworkReg=1",
-                "pdp_connected=1 reg_status=2 legacy_reg=1 voip=2 voip_rat=1",
-                "mImsRegistered=true",
+                false,
+                "QCOM32_VOLTE_IMS_V1\nversion=2.4-qcom32-volte\nrilConnected=true\npublishedFrameworkReg=1",
+                "{\"event\":\"imsa_pdp\",\"pdp_connected\":1}\n{\"event\":\"imsa_reg\",\"reg_status\":2,\"legacy_reg\":1}\n{\"event\":\"imsa_svc\",\"voip\":2,\"voip_rat\":1}",
+                "",
+                "46006",
+                "LTE");
+        check(snapProviderNoSu.telemetryAvailable, "VolteStatusProvider telemetry works without su");
+        check(snapProviderNoSu.volteHealthy, "Healthy snapshot detected without su");
+        check("2.4-qcom32-volte".equals(snapProviderNoSu.imsServiceVersion), "Service version 2.4-qcom32-volte parsed");
+        check("China Unicom (46006) · LTE".equals(snapProviderNoSu.carrierSummary), "China Unicom 46006 label exact");
+
+        // 5. Three-carrier label checks (Mobile & Telecom)
+        check("China Mobile (46000) · LTE".equals(VolteManagerLogic.formatCarrierLabel("46000,", "LTE,")), "China Mobile 46000 label");
+        check("China Telecom (46011) · LTE".equals(VolteManagerLogic.formatCarrierLabel("46011", "LTE")), "China Telecom 46011 label");
+
+        // 6. Generic 32-bit Qualcomm read-only telemetry on non-wolverine ROM integration
+        VolteManagerLogic.StatusSnapshot snapGenericRom = VolteManagerLogic.parseStatusSummary(
+                "A0001",
+                "bacon",
+                30,
+                false,
+                "QCOM32_VOLTE_IMS_V1\nversion=2.4-qcom32-volte\nrilConnected=true\npublishedFrameworkReg=1",
+                "pdp_connected=1 reg_status=2 voip=2 voip_rat=1",
+                "",
                 "46001",
                 "LTE");
-        check(snapOk.volteHealthy, "Healthy snapshot detected");
-        check("2.3-passport-volte".equals(snapOk.imsServiceVersion), "Service version parsed");
-        check(snapOk.carrierSummary.contains("China Unicom"), "China Unicom label formatted");
+        check(!snapGenericRom.isVerifiedEfsProfile && "generic-qcom32-readonly".equals(snapGenericRom.matchedProfileId),
+                "Generic MSM8974 device stays gated from EFS write");
+        check(snapGenericRom.volteHealthy, "Generic MSM8974 ROM integration reports healthy when registered");
 
-        // 5. No-su snapshot
-        VolteManagerLogic.StatusSnapshot snapNoSu = VolteManagerLogic.parseStatusSummary(
-                "Passport", "wolverine", 30, false, "", "", "", "46011", "LTE");
-        check(!snapNoSu.volteHealthy, "No-su without service is not healthy");
-        check(snapNoSu.carrierSummary.contains("China Telecom"), "China Telecom label formatted");
-
-        // 6. Guarded shell scripts
-        String deploySh = VolteManagerLogic.buildRootDeployScript("/data/user/0/org.passport.voltemanager/files/staged", "/data/user/0/org.passport.voltemanager/files/bk");
+        // 7. Guarded shell scripts & legacy org.passport.volteims migration cleanup
+        String deploySh = VolteManagerLogic.buildRootDeployScript(
+                "/data/user/0/org.octolab.qcom32volte/files/staged",
+                "/data/user/0/org.octolab.qcom32volte/files/bk");
         check(deploySh.contains("--inspect-state"), "Deploy captures inspect-state backup first");
         check(deploySh.contains("--provision-stage6a"), "Deploy invokes stage6a");
-        check(!deploySh.contains("--backup-dir"), "Deploy uses exact v6 CLI flags");
-        check(deploySh.contains("apply_override --include-stopped-packages"), "Deploy clears FLAG_STOPPED");
-        check(deploySh.contains("if [ \"$DEV\" != \"wolverine\" ]"), "Deploy enforces wolverine hardware guard");
+        check(deploySh.contains("Qcom32VolteIms.apk"), "Deploy installs Qcom32VolteIms.apk");
+        check(deploySh.contains("org.octolab.qcom32ims/.VolteAdminReceiver"), "Deploy invokes new admin receiver");
+        check(deploySh.contains("pm uninstall org.passport.volteims"), "Deploy migrates legacy package cleanly");
+        check(deploySh.contains("if [ \"$DEV\" != \"wolverine\" ]"), "Deploy enforces wolverine EFS guard");
 
-        String rollbackSh = VolteManagerLogic.buildRootRollbackScript("/data/user/0/org.passport.voltemanager/files/staged");
+        String rollbackSh = VolteManagerLogic.buildRootRollbackScript("/data/user/0/org.octolab.qcom32volte/files/staged");
         check(rollbackSh.contains("clear_override"), "Rollback clears CarrierConfig override");
         check(rollbackSh.contains("--rollback-all"), "Rollback restores all Stage 6A EFS items");
 

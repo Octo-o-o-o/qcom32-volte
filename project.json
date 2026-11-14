@@ -1,19 +1,26 @@
 {
-  "name": "passport-android11-volte",
-  "version": "1.0.0",
+  "name": "qcom32-volte",
+  "version": "1.1.0",
   "desktop_revision": 1,
-  "ims_service_version": "2.3-passport-volte",
-  "manager_app_version": "1.0.0",
+  "ims_service_package": "org.octolab.qcom32ims",
+  "ims_service_version": "2.4-qcom32-volte",
+  "manager_app_package": "org.octolab.qcom32volte",
+  "manager_app_version": "1.1.0-r1",
   "state": "public_release",
-  "repository": "https://github.com/Octo-o-o-o/passport-android11-volte",
+  "repository": "https://github.com/Octo-o-o-o/qcom32-volte",
   "sister_repository": "https://github.com/Octo-o-o-o/bb10-volte",
-  "website": "https://passport-volte.octoooo.com/",
+  "website": "https://qcom32-volte.octoooo.com/",
+  "legacy_website_redirects": [
+    "https://passport-volte.octoooo.com/"
+  ],
   "sister_website": "https://bb10-volte.octoooo.com/",
-  "downloads_mirror": "https://passport-downloads.octoooo.com",
+  "downloads_mirror": "https://qcom32-downloads.octoooo.com",
   "license": "Apache-2.0",
-  "target_hardware": {
-    "model": "BlackBerry Passport (wolverine / SQW100-1 / SQW100-3 / SQW100-4)",
-    "soc": "Qualcomm Snapdragon 801 (MSM8974)",
-    "os": "Android 11 (LineageOS 18.1-UNOFFICIAL-wseries, API 30, ARM32)"
+  "target_architecture": {
+    "soc_family": "32-bit Qualcomm Snapdragon Legacy Platforms (MSM8974 / APQ8084 / MSM8926)",
+    "os": "Android 11 (LineageOS 18.1, API 30, ARM32)",
+    "verified_device_profiles": [
+      "blackberry-passport-wolverine"
+    ]
   }
 }

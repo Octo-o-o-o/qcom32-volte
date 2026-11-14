@@ -1,4 +1,4 @@
-package org.passport.volteims;
+package org.octolab.qcom32ims;
 
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -16,10 +16,10 @@ import android.util.Log;
  * Short-lived Direct-Boot-aware bootstrap watcher started on LOCKED_BOOT_COMPLETED /
  * BOOT_COMPLETED so that even when the USIM finishes loading several seconds after
  * boot broadcasts fire, CarrierConfig override + ImsResolver binding complete 100%
- * hands-free without lingering once PassportVolteImsService is bound.
+ * hands-free without lingering once Qcom32VolteImsService is bound.
  */
 public final class VolteBootstrapService extends Service {
-    private static final String TAG = "PassportVolteBootSvc";
+    private static final String TAG = "Qcom32VolteBootSvc";
     private static final long[] RETRY_DELAYS_MS = {
             0L, 1500L, 4000L, 8000L, 15000L, 25000L, 40000L, 55000L
     };
@@ -50,9 +50,9 @@ public final class VolteBootstrapService extends Service {
         public void run() {
             onTrigger("timer_" + stepIndex);
             stepIndex++;
-            if (PassportVolteImsService.isFeatureBound()
+            if (Qcom32VolteImsService.isFeatureBound()
                     && CarrierConfigBootstrapReceiver.isLastApplyComplete()) {
-                Log.i(TAG, "PassportVolteImsService bound and CarrierConfig verified; stopping watcher");
+                Log.i(TAG, "Qcom32VolteImsService bound and CarrierConfig verified; stopping watcher");
                 stopSelf();
                 return;
             }
@@ -107,7 +107,7 @@ public final class VolteBootstrapService extends Service {
             return;
         }
         CarrierConfigBootstrapReceiver.applyOverrideIfNeeded(this, why, false);
-        if (PassportVolteImsService.isFeatureBound()
+        if (Qcom32VolteImsService.isFeatureBound()
                 && CarrierConfigBootstrapReceiver.isLastApplyComplete()) {
             handler.removeCallbacks(retryRunnable);
             stopSelf();

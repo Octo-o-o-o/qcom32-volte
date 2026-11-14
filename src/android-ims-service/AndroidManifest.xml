@@ -1,25 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.passport.volteims"
+    package="org.octolab.qcom32ims"
     android:sharedUserId="android.uid.phone"
-    android:versionCode="3"
-    android:versionName="2.3-passport-volte">
+    android:versionCode="4"
+    android:versionName="2.4-qcom32-volte">
 
     <uses-sdk
         android:minSdkVersion="30"
         android:targetSdkVersion="30" />
 
-    <!-- Intentionally zero <uses-permission> declarations so com.android.phone retains its exact 120 granted permissions. -->
+    <!-- Intentionally zero <uses-permission> declarations so com.android.phone retains its exact granted permissions. -->
     <application
-        android:label="Passport VoLTE IMS"
-        android:process=":volteims"
+        android:label="Qcom32 VoLTE IMS"
+        android:process=":qcom32ims"
         android:directBootAware="true"
         android:extractNativeLibs="true"
         android:allowBackup="false"
         android:debuggable="false">
 
         <service
-            android:name=".PassportVolteImsService"
+            android:name=".Qcom32VolteImsService"
             android:exported="true"
             android:directBootAware="true"
             android:permission="android.permission.BIND_IMS_SERVICE">
@@ -55,8 +55,14 @@
             android:directBootAware="true"
             android:permission="android.permission.MODIFY_PHONE_STATE">
             <intent-filter>
-                <action android:name="org.passport.volteims.ACTION_ADMIN" />
+                <action android:name="org.octolab.qcom32ims.ACTION_ADMIN" />
             </intent-filter>
         </receiver>
+
+        <provider
+            android:name=".VolteStatusProvider"
+            android:authorities="org.octolab.qcom32ims.status"
+            android:exported="true"
+            android:directBootAware="true" />
     </application>
 </manifest>

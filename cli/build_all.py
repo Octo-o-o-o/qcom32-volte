@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Standalone open-source builder & host unit-test runner for BlackBerry Passport Android 11 VoLTE.
+"""Standalone open-source builder & host unit-test runner for the Qcom32 VoLTE & IMS Stack.
 
-Builds and verifies all three production components directly from `src/`:
+Builds and verifies all four production components directly from `src/`:
   1. `src/modem-efs-provisioner/` -> `build/release/pp_regconfig_provision_v6` (ARM32 PIE + 549 host C assertions)
   2. `src/qmi-imsa-probe/`        -> `build/release/libimsa_probe.so`          (ARM32 PIE + 17 host C assertions)
-  3. `src/android-ims-service/`   -> `build/release/PassportVolteIms.apk`      (Android 11 API 30 + 113 host Java assertions + bytecode checks)
+  3. `src/android-ims-service/`   -> `build/release/Qcom32VolteIms.apk`        (Android 11 API 30 + host Java assertions + bytecode checks)
+  4. `src/android-volte-manager/` -> `build/release/Qcom32VolteManager.apk`    (Android 11 API 30 companion UI + host Java assertions)
 
 Usage:
   python3 cli/build_all.py                  # Run host unit tests + build ARM32 binaries & signed APK
@@ -200,10 +201,11 @@ def main() -> int:
     host_cls_dir.mkdir(parents=True, exist_ok=True)
     ref_java_files = sorted(str(p) for p in (ims_src / "test_ref").rglob("*.java"))
     pure_java_files = [
-        str(ims_src / "src/org/passport/volteims/RilImsWire.java"),
-        str(ims_src / "src/org/passport/volteims/RilImsCoreClient.java"),
-        str(ims_src / "src/org/passport/volteims/CallStateEngine.java"),
-        str(ims_src / "test/org/passport/volteims/PassportVolteImsHostTest.java"),
+        str(ims_src / "src/org/octolab/qcom32ims/RilImsWire.java"),
+        str(ims_src / "src/org/octolab/qcom32ims/RilImsCoreClient.java"),
+        str(ims_src / "src/org/octolab/qcom32ims/CallStateEngine.java"),
+        str(ims_src / "src/org/octolab/qcom32ims/QmiProbeSummaryParser.java"),
+        str(ims_src / "test/org/octolab/qcom32ims/Qcom32VolteImsHostTest.java"),
     ]
     run_checked(
         [
@@ -216,12 +218,12 @@ def main() -> int:
         "ims-host-compile",
     )
     ims_test_out, _ = run_checked(
-        [str(java), "-cp", str(host_cls_dir), "org.passport.volteims.PassportVolteImsHostTest"],
+        [str(java), "-cp", str(host_cls_dir), "org.octolab.qcom32ims.Qcom32VolteImsHostTest"],
         "ims-host-test",
     )
     ims_test_line = ims_test_out.strip()
     if not ims_test_line.startswith("PASS;"):
-        raise RuntimeError(f"PassportVolteImsHostTest failed: {ims_test_line}")
+        raise RuntimeError(f"Qcom32VolteImsHostTest failed: {ims_test_line}")
 
     # 3b. Host Unit Tests: android-volte-manager
     mgr_host_cls = work_dir / "mgr-host-classes"
@@ -231,13 +233,13 @@ def main() -> int:
             str(javac), "-J-Duser.language=en", "-source", "8", "-target", "8",
             "-encoding", "UTF-8", "-Xlint:all,-options",
             "-d", str(mgr_host_cls),
-            str(mgr_src / "src/org/passport/voltemanager/VolteManagerLogic.java"),
+            str(mgr_src / "src/org/octolab/qcom32volte/VolteManagerLogic.java"),
             str(mgr_src / "test/VolteManagerLogicTest.java"),
         ],
         "mgr-host-compile",
     )
     mgr_test_out, _ = run_checked(
-        [str(java), "-cp", str(mgr_host_cls), "org.passport.voltemanager.VolteManagerLogicTest"],
+        [str(java), "-cp", str(mgr_host_cls), "org.octolab.qcom32volte.VolteManagerLogicTest"],
         "mgr-host-test",
     )
     mgr_test_line = mgr_test_out.strip()
@@ -389,7 +391,7 @@ def main() -> int:
 
     # Bytecode safety invariants (persistent overrideConfig + Caller ID CLIP->OIR mapping)
     cc_javap, _ = run_checked(
-        [str(javap), "-c", "-p", str(apk_cls_dir / "org/passport/volteims/CarrierConfigBootstrapReceiver.class")],
+        [str(javap), "-c", "-p", str(apk_cls_dir / "org/octolab/qcom32ims/CarrierConfigBootstrapReceiver.class")],
         "verify-cc-bytecode",
     )
     if cc_javap.count("overrideConfig:(ILandroid/os/PersistableBundle;Z)V") != 2 or "overrideConfig:(ILandroid/os/PersistableBundle;)V" in cc_javap:
@@ -398,13 +400,13 @@ def main() -> int:
     call_javap, _ = run_checked(
         [
             str(javap), "-c", "-p",
-            str(apk_cls_dir / "org/passport/volteims/PassportCallSession.class"),
-            str(apk_cls_dir / "org/passport/volteims/PassportCallSession$CallbackBridge.class"),
+            str(apk_cls_dir / "org/octolab/qcom32ims/Qcom32CallSession.class"),
+            str(apk_cls_dir / "org/octolab/qcom32ims/Qcom32CallSession$CallbackBridge.class"),
         ],
         "verify-callerid-bytecode",
     )
     if "presentationToOir:(I)I" in call_javap or "getNumberOir:()I" not in call_javap or "callSessionUpdated:" not in call_javap:
-        raise RuntimeError("Bytecode invariant failed: PassportCallSession must use getNumberOir()/getNameOir() + callSessionUpdated()")
+        raise RuntimeError("Bytecode invariant failed: Qcom32CallSession must use getNumberOir()/getNameOir() + callSessionUpdated()")
 
     classes_jar = work_dir / "classes.jar"
     run_checked([str(jar_tool), "cf", str(classes_jar), "-C", str(apk_cls_dir), "."], "ims-jar")
@@ -439,7 +441,7 @@ def main() -> int:
     aligned_apk = work_dir / "aligned.apk"
     run_checked([str(zipalign), "-f", "-p", "4", str(unsigned_apk), str(aligned_apk)], "ims-zipalign")
 
-    final_apk = out_dir / "PassportVolteIms.apk"
+    final_apk = out_dir / "Qcom32VolteIms.apk"
     run_checked(
         [
             str(java), "-jar", str(apksigner_jar), "sign",
@@ -511,7 +513,7 @@ def main() -> int:
             {
                 "pp_regconfig_provision_v6": sha256_file(prov_arm),
                 "libimsa_probe.so": sha256_file(probe_arm),
-                "PassportVolteIms.apk": sha256_file(final_apk),
+                "Qcom32VolteIms.apk": sha256_file(final_apk),
             },
             indent=2,
         )
@@ -523,7 +525,7 @@ def main() -> int:
         zf.writestr("assets/payload-manifest.json", payload_manifest_bytes, compress_type=zipfile.ZIP_DEFLATED)
         zf.write(prov_arm, "assets/pp_regconfig_provision_v6", compress_type=zipfile.ZIP_DEFLATED)
         zf.write(probe_arm, "assets/libimsa_probe.so", compress_type=zipfile.ZIP_DEFLATED)
-        zf.write(final_apk, "assets/PassportVolteIms.apk", compress_type=zipfile.ZIP_STORED)
+        zf.write(final_apk, "assets/Qcom32VolteIms.apk", compress_type=zipfile.ZIP_STORED)
 
     mgr_aligned = mgr_work / "mgr-aligned.apk"
     run_checked([str(zipalign), "-f", "-p", "4", str(mgr_unsigned), str(mgr_aligned)], "mgr-zipalign")
@@ -544,7 +546,7 @@ def main() -> int:
             "mgr-keygen",
         )
 
-    final_mgr_apk = out_dir / "PassportVolteManager.apk"
+    final_mgr_apk = out_dir / "Qcom32VolteManager.apk"
     run_checked(
         [
             str(java), "-jar", str(apksigner_jar), "sign",
@@ -573,12 +575,12 @@ def main() -> int:
             "sha256": sha256_file(probe_arm),
             "bytes": probe_arm.stat().st_size,
         },
-        "PassportVolteIms.apk": {
+        "Qcom32VolteIms.apk": {
             "path": final_apk.relative_to(REPO_ROOT).as_posix() if final_apk.is_relative_to(REPO_ROOT) else str(final_apk),
             "sha256": sha256_file(final_apk),
             "bytes": final_apk.stat().st_size,
         },
-        "PassportVolteManager.apk": {
+        "Qcom32VolteManager.apk": {
             "path": final_mgr_apk.relative_to(REPO_ROOT).as_posix() if final_mgr_apk.is_relative_to(REPO_ROOT) else str(final_mgr_apk),
             "sha256": sha256_file(final_mgr_apk),
             "bytes": final_mgr_apk.stat().st_size,
