@@ -45,9 +45,11 @@ See **[`docs/guide/COMPARISON_QUALCOMM_VOLTE_ENABLER.md`](docs/guide/COMPARISON_
 
 ---
 
-## Onboarding Fellow Snapdragon 800 / 801 (`MSM8974`) Phones
+## Onboarding Fellow Snapdragon 800 / 801 (`MSM8974`) Phones & Built-in AI Skill
 
-Using OnePlus One (`bacon`), Xiaomi Mi 4 / Note (`cancro`), Sony Xperia Z1/Z2/Z3, Samsung Galaxy S5 (`klte`), LG G2/G3, or HTC One M8 on Android 10/11? Read **[`devices/README.md`](devices/README.md)** and **[`docs/guide/MSM8974_PORTING_GUIDE.md`](docs/guide/MSM8974_PORTING_GUIDE.md)** for reusing `Qcom32VolteIms.apk` and creating a verified device profile.
+Using OnePlus One (`bacon`), Xiaomi Mi 4 / Note (`cancro`), Sony Xperia Z1/Z2/Z3, Samsung Galaxy S5 (`klte`), LG G2/G3, HTC One M8, Moto X 2014, or Nexus 6 on Android 10/11?
+- **Human Porting Guides**: Read **[`devices/README.md`](devices/README.md)** and **[`docs/guide/MSM8974_PORTING_GUIDE.md`](docs/guide/MSM8974_PORTING_GUIDE.md)** for reusing `Qcom32VolteIms.apk` and onboarding a verified device profile.
+- **Built-in Multi-Agent AI Skill ([`.agents/skills/qcom32-volte/`](.agents/skills/qcom32-volte/SKILL.md) & [`.claude/skills/qcom32-volte/`](.claude/skills/qcom32-volte/SKILL.md))**: Out-of-the-box workspace skill for **Antigravity, Claude Code, Codex, Cursor, and Gemini CLI**. AI assistants automatically inspect connected phones in read-only mode (`ai_device_helper.py inspect`), flag incompatible hardware sub-variants (`catalog`), run guarded deploy/upgrade/rollback on verified profiles, and decode 789-byte `/pdp_profiles/*` blobs (`decode-pdp`) during 4-Gate new-device porting without blind EFS writes.
 
 ---
 
@@ -56,6 +58,7 @@ Using OnePlus One (`bacon`), Xiaomi Mi 4 / Note (`cancro`), Sony Xperia Z1/Z2/Z3
 ```bash
 python3 cli/build_all.py --host-tests-only
 python3 cli/volte_ctl.py self-test
+python3 .agents/skills/qcom32-volte/scripts/ai_device_helper.py self-test
 cd website && npm test
 ```
 

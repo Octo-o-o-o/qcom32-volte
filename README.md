@@ -67,9 +67,20 @@
 
 ---
 
+## AI 助手一键识别与多机型适配（内置 Multi-Agent Skill）
+
+仓库已内置面向 **Antigravity、Claude Code、Codex、Cursor、Gemini CLI** 等主流 AI 编程助手的专用技能包（[`.agents/skills/qcom32-volte/`](.agents/skills/qcom32-volte/SKILL.md) 与 [`.claude/skills/qcom32-volte/`](.claude/skills/qcom32-volte/SKILL.md)）。其他用户或开发者使用 AI 打开本项目时，AI 会自动加载本项目的安全红线与机型工作流：
+
+- **插线自动只读识别与路由**：执行 `python3 .agents/skills/qcom32-volte/scripts/ai_device_helper.py inspect` 自动检测 ADB / Fastboot 状态、SoC 平台、Android 版本、ROM `test-keys`/`release-keys` 签名兼容性、`rild_ims0`、音频 `Voice-MMode1` 通路与基带符号，自动分流至一键激活、APK 升级、刷机前置准备或新机移植流程（自动脱敏序列号/IMEI，绝不跨机型盲写 EFS）。
+- **9 大经典机系子型号避坑查询**：执行 `python3 .agents/skills/qcom32-volte/scripts/ai_device_helper.py catalog --query <型号或代号>` 秒查三星 S5 (`klte`)、小米 4 (`cancro`)、LG G3 (`d855`)、一加 1 (`bacon`)、索尼 Z1/Z2/Z3、HTC M8、Nexus 6 等机型的推荐 ROM、刷机入口与硬件锁死变体（自动拦截联通 3G 版 `MI 4W`、猎户座 `SM-G900H`、美版锁 BL `SM-G900A` 与无 `qipcall` 基带的 `Nexus 5`）。
+- **4-Gate 新机只读 EFS 移植辅助**：内置 789 字节 `/pdp_profiles/profile*` 解码器（`decode-pdp`）与 `devices/<id>/profile.json` 脚手架/校验器（`scaffold-profile` / `validate-profile`），严防覆盖非 IMS 数据或彩信槽位。
+
+---
+
 ## 仓库目录结构
 
 ```text
+├── .agents/skills/qcom32-volte/     # 【内置 AI 技能】机型自动识别、安全部署与 4-Gate 移植助手（兼容 Claude/.claude）
 ├── devices/                         # 【设备 Profile 注册表】按机型隔离基带 EFS 槽位与安全门禁
 │   └── blackberry-passport-wolverine/profile.json
 ├── src/                             # 【正式生产源码】100% 从源码编译验证，零预编译黑盒
@@ -96,9 +107,10 @@
 ## 从源码编译与自检
 
 ```bash
-# 1. 运行宿主机全套 C + Java + CLI 单元测试（无需连接手机或交叉工具链）
+# 1. 运行宿主机全套 C + Java + CLI + AI Skill 单元测试（无需连接手机或交叉工具链）
 python3 cli/build_all.py --host-tests-only
 python3 cli/volte_ctl.py self-test
+python3 .agents/skills/qcom32-volte/scripts/ai_device_helper.py self-test
 
 # 2. 交叉编译全部 ARM32 工具与签名双 APK 至 build/release/
 python3 cli/build_all.py

@@ -28,6 +28,10 @@ jobs:
         run: python3 cli/build_all.py --host-tests-only
       - name: Run CLI Self-Test
         run: python3 cli/volte_ctl.py self-test
+      - name: Run Built-in AI Skill & Profile Self-Test
+        run: |
+          python3 .agents/skills/qcom32-volte/scripts/ai_device_helper.py self-test
+          python3 .agents/skills/qcom32-volte/scripts/ai_device_helper.py validate-profile
       - name: Build & Test Official Website
         working-directory: website
         run: npm test

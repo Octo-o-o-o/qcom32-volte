@@ -34,6 +34,8 @@ EXPORT_TREE_ENTRIES = (
     "Start-GUI.cmd",
     ".gitignore",
     ".github/workflows/ci.yml",
+    ".agents/skills/qcom32-volte",
+    ".claude/skills/qcom32-volte",
     "assets",
     "devices",
     "src",
@@ -99,6 +101,8 @@ def build_portable_zip(opensource_dir: Path, release_dir: Path, dst_zip: Path, v
         "NOTICE.md",
         "project.json",
         "Start-GUI.cmd",
+        ".agents/skills/qcom32-volte",
+        ".claude/skills/qcom32-volte",
         "assets",
         "devices",
         "cli/volte_ctl.py",
@@ -141,6 +145,11 @@ def main() -> int:
         "--release-out",
         default=None,
         help="Destination directory for packaged release assets (default: dist/release-v<ver>-r<rev>)",
+    )
+    ap.add_argument(
+        "--skip-release-package",
+        action="store_true",
+        help="Export dist/qcom32-volte-opensource only without repackaging dist/release-*",
     )
     args = ap.parse_args()
 
@@ -203,7 +212,7 @@ def main() -> int:
     release_summary: dict[str, object] = {"packaged": False}
     build_rel_dir = REPO_ROOT / "build/release"
     win_exe = REPO_ROOT / f"build/windows/qcom32-volte-{ver_label}-windows-x64.exe"
-    if (build_rel_dir / "Qcom32VolteIms.apk").is_file() and (build_rel_dir / "Qcom32VolteManager.apk").is_file() and win_exe.is_file():
+    if (not args.skip_release_package) and (build_rel_dir / "Qcom32VolteIms.apk").is_file() and (build_rel_dir / "Qcom32VolteManager.apk").is_file() and win_exe.is_file():
         rel_out = Path(args.release_out).expanduser().resolve() if args.release_out else (REPO_ROOT / f"dist/release-{tag}")
         if rel_out.exists():
             shutil.rmtree(rel_out)
