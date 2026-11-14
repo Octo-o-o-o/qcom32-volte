@@ -1,0 +1,40 @@
+// SPDX-License-Identifier: Apache-2.0
+// Drop into packages/services/PassportVolteIms/Android.bp inside a LineageOS 18.1 (Android 11) tree.
+
+cc_binary {
+    name: "libimsa_probe.so",
+    srcs: [
+        "jni/imsa_probe_v3.c",
+        "jni/imsa_probe_v3_main.c",
+    ],
+    cflags: [
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-O2",
+    ],
+    shared_libs: [
+        "libc",
+        "libdl",
+    ],
+    compile_multilib: "32",
+    stem: "libimsa_probe.so",
+    proprietary: false,
+}
+
+android_app {
+    name: "PassportVolteIms",
+    srcs: ["src/**/*.java"],
+    manifest: "AndroidManifest.xml",
+    platform_apis: true,
+    certificate: "platform",
+    privileged: true,
+    system_ext_specific: true,
+    optimize: {
+        enabled: false,
+    },
+    jni_libs: [],
+    required: [
+        "libimsa_probe.so",
+    ],
+}

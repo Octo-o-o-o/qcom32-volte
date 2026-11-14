@@ -1,0 +1,521 @@
+package org.passport.voltemanager;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.os.Build;
+import android.os.Bundle;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+/**
+ * Companion on-device status & Magisk Root manager UI optimized for the 1440x1440 square display
+ * of BlackBerry Passport running LineageOS 18.1 (Android 11).
+ */
+public final class MainActivity extends Activity {
+    private static final int COLOR_CANVAS = Color.parseColor("#F4F5F0");
+    private static final int COLOR_SURFACE = Color.parseColor("#FCFCF8");
+    private static final int COLOR_TEXT = Color.parseColor("#202923");
+    private static final int COLOR_MUTED = Color.parseColor("#657068");
+    private static final int COLOR_LINE = Color.parseColor("#D7DDD4");
+    private static final int COLOR_ACCENT = Color.parseColor("#2E654D");
+    private static final int COLOR_DANGER = Color.parseColor("#984B3E");
+
+    private final ExecutorService worker = Executors.newSingleThreadExecutor();
+    private boolean englishMode = false;
+    private boolean busy = false;
+
+    private TextView titleView;
+    private TextView subtitleView;
+    private Button langButton;
+    private TextView statusBadgeView;
+    private TextView statusDetailsView;
+    private TextView logView;
+    private Button refreshButton;
+    private Button deployButton;
+    private Button upgradeButton;
+    private Button rollbackButton;
+    private Button copyButton;
+    private String lastSanitizedReport = "";
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        englishMode = !Locale.getDefault().getLanguage().toLowerCase(Locale.ROOT).startsWith("zh");
+        buildSquareUi();
+        refreshLabels();
+        runCheckStatus();
+    }
+
+    @Override
+    protected void onDestroy() {
+        worker.shutdownNow();
+        super.onDestroy();
+    }
+
+    private int dp(int v) {
+        return Math.round(TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, v, getResources().getDisplayMetrics()));
+    }
+
+    private GradientDrawable roundedBox(int fill, int stroke, int radiusDp) {
+        GradientDrawable gd = new GradientDrawable();
+        gd.setColor(fill);
+        gd.setCornerRadius(dp(radiusDp));
+        gd.setStroke(dp(1), stroke);
+        return gd;
+    }
+
+    private Button createActionButton(String label, boolean primary, boolean danger) {
+        Button b = new Button(this);
+        b.setAllCaps(false);
+        b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        int padV = dp(12);
+        int padH = dp(16);
+        b.setPadding(padH, padV, padH, padV);
+        if (primary) {
+            b.setTextColor(Color.WHITE);
+            b.setBackground(roundedBox(COLOR_ACCENT, COLOR_ACCENT, 4));
+        } else if (danger) {
+            b.setTextColor(COLOR_DANGER);
+            b.setBackground(roundedBox(COLOR_SURFACE, COLOR_DANGER, 4));
+        } else {
+            b.setTextColor(COLOR_TEXT);
+            b.setBackground(roundedBox(COLOR_SURFACE, COLOR_LINE, 4));
+        }
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(10);
+        b.setLayoutParams(lp);
+        b.setText(label);
+        return b;
+    }
+
+    private void buildSquareUi() {
+        ScrollView scroll = new ScrollView(this);
+        scroll.setBackgroundColor(COLOR_CANVAS);
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(18);
+        root.setPadding(pad, pad, pad, pad);
+
+        // Header row
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+
+        LinearLayout titleCol = new LinearLayout(this);
+        titleCol.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        titleCol.setLayoutParams(titleLp);
+
+        titleView = new TextView(this);
+        titleView.setTextColor(COLOR_TEXT);
+        titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+        titleView.setTypeface(Typeface.DEFAULT_BOLD);
+        titleCol.addView(titleView);
+
+        subtitleView = new TextView(this);
+        subtitleView.setTextColor(COLOR_MUTED);
+        subtitleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        titleCol.addView(subtitleView);
+
+        langButton = new Button(this);
+        langButton.setAllCaps(false);
+        langButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        langButton.setTextColor(COLOR_ACCENT);
+        langButton.setBackground(roundedBox(COLOR_SURFACE, COLOR_LINE, 4));
+        langButton.setPadding(dp(12), dp(6), dp(12), dp(6));
+        langButton.setOnClickListener(v -> {
+            englishMode = !englishMode;
+            refreshLabels();
+            runCheckStatus();
+        });
+
+        header.addView(titleCol);
+        header.addView(langButton);
+        root.addView(header);
+
+        // Status Card
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackground(roundedBox(COLOR_SURFACE, COLOR_LINE, 6));
+        card.setPadding(dp(16), dp(14), dp(16), dp(14));
+        LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        cardLp.topMargin = dp(14);
+        cardLp.bottomMargin = dp(14);
+        card.setLayoutParams(cardLp);
+
+        statusBadgeView = new TextView(this);
+        statusBadgeView.setTextColor(COLOR_ACCENT);
+        statusBadgeView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        statusBadgeView.setTypeface(Typeface.DEFAULT_BOLD);
+        card.addView(statusBadgeView);
+
+        statusDetailsView = new TextView(this);
+        statusDetailsView.setTextColor(COLOR_TEXT);
+        statusDetailsView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        statusDetailsView.setTypeface(Typeface.MONOSPACE);
+        LinearLayout.LayoutParams detLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        detLp.topMargin = dp(8);
+        statusDetailsView.setLayoutParams(detLp);
+        card.addView(statusDetailsView);
+        root.addView(card);
+
+        // Action buttons
+        refreshButton = createActionButton("", false, false);
+        refreshButton.setOnClickListener(v -> runCheckStatus());
+        root.addView(refreshButton);
+
+        deployButton = createActionButton("", true, false);
+        deployButton.setOnClickListener(v -> confirmAndRunDeploy());
+        root.addView(deployButton);
+
+        upgradeButton = createActionButton("", false, false);
+        upgradeButton.setOnClickListener(v -> confirmAndRunUpgrade());
+        root.addView(upgradeButton);
+
+        rollbackButton = createActionButton("", false, true);
+        rollbackButton.setOnClickListener(v -> confirmAndRunRollback());
+        root.addView(rollbackButton);
+
+        copyButton = createActionButton("", false, false);
+        copyButton.setOnClickListener(v -> copyReportToClipboard());
+        root.addView(copyButton);
+
+        // Log output box
+        logView = new TextView(this);
+        logView.setTextColor(COLOR_MUTED);
+        logView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        logView.setTypeface(Typeface.MONOSPACE);
+        logView.setBackground(roundedBox(COLOR_SURFACE, COLOR_LINE, 6));
+        logView.setPadding(dp(14), dp(12), dp(14), dp(12));
+        root.addView(logView);
+
+        scroll.addView(root);
+        setContentView(scroll);
+    }
+
+    private void refreshLabels() {
+        if (englishMode) {
+            titleView.setText("Passport Android 11 VoLTE");
+            subtitleView.setText("OCTOLAB · Native Stage 6A + ImsService v2.3 Companion");
+            langButton.setText("中文");
+            refreshButton.setText("Check Live VoLTE & SIM Status");
+            deployButton.setText("Backup EFS & Activate VoLTE (Requires Magisk Root)");
+            upgradeButton.setText("Update ImsService Bridge APK Only (Zero EFS Write)");
+            rollbackButton.setText("Restore Factory Modem EFS & Uninstall");
+            copyButton.setText("Copy Redacted Diagnostic Report");
+        } else {
+            titleView.setText("Passport Android 11 VoLTE");
+            subtitleView.setText("OCTOLAB · 原生基带 Stage 6A + ImsService v2.3 伴侣管理端");
+            langButton.setText("English");
+            refreshButton.setText("检查当前 SIM / 4G / VoLTE 状态");
+            deployButton.setText("备份原值并一键激活 VoLTE（需手机本地 Magisk Root）");
+            upgradeButton.setText("仅原位更新桥接服务 APK（零基带 EFS 写入）");
+            rollbackButton.setText("一键恢复出厂基带配置并卸载桥接服务");
+            copyButton.setText("复制脱敏诊断摘要");
+        }
+    }
+
+    private void setBusy(boolean isBusy) {
+        busy = isBusy;
+        refreshButton.setEnabled(!isBusy);
+        deployButton.setEnabled(!isBusy);
+        upgradeButton.setEnabled(!isBusy);
+        rollbackButton.setEnabled(!isBusy);
+    }
+
+    private void runCheckStatus() {
+        if (busy) return;
+        setBusy(true);
+        statusBadgeView.setText(englishMode ? "Checking device & IMS state..." : "正在读取设备与 IMS 状态…");
+        worker.execute(() -> {
+            String model = Build.MODEL;
+            String device = Build.DEVICE;
+            int sdk = Build.VERSION.SDK_INT;
+            String simNum = readSystemProp("gsm.sim.operator.numeric");
+            String netType = readSystemProp("gsm.network.type");
+
+            boolean imsInstalled = false;
+            String imsVer = null;
+            try {
+                PackageInfo pi = getPackageManager().getPackageInfo(VolteManagerLogic.IMS_PKG, 0);
+                imsInstalled = true;
+                imsVer = pi.versionName;
+            } catch (PackageManager.NameNotFoundException ignored) {}
+
+            boolean suOk = checkSuAvailable();
+            String svcDump = imsInstalled ? "package=org.passport.volteims\nversion=" + imsVer : "";
+            String qmiOut = "";
+            String phoneDump = "";
+
+            if (suOk) {
+                svcDump = execRoot("dumpsys activity service org.passport.volteims/.PassportVolteImsService || true")
+                        + "\n" + svcDump;
+                phoneDump = execRoot("dumpsys activity service com.android.phone/.TelephonyDebugService | grep -E 'mImsRegistered=' | head -n 4 || true");
+                try {
+                    File staged = stageVerifiedAssets();
+                    String probePath = new File(staged, "libimsa_probe.so").getAbsolutePath();
+                    qmiOut = execRoot("cp '" + probePath + "' /data/local/tmp/pp_imsa_probe && chmod 0700 /data/local/tmp/pp_imsa_probe && /data/local/tmp/pp_imsa_probe; rm -f /data/local/tmp/pp_imsa_probe");
+                } catch (Exception e) {
+                    qmiOut = "probe_error=" + e.getMessage();
+                }
+            }
+
+            VolteManagerLogic.StatusSnapshot snap = VolteManagerLogic.parseStatusSummary(
+                    model, device, sdk, suOk, svcDump, qmiOut, phoneDump, simNum, netType);
+
+            String details = "Model / Device : " + model + " (" + device + ", SDK " + sdk + ")\n"
+                    + "SIM / Network  : " + snap.carrierSummary + "\n"
+                    + "Local Root (su): " + (snap.suAvailable ? "YES (UID 0)" : "NO (Use PC ADB Root tool)") + "\n"
+                    + "ImsService APK : " + (snap.imsServicePresent ? ("Installed (" + snap.imsServiceVersion + ")") : "Not installed") + "\n"
+                    + "rild_ims0 Link : " + (snap.suAvailable ? String.valueOf(snap.rilConnected) : "Requires su / PC") + "\n"
+                    + "QMI_IMSA VoIP  : " + (snap.suAvailable ? String.valueOf(snap.qmiRegistered) : "Requires su / PC") + "\n"
+                    + "Framework IMS  : " + (snap.suAvailable ? String.valueOf(snap.frameworkRegistered) : "Requires su / PC");
+
+            String rawLog = "[Sanitized Diagnostic Log]\n"
+                    + details + "\n"
+                    + (!qmiOut.isEmpty() ? ("QMI: " + qmiOut.trim() + "\n") : "")
+                    + (!phoneDump.isEmpty() ? ("Phone: " + phoneDump.trim() + "\n") : "");
+            String cleanLog = VolteManagerLogic.redactSensitiveDigits(rawLog);
+
+            runOnUiThread(() -> {
+                statusBadgeView.setText(englishMode ? snap.headlineEn : snap.headlineZh);
+                statusBadgeView.setTextColor(snap.volteHealthy ? COLOR_ACCENT : COLOR_TEXT);
+                statusDetailsView.setText(details);
+                logView.setText(cleanLog);
+                lastSanitizedReport = cleanLog;
+                setBusy(false);
+            });
+        });
+    }
+
+    private void confirmAndRunDeploy() {
+        if (busy) return;
+        String title = englishMode ? "Backup & Activate VoLTE" : "备份原值并激活 VoLTE";
+        String msg = englishMode
+                ? "This will:\n1. Verify SHA-256 of bundled Stage 6A payloads;\n2. Save original EFS backups locally;\n3. Provision Stage 6A modem EFS + EFS_SYNC;\n4. Install PassportVolteIms v2.3 & apply persistent CarrierConfig.\n\nA normal phone reboot is required afterwards. Proceed?"
+                : "即将执行：\n1. 校验内置 Stage 6A 载荷 SHA-256；\n2. 备份本机基带原始 EFS 配置到本地安全目录；\n3. 写入 Stage 6A 基带配置并完成 EFS_SYNC；\n4. 安装 PassportVolteIms v2.3 并写入跨重启绑定。\n\n完成后需正常重启一次手机生效。确认继续？";
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(msg)
+                .setPositiveButton(englishMode ? "Activate" : "确认激活", (d, w) -> executeRootOperation("deploy"))
+                .setNegativeButton(englishMode ? "Cancel" : "取消", null)
+                .show();
+    }
+
+    private void confirmAndRunUpgrade() {
+        if (busy) return;
+        new AlertDialog.Builder(this)
+                .setTitle(englishMode ? "Update ImsService APK" : "更新桥接服务 APK")
+                .setMessage(englishMode
+                        ? "Updates PassportVolteIms.apk v2.3 in place without touching modem EFS."
+                        : "仅原位更新 PassportVolteIms.apk v2.3，不写入任何基带 EFS 项。")
+                .setPositiveButton(englishMode ? "Update" : "确认更新", (d, w) -> executeRootOperation("upgrade"))
+                .setNegativeButton(englishMode ? "Cancel" : "取消", null)
+                .show();
+    }
+
+    private void confirmAndRunRollback() {
+        if (busy) return;
+        new AlertDialog.Builder(this)
+                .setTitle(englishMode ? "Restore Factory Modem EFS" : "恢复出厂基带并卸载")
+                .setMessage(englishMode
+                        ? "Clears CarrierConfig overrides, uninstalls PassportVolteIms, deletes all 52 Stage 6A EFS files, and restores IMS_enable=00 & voice_domain_pref=00."
+                        : "将清除 CarrierConfig 持久覆盖、卸载 PassportVolteIms，删除全部 52 项新建 EFS 文件，并将 IMS_enable 与 voice_domain_pref 恢复为 00。")
+                .setPositiveButton(englishMode ? "Restore" : "确认恢复", (d, w) -> executeRootOperation("rollback"))
+                .setNegativeButton(englishMode ? "Cancel" : "取消", null)
+                .show();
+    }
+
+    private void executeRootOperation(String mode) {
+        setBusy(true);
+        statusBadgeView.setText(englishMode ? "Running guarded root operation..." : "正在执行受控 Root 操作，请勿断开电源…");
+        worker.execute(() -> {
+            try {
+                if (!VolteManagerLogic.verifyPassportIdentity(Build.MODEL, Build.DEVICE, Build.VERSION.SDK_INT)) {
+                    throw new IllegalStateException("Unsupported hardware: " + Build.MODEL + " / " + Build.DEVICE);
+                }
+                if (!checkSuAvailable()) {
+                    throw new IllegalStateException(englishMode
+                            ? "Local su (Magisk) is not available. Please connect USB and use the Windows/Desktop tool via ADB Root."
+                            : "当前手机没有本地 su (Magisk) 权限。若是纯净 LineageOS 18.1，请连电脑使用桌面一键激活器（走自带 ADB Root）。");
+                }
+                File staged = stageVerifiedAssets();
+                String script;
+                if ("deploy".equals(mode)) {
+                    String stamp = new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(new Date());
+                    File backupDir = new File(getFilesDir(), "efs-backups/backup-" + stamp);
+                    backupDir.mkdirs();
+                    script = VolteManagerLogic.buildRootDeployScript(staged.getAbsolutePath(), backupDir.getAbsolutePath());
+                } else if ("upgrade".equals(mode)) {
+                    script = VolteManagerLogic.buildRootUpgradeApkScript(staged.getAbsolutePath());
+                } else {
+                    script = VolteManagerLogic.buildRootRollbackScript(staged.getAbsolutePath());
+                }
+                String out = execRoot(script);
+                String redacted = VolteManagerLogic.redactSensitiveDigits(out);
+                runOnUiThread(() -> {
+                    logView.setText(redacted);
+                    lastSanitizedReport = redacted;
+                    setBusy(false);
+                    promptNormalReboot();
+                });
+            } catch (Exception e) {
+                String err = VolteManagerLogic.redactSensitiveDigits("ERROR: " + e.getMessage());
+                runOnUiThread(() -> {
+                    statusBadgeView.setText(englishMode ? "Operation stopped safely" : "操作已安全中止");
+                    statusBadgeView.setTextColor(COLOR_DANGER);
+                    logView.setText(err);
+                    setBusy(false);
+                });
+            }
+        });
+    }
+
+    private void promptNormalReboot() {
+        new AlertDialog.Builder(this)
+                .setTitle(englishMode ? "Completed — Reboot Required" : "已完成 — 请正常重启手机")
+                .setMessage(englishMode
+                        ? "Operation succeeded and EFS_SYNC completed. Reboot now to apply cleanly?"
+                        : "操作与基带 EFS_SYNC 均已核验完成。是否现在正常重启手机使其生效？")
+                .setPositiveButton(englishMode ? "Reboot Now" : "立即正常重启", (d, w) -> worker.execute(() -> execRoot("svc power reboot")))
+                .setNegativeButton(englishMode ? "Reboot Later" : "稍后手动重启", (d, w) -> runCheckStatus())
+                .show();
+    }
+
+    private void copyReportToClipboard() {
+        if (lastSanitizedReport == null || lastSanitizedReport.isEmpty()) {
+            return;
+        }
+        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        if (cm != null) {
+            cm.setPrimaryClip(ClipData.newPlainText("PassportVoLTE", lastSanitizedReport));
+            Toast.makeText(this, englishMode ? "Redacted report copied" : "已复制脱敏诊断摘要", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private File stageVerifiedAssets() throws Exception {
+        AssetManager am = getAssets();
+        JSONObject manifest = new JSONObject(new String(readAssetBytes(am, "payload-manifest.json"), StandardCharsets.UTF_8));
+        File dir = new File(getFilesDir(), "staged-payloads");
+        if (!dir.exists() && !dir.mkdirs()) {
+            throw new IOException("Could not create staged-payloads directory");
+        }
+        String[] names = new String[]{"pp_regconfig_provision_v6", "libimsa_probe.so", "PassportVolteIms.apk"};
+        for (String name : names) {
+            String expectedSha = manifest.getString(name);
+            byte[] raw = readAssetBytes(am, name);
+            String actualSha = VolteManagerLogic.sha256Hex(raw);
+            if (!expectedSha.equalsIgnoreCase(actualSha)) {
+                throw new SecurityException("Asset SHA-256 mismatch for " + name);
+            }
+            File out = new File(dir, name);
+            try (FileOutputStream fos = new FileOutputStream(out)) {
+                fos.write(raw);
+            }
+            out.setReadable(true, false);
+            if (!name.endsWith(".apk")) {
+                out.setExecutable(true, false);
+            }
+        }
+        return dir;
+    }
+
+    private static byte[] readAssetBytes(AssetManager am, String name) throws IOException {
+        try (InputStream in = am.open(name); ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+            byte[] buf = new byte[16384];
+            int n;
+            while ((n = in.read(buf)) != -1) {
+                bos.write(buf, 0, n);
+            }
+            return bos.toByteArray();
+        }
+    }
+
+    private static String readSystemProp(String key) {
+        try {
+            Process p = new ProcessBuilder("getprop", key).redirectErrorStream(true).start();
+            byte[] out = readStream(p.getInputStream());
+            p.waitFor();
+            return new String(out, StandardCharsets.UTF_8).trim();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private static boolean checkSuAvailable() {
+        try {
+            Process p = new ProcessBuilder("su", "-c", "id -u").redirectErrorStream(true).start();
+            String out = new String(readStream(p.getInputStream()), StandardCharsets.UTF_8).trim();
+            int rc = p.waitFor();
+            return rc == 0 && "0".equals(out);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static String execRoot(String script) {
+        try {
+            Process p = new ProcessBuilder("su").redirectErrorStream(true).start();
+            try (OutputStream os = p.getOutputStream()) {
+                os.write(VolteManagerLogic.utf8Bytes(script + "\nexit\n"));
+                os.flush();
+            }
+            String out = new String(readStream(p.getInputStream()), StandardCharsets.UTF_8);
+            int rc = p.waitFor();
+            if (rc != 0) {
+                throw new IllegalStateException("su exited with code " + rc + ": " + out.trim());
+            }
+            return out;
+        } catch (RuntimeException re) {
+            throw re;
+        } catch (Exception e) {
+            throw new IllegalStateException("Root execution failed: " + e.getMessage(), e);
+        }
+    }
+
+    private static byte[] readStream(InputStream in) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        byte[] buf = new byte[8192];
+        int n;
+        while ((n = in.read(buf)) != -1) {
+            bos.write(buf, 0, n);
+        }
+        return bos.toByteArray();
+    }
+}

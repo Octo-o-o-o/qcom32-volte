@@ -1,0 +1,4478 @@
+{
+  "schema": "bb-passport-volte-archive-catalog-v1",
+  "generated_at": "2026-11-14T10:00:21.017884+08:00",
+  "policy_note": "Formal production code lives cleanly under src/, cli/, and docs/guide/. Historical prototypes (prototype/*), research scripts (tools/*), milestone reports (docs/01..111), and sanitized evidence (evidence/*) remain pinned in place in the research monorepo to preserve cryptographic SHA-256 auditability across 1,920+ debug-journal entries, while cli/export_opensource_bundle.py exports a pure clutter-free standalone open-source repository.",
+  "production_components": [
+    {
+      "id": "android-ims-service",
+      "formal_dir": "src/android-ims-service",
+      "artifact_name": "PassportVolteIms.apk",
+      "version": "2.3-passport-volte",
+      "qualified_apk_sha256": "ca7a44e9581f50d0901cd92e4e2e5ca3357215227f108f1a93b47660b23adf19",
+      "origin_prototype": "prototype/passport-volte-ims-v2r3"
+    },
+    {
+      "id": "modem-efs-provisioner",
+      "formal_dir": "src/modem-efs-provisioner",
+      "artifact_name": "pp_regconfig_provision_v6",
+      "qualified_binary_sha256": "7d872cf42d2f50bfa82ce98a029ebb01b09ee9497c9c66f34b5d6947a5cb4c6e",
+      "origin_prototype": "prototype/regconfig-provision-v6"
+    },
+    {
+      "id": "qmi-imsa-probe",
+      "formal_dir": "src/qmi-imsa-probe",
+      "artifact_name": "libimsa_probe.so",
+      "qualified_binary_sha256": "fc6fc45fd4eb8c103409d759f02b5b540f3d7b02f91785c127d620b7489779f2",
+      "origin_prototype": "prototype/imsa-status-probe-v3"
+    }
+  ],
+  "counts": {
+    "production_staged_files": 31,
+    "prototype_directories_total": 75,
+    "tools_files_total": 665
+  },
+  "prototype_catalog": [
+    {
+      "name": "backend-diag",
+      "path": "prototype/backend-diag",
+      "status": "shared_runtime_stub_and_archived_diag",
+      "summary": "Provided minimal ARM32 Bionic PIE crt_entry.c (promoted to src/) plus early RIL socket diagnostic probes."
+    },
+    {
+      "name": "device-tests",
+      "path": "prototype/device-tests",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "diag-efs-prep",
+      "path": "prototype/diag-efs-prep",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "diag-root-readonly",
+      "path": "prototype/diag-root-readonly",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "diag-route-contracts",
+      "path": "prototype/diag-route-contracts",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "efs-ds-audit",
+      "path": "prototype/efs-ds-audit",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "efs-ims-audit",
+      "path": "prototype/efs-ims-audit",
+      "status": "shared_codec_and_forensic_audit",
+      "summary": "Provided wide_diag_codec.{h,c} (promoted to src/modem-efs-provisioner/) and read-only EFS2 directory/item audit."
+    },
+    {
+      "name": "host",
+      "path": "prototype/host",
+      "status": "promoted_test_reference",
+      "summary": "Provided independent LegacyFrameCodec/Observation reference classes used by PassportVolteImsHostTest."
+    },
+    {
+      "name": "ims-bearer-probe",
+      "path": "prototype/ims-bearer-probe",
+      "status": "archived_experiment",
+      "summary": "Intermediate WDS / Android ConnectivityService IMS PDN probes; proved Android rmnet1 clashes with Hexagon standalone DCM."
+    },
+    {
+      "name": "ims-enable-reboot",
+      "path": "prototype/ims-enable-reboot",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "ims-enable-toggle",
+      "path": "prototype/ims-enable-toggle",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "imsa-status-probe",
+      "path": "prototype/imsa-status-probe",
+      "status": "archived_experiment",
+      "summary": "Early QMI_IMSS / QMI_IMSA readers (including 40-byte vendor header SIGSEGV reproduction and v1/v2 probes)."
+    },
+    {
+      "name": "imsa-status-probe-v2",
+      "path": "prototype/imsa-status-probe-v2",
+      "status": "archived_experiment",
+      "summary": "Early QMI_IMSS / QMI_IMSA readers (including 40-byte vendor header SIGSEGV reproduction and v1/v2 probes)."
+    },
+    {
+      "name": "imsa-status-probe-v3",
+      "path": "prototype/imsa-status-probe-v3",
+      "status": "promoted_to_production",
+      "summary": "Final connection-aware read-only QMI_IMSA / QMI_IMSS health probe packaged in PassportVolteIms.apk (promoted to src/qmi-imsa-probe/)."
+    },
+    {
+      "name": "imss-original-reader",
+      "path": "prototype/imss-original-reader",
+      "status": "archived_experiment",
+      "summary": "Early QMI_IMSS / QMI_IMSA readers (including 40-byte vendor header SIGSEGV reproduction and v1/v2 probes)."
+    },
+    {
+      "name": "imss-original-reader-v2",
+      "path": "prototype/imss-original-reader-v2",
+      "status": "archived_experiment",
+      "summary": "Early QMI_IMSS / QMI_IMSA readers (including 40-byte vendor header SIGSEGV reproduction and v1/v2 probes)."
+    },
+    {
+      "name": "mmtel-backend-link",
+      "path": "prototype/mmtel-backend-link",
+      "status": "archived_experiment",
+      "summary": "Incremental Android 11 MmTelFeature binding & RIL 1/29 socket probes prior to full PassportVolteImsService."
+    },
+    {
+      "name": "mmtel-lifecycle-probe",
+      "path": "prototype/mmtel-lifecycle-probe",
+      "status": "archived_experiment",
+      "summary": "Incremental Android 11 MmTelFeature binding & RIL 1/29 socket probes prior to full PassportVolteImsService."
+    },
+    {
+      "name": "mmtel-lifecycle-probe-v2",
+      "path": "prototype/mmtel-lifecycle-probe-v2",
+      "status": "archived_experiment",
+      "summary": "Incremental Android 11 MmTelFeature binding & RIL 1/29 socket probes prior to full PassportVolteImsService."
+    },
+    {
+      "name": "mmtel-listener-contract",
+      "path": "prototype/mmtel-listener-contract",
+      "status": "archived_experiment",
+      "summary": "Incremental Android 11 MmTelFeature binding & RIL 1/29 socket probes prior to full PassportVolteImsService."
+    },
+    {
+      "name": "mmtel-state-link",
+      "path": "prototype/mmtel-state-link",
+      "status": "archived_experiment",
+      "summary": "Incremental Android 11 MmTelFeature binding & RIL 1/29 socket probes prior to full PassportVolteImsService."
+    },
+    {
+      "name": "mmtel-state-listener",
+      "path": "prototype/mmtel-state-listener",
+      "status": "archived_experiment",
+      "summary": "Incremental Android 11 MmTelFeature binding & RIL 1/29 socket probes prior to full PassportVolteImsService."
+    },
+    {
+      "name": "observer",
+      "path": "prototype/observer",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "observer-lab",
+      "path": "prototype/observer-lab",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "observer-tests",
+      "path": "prototype/observer-tests",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "operation-mode-efs-read",
+      "path": "prototype/operation-mode-efs-read",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "passport-diag32-codec",
+      "path": "prototype/passport-diag32-codec",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "passport-volte-ims",
+      "path": "prototype/passport-volte-ims",
+      "status": "superseded_prototype",
+      "summary": "v1 ImsService prototype: used non-persistent overrideConfig(subId, bundle) which cleared on reboot; failed RP34 r2 and rolled back."
+    },
+    {
+      "name": "passport-volte-ims-v2",
+      "path": "prototype/passport-volte-ims-v2",
+      "status": "failed_prototype",
+      "summary": "v2 compile candidate: failed javac because SDK 30 jar stripped @SystemApi 3-arg overrideConfig(int, PersistableBundle, boolean)."
+    },
+    {
+      "name": "passport-volte-ims-v2r2",
+      "path": "prototype/passport-volte-ims-v2r2",
+      "status": "superseded_prototype",
+      "summary": "v2r2 ImsService: live-verified outgoing/incoming HD audio & USB-unplugged reboot, but passed raw CLIP=1 as OIR_PRESENTATION_RESTRICTED (hiding incoming Caller ID)."
+    },
+    {
+      "name": "passport-volte-ims-v2r3",
+      "path": "prototype/passport-volte-ims-v2r3",
+      "status": "promoted_to_production",
+      "summary": "Final Android 11 ImsService + MmTelFeature + persistent CarrierConfig + Caller ID CLIP->OIR fix (promoted to src/android-ims-service/)."
+    },
+    {
+      "name": "pdc-activate",
+      "path": "prototype/pdc-activate",
+      "status": "archived_dead_end",
+      "summary": "Early QMI_PDC MCFG loading/activation experiments: rejected (0x22) or CUCC 65535.mbn found to be NULL-filled."
+    },
+    {
+      "name": "pdc-load-elf",
+      "path": "prototype/pdc-load-elf",
+      "status": "archived_dead_end",
+      "summary": "Early QMI_PDC MCFG loading/activation experiments: rejected (0x22) or CUCC 65535.mbn found to be NULL-filled."
+    },
+    {
+      "name": "pdc-load-only",
+      "path": "prototype/pdc-load-only",
+      "status": "archived_dead_end",
+      "summary": "Early QMI_PDC MCFG loading/activation experiments: rejected (0x22) or CUCC 65535.mbn found to be NULL-filled."
+    },
+    {
+      "name": "pdc-load-swdef",
+      "path": "prototype/pdc-load-swdef",
+      "status": "archived_dead_end",
+      "summary": "Early QMI_PDC MCFG loading/activation experiments: rejected (0x22) or CUCC 65535.mbn found to be NULL-filled."
+    },
+    {
+      "name": "pdc-reader",
+      "path": "prototype/pdc-reader",
+      "status": "archived_dead_end",
+      "summary": "Early QMI_PDC MCFG loading/activation experiments: rejected (0x22) or CUCC 65535.mbn found to be NULL-filled."
+    },
+    {
+      "name": "pdc-reader10",
+      "path": "prototype/pdc-reader10",
+      "status": "archived_dead_end",
+      "summary": "Early QMI_PDC MCFG loading/activation experiments: rejected (0x22) or CUCC 65535.mbn found to be NULL-filled."
+    },
+    {
+      "name": "pdc-reader11",
+      "path": "prototype/pdc-reader11",
+      "status": "archived_dead_end",
+      "summary": "Early QMI_PDC MCFG loading/activation experiments: rejected (0x22) or CUCC 65535.mbn found to be NULL-filled."
+    },
+    {
+      "name": "pdc-reader12",
+      "path": "prototype/pdc-reader12",
+      "status": "archived_dead_end",
+      "summary": "Early QMI_PDC MCFG loading/activation experiments: rejected (0x22) or CUCC 65535.mbn found to be NULL-filled."
+    },
+    {
+      "name": "pdc-reader13",
+      "path": "prototype/pdc-reader13",
+      "status": "archived_dead_end",
+      "summary": "Early QMI_PDC MCFG loading/activation experiments: rejected (0x22) or CUCC 65535.mbn found to be NULL-filled."
+    },
+    {
+      "name": "pdc-reader14",
+      "path": "prototype/pdc-reader14",
+      "status": "archived_dead_end",
+      "summary": "Early QMI_PDC MCFG loading/activation experiments: rejected (0x22) or CUCC 65535.mbn found to be NULL-filled."
+    },
+    {
+      "name": "pdc-reader7",
+      "path": "prototype/pdc-reader7",
+      "status": "archived_dead_end",
+      "summary": "Early QMI_PDC MCFG loading/activation experiments: rejected (0x22) or CUCC 65535.mbn found to be NULL-filled."
+    },
+    {
+      "name": "pdc-reader8",
+      "path": "prototype/pdc-reader8",
+      "status": "archived_dead_end",
+      "summary": "Early QMI_PDC MCFG loading/activation experiments: rejected (0x22) or CUCC 65535.mbn found to be NULL-filled."
+    },
+    {
+      "name": "pdc-reader9",
+      "path": "prototype/pdc-reader9",
+      "status": "archived_dead_end",
+      "summary": "Early QMI_PDC MCFG loading/activation experiments: rejected (0x22) or CUCC 65535.mbn found to be NULL-filled."
+    },
+    {
+      "name": "pdn-hold-ril",
+      "path": "prototype/pdn-hold-ril",
+      "status": "archived_experiment",
+      "summary": "Intermediate WDS / Android ConnectivityService IMS PDN probes; proved Android rmnet1 clashes with Hexagon standalone DCM."
+    },
+    {
+      "name": "pdn-reg-poll",
+      "path": "prototype/pdn-reg-poll",
+      "status": "archived_experiment",
+      "summary": "Intermediate WDS / Android ConnectivityService IMS PDN probes; proved Android rmnet1 clashes with Hexagon standalone DCM."
+    },
+    {
+      "name": "pdn-reg-poll-v2",
+      "path": "prototype/pdn-reg-poll-v2",
+      "status": "archived_experiment",
+      "summary": "Intermediate WDS / Android ConnectivityService IMS PDN probes; proved Android rmnet1 clashes with Hexagon standalone DCM."
+    },
+    {
+      "name": "pdn-reg-poll-v3",
+      "path": "prototype/pdn-reg-poll-v3",
+      "status": "archived_experiment",
+      "summary": "Intermediate WDS / Android ConnectivityService IMS PDN probes; proved Android rmnet1 clashes with Hexagon standalone DCM."
+    },
+    {
+      "name": "pdn-reg-poll-v4",
+      "path": "prototype/pdn-reg-poll-v4",
+      "status": "archived_experiment",
+      "summary": "Intermediate WDS / Android ConnectivityService IMS PDN probes; proved Android rmnet1 clashes with Hexagon standalone DCM."
+    },
+    {
+      "name": "pdn-reg-poll-v5",
+      "path": "prototype/pdn-reg-poll-v5",
+      "status": "archived_experiment",
+      "summary": "Intermediate WDS / Android ConnectivityService IMS PDN probes; proved Android rmnet1 clashes with Hexagon standalone DCM."
+    },
+    {
+      "name": "pdn-reg-poll-v6",
+      "path": "prototype/pdn-reg-poll-v6",
+      "status": "archived_experiment",
+      "summary": "Intermediate WDS / Android ConnectivityService IMS PDN probes; proved Android rmnet1 clashes with Hexagon standalone DCM."
+    },
+    {
+      "name": "pdn-reg-poll-v7",
+      "path": "prototype/pdn-reg-poll-v7",
+      "status": "archived_experiment",
+      "summary": "Intermediate WDS / Android ConnectivityService IMS PDN probes; proved Android rmnet1 clashes with Hexagon standalone DCM."
+    },
+    {
+      "name": "pdn-reg-poll-v8",
+      "path": "prototype/pdn-reg-poll-v8",
+      "status": "archived_experiment",
+      "summary": "Intermediate WDS / Android ConnectivityService IMS PDN probes; proved Android rmnet1 clashes with Hexagon standalone DCM."
+    },
+    {
+      "name": "publication-timeline",
+      "path": "prototype/publication-timeline",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "qmi-root-efs",
+      "path": "prototype/qmi-root-efs",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "query-lab",
+      "path": "prototype/query-lab",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "radio-hidl-probe",
+      "path": "prototype/radio-hidl-probe",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "regconfig-efs-read",
+      "path": "prototype/regconfig-efs-read",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "regconfig-provision",
+      "path": "prototype/regconfig-provision",
+      "status": "superseded_prototype",
+      "summary": "Stage 1 EFS provisioner: wrote only IMS_enable + qp_ims_reg_config + ims_operation_mode; insufficient without SMS/RCS/QIPCALL/PDP profile4."
+    },
+    {
+      "name": "regconfig-provision-v2",
+      "path": "prototype/regconfig-provision-v2",
+      "status": "shared_codec_and_superseded_stage",
+      "summary": "Stage 2 EFS provisioner: added regfile_diag_codec.{h,c} (promoted to src/modem-efs-provisioner/) but lacked full DPL/PDP items."
+    },
+    {
+      "name": "regconfig-provision-v3",
+      "path": "prototype/regconfig-provision-v3",
+      "status": "superseded_prototype",
+      "summary": "Stage 3 EFS provisioner: added SMS/RCS/QIPCALL items, before discovering /pdp_profiles/profile4 corrupted IP family bytes."
+    },
+    {
+      "name": "regconfig-provision-v4",
+      "path": "prototype/regconfig-provision-v4",
+      "status": "superseded_prototype",
+      "summary": "Stage 4 EFS provisioner: initial DS profile exploration before exact 789-byte b750/b751 IPv4/IPv6 flags were mapped."
+    },
+    {
+      "name": "regconfig-provision-v5",
+      "path": "prototype/regconfig-provision-v5",
+      "status": "failed_experiment",
+      "summary": "Stage 5 EFS provisioner: proved APConnectivity=1 deadlocks when Android ConnectivityService simultaneously opens rmnet1."
+    },
+    {
+      "name": "regconfig-provision-v6",
+      "path": "prototype/regconfig-provision-v6",
+      "status": "promoted_to_production",
+      "summary": "Final Hexagon Stage 6A EFS2 provisioner + IPV4V6 profile4 fix + unconditional rollback binary (promoted to src/modem-efs-provisioner/)."
+    },
+    {
+      "name": "regmgr-efs-stat",
+      "path": "prototype/regmgr-efs-stat",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "ril-sim-status",
+      "path": "prototype/ril-sim-status",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "runtime-observe",
+      "path": "prototype/runtime-observe",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "src",
+      "path": "prototype/src",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "swoop-reader",
+      "path": "prototype/swoop-reader",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "testmode-efs-read",
+      "path": "prototype/testmode-efs-read",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "tests",
+      "path": "prototype/tests",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "transport-diag",
+      "path": "prototype/transport-diag",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "uicc-probe",
+      "path": "prototype/uicc-probe",
+      "status": "archived_forensic_probe",
+      "summary": "Historical read-only diagnostic, EFS STAT/GET, kernel/DIAG route, or RIL/HIDL observation experiment."
+    },
+    {
+      "name": "wds-ims-bearer",
+      "path": "prototype/wds-ims-bearer",
+      "status": "archived_experiment",
+      "summary": "Intermediate WDS / Android ConnectivityService IMS PDN probes; proved Android rmnet1 clashes with Hexagon standalone DCM."
+    },
+    {
+      "name": "wds-profile-reader",
+      "path": "prototype/wds-profile-reader",
+      "status": "archived_experiment",
+      "summary": "Intermediate WDS / Android ConnectivityService IMS PDN probes; proved Android rmnet1 clashes with Hexagon standalone DCM."
+    }
+  ],
+  "tools_catalog": [
+    {
+      "name": "aab632_ext4_walk.py",
+      "path": "tools/aab632_ext4_walk.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "aab632_list_dir.py",
+      "path": "tools/aab632_list_dir.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "aab982_boot_inspect.py",
+      "path": "tools/aab982_boot_inspect.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "aab982_common_bundle.py",
+      "path": "tools/aab982_common_bundle.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "aab982_extract_mcfg.py",
+      "path": "tools/aab982_extract_mcfg.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "aab982_mbn_scan.py",
+      "path": "tools/aab982_mbn_scan.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "aab982_nv_diff.py",
+      "path": "tools/aab982_nv_diff.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "aab982_system_fetch.py",
+      "path": "tools/aab982_system_fetch.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "aab982_system_inspect.py",
+      "path": "tools/aab982_system_inspect.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "acquire_passport_kernel_candidate.py",
+      "path": "tools/acquire_passport_kernel_candidate.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "activate_passport_adb_root.py",
+      "path": "tools/activate_passport_adb_root.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "adb_root_cycle.py",
+      "path": "tools/adb_root_cycle.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_backend_prerequisites.py",
+      "path": "tools/analyze_backend_prerequisites.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_cci_xport.py",
+      "path": "tools/analyze_cci_xport.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_connectivity_apn.py",
+      "path": "tools/analyze_connectivity_apn.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_ep06_refs_and_mbn_inventory.py",
+      "path": "tools/analyze_ep06_refs_and_mbn_inventory.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep08_final_gate_refs.py",
+      "path": "tools/analyze_ep08_final_gate_refs.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep09_ds_and_nv.py",
+      "path": "tools/analyze_ep09_ds_and_nv.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep10_strings_and_ds.py",
+      "path": "tools/analyze_ep10_strings_and_ds.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep16_ds_registry_ril_srv_and_mbn_profiles.py",
+      "path": "tools/analyze_ep16_ds_registry_ril_srv_and_mbn_profiles.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep17_pdp_tlv_map_ril_wire_and_q6_targets.py",
+      "path": "tools/analyze_ep17_pdp_tlv_map_ril_wire_and_q6_targets.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep19_resolve_ep18_tables_and_mbn_configs.py",
+      "path": "tools/analyze_ep19_resolve_ep18_tables_and_mbn_configs.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep21_pdp_789_layout_and_qipcall_gates.py",
+      "path": "tools/analyze_ep21_pdp_789_layout_and_qipcall_gates.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep22_mixed_windows_and_pdn_gates.py",
+      "path": "tools/analyze_ep22_mixed_windows_and_pdn_gates.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep23_pack_codecs_and_imsa_writers.py",
+      "path": "tools/analyze_ep23_pack_codecs_and_imsa_writers.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep24_exact_flag_and_codec_tables.py",
+      "path": "tools/analyze_ep24_exact_flag_and_codec_tables.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep25_qipcall_tail_pdp789_and_imsa_idl.py",
+      "path": "tools/analyze_ep25_qipcall_tail_pdp789_and_imsa_idl.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep26_finalize_stage4_schema_and_imsa_structs.py",
+      "path": "tools/analyze_ep26_finalize_stage4_schema_and_imsa_structs.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep27_ds_profile_3gpp_exact_offsets_and_type5.py",
+      "path": "tools/analyze_ep27_ds_profile_3gpp_exact_offsets_and_type5.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep28_ds_profile_789_tail_and_registry.py",
+      "path": "tools/analyze_ep28_ds_profile_789_tail_and_registry.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep29_imss_voip_reg_gates_and_ril30.py",
+      "path": "tools/analyze_ep29_imss_voip_reg_gates_and_ril30.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep30_finalize_stage5_payloads_and_ril30.py",
+      "path": "tools/analyze_ep30_finalize_stage5_payloads_and_ril30.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep31_mbn_ims_items_exact.py",
+      "path": "tools/analyze_ep31_mbn_ims_items_exact.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep32_exact_mbn_diffs_and_ril_parse.py",
+      "path": "tools/analyze_ep32_exact_mbn_diffs_and_ril_parse.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep33_libril_req30_and_qipcall_set.py",
+      "path": "tools/analyze_ep33_libril_req30_and_qipcall_set.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep34_stage5a_forensics.py",
+      "path": "tools/analyze_ep34_stage5a_forensics.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep35_pdn_policy_and_hybrid_dcm.py",
+      "path": "tools/analyze_ep35_pdn_policy_and_hybrid_dcm.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep36_dcm_jumptables_and_ipmatch.py",
+      "path": "tools/analyze_ep36_dcm_jumptables_and_ipmatch.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep37_imsa_wire_audio_and_resolver.py",
+      "path": "tools/analyze_ep37_imsa_wire_audio_and_resolver.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep38_call_flow_qcril_am_and_sdk_apis.py",
+      "path": "tools/analyze_ep38_call_flow_qcril_am_and_sdk_apis.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep40_imsresolver_binding.py",
+      "path": "tools/analyze_ep40_imsresolver_binding.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep40b_get_ims_package_override_config.py",
+      "path": "tools/analyze_ep40b_get_ims_package_override_config.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep40c_rp34_reboot1_forensics.py",
+      "path": "tools/analyze_ep40c_rp34_reboot1_forensics.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep40d_carrierconfigloader_and_setims.py",
+      "path": "tools/analyze_ep40d_carrierconfigloader_and_setims.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep40e_persistent_carrier_override_chain.py",
+      "path": "tools/analyze_ep40e_persistent_carrier_override_chain.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep40f_xml_filename_and_ccm_signature.py",
+      "path": "tools/analyze_ep40f_xml_filename_and_ccm_signature.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep40g_imsfeature_ready_lifecycle.py",
+      "path": "tools/analyze_ep40g_imsfeature_ready_lifecycle.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep41_reboot2_call_readiness_audit.py",
+      "path": "tools/analyze_ep41_reboot2_call_readiness_audit.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep42_caller_id_and_call_trace.py",
+      "path": "tools/analyze_ep42_caller_id_and_call_trace.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep43_caller_id_decompile.py",
+      "path": "tools/analyze_ep43_caller_id_decompile.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep43b_caller_id_exact_methods.py",
+      "path": "tools/analyze_ep43b_caller_id_exact_methods.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep44_post_callerid_fix_audit.py",
+      "path": "tools/analyze_ep44_post_callerid_fix_audit.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ep45_repo_layout_for_release.py",
+      "path": "tools/analyze_ep45_repo_layout_for_release.py",
+      "status": "archived_research_tool",
+      "summary": "Milestone 2.0 Hexagon/Android bytecode/EFS forensic analysis script"
+    },
+    {
+      "name": "analyze_ims_lifecycle.py",
+      "path": "tools/analyze_ims_lifecycle.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_ims_registration_gate.py",
+      "path": "tools/analyze_ims_registration_gate.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_ims_socket_protocol.py",
+      "path": "tools/analyze_ims_socket_protocol.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_imsa_instance.py",
+      "path": "tools/analyze_imsa_instance.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_imsqmidaemon.py",
+      "path": "tools/analyze_imsqmidaemon.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_imss_allocation_failure.py",
+      "path": "tools/analyze_imss_allocation_failure.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_imss_read_failure.py",
+      "path": "tools/analyze_imss_read_failure.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_imss_reader_crash.py",
+      "path": "tools/analyze_imss_reader_crash.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_imss_send_contract.py",
+      "path": "tools/analyze_imss_send_contract.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_key2_kernel_capture.py",
+      "path": "tools/analyze_key2_kernel_capture.py",
+      "status": "archived_research_tool",
+      "summary": "Upstream ikimi615/qualcomm-volte-enabler reference comparison & ARM32 kernel adaptation audit"
+    },
+    {
+      "name": "analyze_modem_publication_conditions.py",
+      "path": "tools/analyze_modem_publication_conditions.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_observation_trace.py",
+      "path": "tools/analyze_observation_trace.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_publication_route.py",
+      "path": "tools/analyze_publication_route.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_publication_timing.py",
+      "path": "tools/analyze_publication_timing.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_qmi_discovery.py",
+      "path": "tools/analyze_qmi_discovery.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_qmux_refresh.py",
+      "path": "tools/analyze_qmux_refresh.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_qmuxd_metadata.py",
+      "path": "tools/analyze_qmuxd_metadata.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_radio_request_transaction.py",
+      "path": "tools/analyze_radio_request_transaction.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_radio_response_dispatch.py",
+      "path": "tools/analyze_radio_response_dispatch.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_regmgr_provisioning_records.py",
+      "path": "tools/analyze_regmgr_provisioning_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_regmgr_provisioning_records_v2.py",
+      "path": "tools/analyze_regmgr_provisioning_records_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_regmgr_provisioning_records_v3.py",
+      "path": "tools/analyze_regmgr_provisioning_records_v3.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_ril_backend.py",
+      "path": "tools/analyze_ril_backend.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_ril_set_response.py",
+      "path": "tools/analyze_ril_set_response.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "analyze_version_forwarding.py",
+      "path": "tools/analyze_version_forwarding.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "archive_session_inventory.py",
+      "path": "tools/archive_session_inventory.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_combined_ims_backend.py",
+      "path": "tools/assess_combined_ims_backend.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_config_record_producers.py",
+      "path": "tools/assess_config_record_producers.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_config_record_producers_v2.py",
+      "path": "tools/assess_config_record_producers_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_diag_access_and_root.py",
+      "path": "tools/assess_diag_access_and_root.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_exact_regconfig_stat.py",
+      "path": "tools/assess_exact_regconfig_stat.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_field_state.py",
+      "path": "tools/assess_field_state.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_ims_reboot_records.py",
+      "path": "tools/assess_ims_reboot_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_imss_allocation_records.py",
+      "path": "tools/assess_imss_allocation_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_imss_enabled_read.py",
+      "path": "tools/assess_imss_enabled_read.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_imss_getter_mapping.py",
+      "path": "tools/assess_imss_getter_mapping.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_key2_reference.py",
+      "path": "tools/assess_key2_reference.py",
+      "status": "archived_research_tool",
+      "summary": "Upstream ikimi615/qualcomm-volte-enabler reference comparison & ARM32 kernel adaptation audit"
+    },
+    {
+      "name": "assess_mmtel_backend_records.py",
+      "path": "tools/assess_mmtel_backend_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_mmtel_backend_records_v2.py",
+      "path": "tools/assess_mmtel_backend_records_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_mmtel_lifecycle_records.py",
+      "path": "tools/assess_mmtel_lifecycle_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_mmtel_phone_records.py",
+      "path": "tools/assess_mmtel_phone_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_mmtel_state_records.py",
+      "path": "tools/assess_mmtel_state_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_native_cancel.py",
+      "path": "tools/assess_native_cancel.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_native_hal_gate.py",
+      "path": "tools/assess_native_hal_gate.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_native_hal_gate_v2.py",
+      "path": "tools/assess_native_hal_gate_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_native_hal_gate_v3.py",
+      "path": "tools/assess_native_hal_gate_v3.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_natural_boot_capture.py",
+      "path": "tools/assess_natural_boot_capture.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_natural_observation_gate.py",
+      "path": "tools/assess_natural_observation_gate.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_operation_mode_efs_read.py",
+      "path": "tools/assess_operation_mode_efs_read.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_passport_kernel_sources.py",
+      "path": "tools/assess_passport_kernel_sources.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_passport_kernel_sources_v2.py",
+      "path": "tools/assess_passport_kernel_sources_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_publication_timing.py",
+      "path": "tools/assess_publication_timing.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_q6_regmgr_chain.py",
+      "path": "tools/assess_q6_regmgr_chain.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_q6_regmgr_chain_v2.py",
+      "path": "tools/assess_q6_regmgr_chain_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_regmgr_handler_construction.py",
+      "path": "tools/assess_regmgr_handler_construction.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_regmgr_readonly_and_consumers.py",
+      "path": "tools/assess_regmgr_readonly_and_consumers.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_regmgr_stat_records.py",
+      "path": "tools/assess_regmgr_stat_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_regmgr_stat_records_v2.py",
+      "path": "tools/assess_regmgr_stat_records_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_root_efs_read_result.py",
+      "path": "tools/assess_root_efs_read_result.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_root_efs_read_result_v2.py",
+      "path": "tools/assess_root_efs_read_result_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_sameboot_comparison.py",
+      "path": "tools/assess_sameboot_comparison.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_standard_diag_exports.py",
+      "path": "tools/assess_standard_diag_exports.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "assess_testmode_efs_read.py",
+      "path": "tools/assess_testmode_efs_read.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "attribute_hal_and_diag_gate.py",
+      "path": "tools/attribute_hal_and_diag_gate.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "attribute_passive_trace.py",
+      "path": "tools/attribute_passive_trace.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "audit_730_window.py",
+      "path": "tools/audit_730_window.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "audit_android_bearer_history.py",
+      "path": "tools/audit_android_bearer_history.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "audit_framework_recovery_edges.py",
+      "path": "tools/audit_framework_recovery_edges.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "audit_key2_scripts_offline.py",
+      "path": "tools/audit_key2_scripts_offline.py",
+      "status": "archived_research_tool",
+      "summary": "Upstream ikimi615/qualcomm-volte-enabler reference comparison & ARM32 kernel adaptation audit"
+    },
+    {
+      "name": "audit_key2_scripts_offline_v2.py",
+      "path": "tools/audit_key2_scripts_offline_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Upstream ikimi615/qualcomm-volte-enabler reference comparison & ARM32 kernel adaptation audit"
+    },
+    {
+      "name": "audit_pdc_frames.py",
+      "path": "tools/audit_pdc_frames.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "audit_shim_vendor_response_chain.py",
+      "path": "tools/audit_shim_vendor_response_chain.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "audit_wds_runs.py",
+      "path": "tools/audit_wds_runs.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "backup_modem_partitions.py",
+      "path": "tools/backup_modem_partitions.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_backend_diag.py",
+      "path": "tools/build_backend_diag.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_device_harness.py",
+      "path": "tools/build_device_harness.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_efs_ds_audit.py",
+      "path": "tools/build_efs_ds_audit.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_efs_ims_audit.py",
+      "path": "tools/build_efs_ims_audit.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_exact_regconfig_stat.py",
+      "path": "tools/build_exact_regconfig_stat.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_ims_bearer_probe.py",
+      "path": "tools/build_ims_bearer_probe.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_imsa_status_probe.py",
+      "path": "tools/build_imsa_status_probe.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_imsa_status_probe_v2.py",
+      "path": "tools/build_imsa_status_probe_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_imsa_status_probe_v3.py",
+      "path": "tools/build_imsa_status_probe_v3.py",
+      "status": "active_infrastructure_or_promoted_builder",
+      "summary": "Frozen qualification builder for libimsa_probe.so (superseded for open-source users by cli/build_all.py)."
+    },
+    {
+      "name": "build_imss_buffer_reader.py",
+      "path": "tools/build_imss_buffer_reader.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_imss_original_reader.py",
+      "path": "tools/build_imss_original_reader.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_imss_original_reader_v2.py",
+      "path": "tools/build_imss_original_reader_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_key2_offline_contracts.py",
+      "path": "tools/build_key2_offline_contracts.py",
+      "status": "archived_research_tool",
+      "summary": "Upstream ikimi615/qualcomm-volte-enabler reference comparison & ARM32 kernel adaptation audit"
+    },
+    {
+      "name": "build_mcfg_mbn.py",
+      "path": "tools/build_mcfg_mbn.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "build_mmtel_backend_link.py",
+      "path": "tools/build_mmtel_backend_link.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_mmtel_backend_link_v2.py",
+      "path": "tools/build_mmtel_backend_link_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_mmtel_lifecycle_probe.py",
+      "path": "tools/build_mmtel_lifecycle_probe.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_mmtel_lifecycle_probe_v2.py",
+      "path": "tools/build_mmtel_lifecycle_probe_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_mmtel_listener.py",
+      "path": "tools/build_mmtel_listener.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_mmtel_listener_v2.py",
+      "path": "tools/build_mmtel_listener_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_mmtel_state_link.py",
+      "path": "tools/build_mmtel_state_link.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_mmtel_state_link_v2.py",
+      "path": "tools/build_mmtel_state_link_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_modem_elf.py",
+      "path": "tools/build_modem_elf.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_observer_lab.py",
+      "path": "tools/build_observer_lab.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_passport_legacy_codec.py",
+      "path": "tools/build_passport_legacy_codec.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_passport_volte_ims.py",
+      "path": "tools/build_passport_volte_ims.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_passport_volte_ims_v2.py",
+      "path": "tools/build_passport_volte_ims_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_passport_volte_ims_v2r2.py",
+      "path": "tools/build_passport_volte_ims_v2r2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_passport_volte_ims_v2r3.py",
+      "path": "tools/build_passport_volte_ims_v2r3.py",
+      "status": "active_infrastructure_or_promoted_builder",
+      "summary": "Frozen qualification builder for PassportVolteIms v2r3 (superseded for open-source users by cli/build_all.py)."
+    },
+    {
+      "name": "build_pdc_activate.py",
+      "path": "tools/build_pdc_activate.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "build_pdc_load_elf.py",
+      "path": "tools/build_pdc_load_elf.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "build_pdc_load_only.py",
+      "path": "tools/build_pdc_load_only.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "build_pdc_load_swdef.py",
+      "path": "tools/build_pdc_load_swdef.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "build_pdc_reader.py",
+      "path": "tools/build_pdc_reader.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "build_pdc_reader10.py",
+      "path": "tools/build_pdc_reader10.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "build_pdc_reader11.py",
+      "path": "tools/build_pdc_reader11.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "build_pdc_reader12.py",
+      "path": "tools/build_pdc_reader12.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "build_pdc_reader13.py",
+      "path": "tools/build_pdc_reader13.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "build_pdc_reader14.py",
+      "path": "tools/build_pdc_reader14.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "build_pdc_reader7.py",
+      "path": "tools/build_pdc_reader7.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "build_pdc_reader8.py",
+      "path": "tools/build_pdc_reader8.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "build_pdc_reader9.py",
+      "path": "tools/build_pdc_reader9.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "build_pdn_hold_ril.py",
+      "path": "tools/build_pdn_hold_ril.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_pdn_reg_poll.py",
+      "path": "tools/build_pdn_reg_poll.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_pdn_reg_poll_v2.py",
+      "path": "tools/build_pdn_reg_poll_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_pdn_reg_poll_v3.py",
+      "path": "tools/build_pdn_reg_poll_v3.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_pdn_reg_poll_v4.py",
+      "path": "tools/build_pdn_reg_poll_v4.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_pdn_reg_poll_v5.py",
+      "path": "tools/build_pdn_reg_poll_v5.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_pdn_reg_poll_v6.py",
+      "path": "tools/build_pdn_reg_poll_v6.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_pdn_reg_poll_v7.py",
+      "path": "tools/build_pdn_reg_poll_v7.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_pdn_reg_poll_v8.py",
+      "path": "tools/build_pdn_reg_poll_v8.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_prototype.py",
+      "path": "tools/build_prototype.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_publication_timeline.py",
+      "path": "tools/build_publication_timeline.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_qmi_root_efs.py",
+      "path": "tools/build_qmi_root_efs.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_query_lab.py",
+      "path": "tools/build_query_lab.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_radio_hidl_probe.py",
+      "path": "tools/build_radio_hidl_probe.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_regconfig_full_reader.py",
+      "path": "tools/build_regconfig_full_reader.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_regconfig_provision.py",
+      "path": "tools/build_regconfig_provision.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_regconfig_provision_v2.py",
+      "path": "tools/build_regconfig_provision_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_regconfig_provision_v3.py",
+      "path": "tools/build_regconfig_provision_v3.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_regconfig_provision_v4.py",
+      "path": "tools/build_regconfig_provision_v4.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_regconfig_provision_v5.py",
+      "path": "tools/build_regconfig_provision_v5.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_regconfig_provision_v6.py",
+      "path": "tools/build_regconfig_provision_v6.py",
+      "status": "active_infrastructure_or_promoted_builder",
+      "summary": "Frozen qualification builder for pp_regconfig_provision_v6 (superseded for open-source users by cli/build_all.py)."
+    },
+    {
+      "name": "build_registration_dispatcher.py",
+      "path": "tools/build_registration_dispatcher.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_regmgr_stat_candidates.py",
+      "path": "tools/build_regmgr_stat_candidates.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_ril_sim_status.py",
+      "path": "tools/build_ril_sim_status.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_root_diag_probe.py",
+      "path": "tools/build_root_diag_probe.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_root_diag_probe_v2.py",
+      "path": "tools/build_root_diag_probe_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_runtime_timer_control.py",
+      "path": "tools/build_runtime_timer_control.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_swoop_reader.py",
+      "path": "tools/build_swoop_reader.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_transport_diag.py",
+      "path": "tools/build_transport_diag.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_uicc_probe.py",
+      "path": "tools/build_uicc_probe.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_wds_ims_bearer.py",
+      "path": "tools/build_wds_ims_bearer.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "build_wds_profile_reader.py",
+      "path": "tools/build_wds_profile_reader.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "capture_integration_context.py",
+      "path": "tools/capture_integration_context.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_diag_route_recovery_contracts.py",
+      "path": "tools/check_diag_route_recovery_contracts.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_diag_route_recovery_contracts_v2.py",
+      "path": "tools/check_diag_route_recovery_contracts_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_dsi_observation_records.py",
+      "path": "tools/check_dsi_observation_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_dsi_observation_records_v2.py",
+      "path": "tools/check_dsi_observation_records_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_existing_diag_records.py",
+      "path": "tools/check_existing_diag_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_frozen_ril_layout.py",
+      "path": "tools/check_frozen_ril_layout.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_ims_daemon_state.py",
+      "path": "tools/check_ims_daemon_state.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_imss_nonexec_constants.py",
+      "path": "tools/check_imss_nonexec_constants.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_natural_observation_records.py",
+      "path": "tools/check_natural_observation_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_natural_observation_records_v2.py",
+      "path": "tools/check_natural_observation_records_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_natural_observation_records_v3.py",
+      "path": "tools/check_natural_observation_records_v3.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_natural_setup_parser.py",
+      "path": "tools/check_natural_setup_parser.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_observation_phase_records.py",
+      "path": "tools/check_observation_phase_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_observation_phase_records_v2.py",
+      "path": "tools/check_observation_phase_records_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_public_volte_methods.py",
+      "path": "tools/check_public_volte_methods.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_ril_timeout_semantics.py",
+      "path": "tools/check_ril_timeout_semantics.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_rild_context.py",
+      "path": "tools/check_rild_context.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "check_runtime_chain_records.py",
+      "path": "tools/check_runtime_chain_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_combined_ims_records.py",
+      "path": "tools/close_combined_ims_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_config_record_producers.py",
+      "path": "tools/close_config_record_producers.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_diag_entry_records.py",
+      "path": "tools/close_diag_entry_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_factory_regmgr_analysis.py",
+      "path": "tools/close_factory_regmgr_analysis.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_ims_reboot_records.py",
+      "path": "tools/close_ims_reboot_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_ims_toggle_records.py",
+      "path": "tools/close_ims_toggle_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_imss_allocation_records.py",
+      "path": "tools/close_imss_allocation_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_imss_enabled_read_records.py",
+      "path": "tools/close_imss_enabled_read_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_imss_getter_records.py",
+      "path": "tools/close_imss_getter_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_key2_live_records.py",
+      "path": "tools/close_key2_live_records.py",
+      "status": "archived_research_tool",
+      "summary": "Upstream ikimi615/qualcomm-volte-enabler reference comparison & ARM32 kernel adaptation audit"
+    },
+    {
+      "name": "close_mmtel_backend_records.py",
+      "path": "tools/close_mmtel_backend_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_mmtel_lifecycle_records.py",
+      "path": "tools/close_mmtel_lifecycle_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_mmtel_state_records.py",
+      "path": "tools/close_mmtel_state_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_operation_mode_efs_records.py",
+      "path": "tools/close_operation_mode_efs_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_passport_kernel_adaptation.py",
+      "path": "tools/close_passport_kernel_adaptation.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_regmgr_handler_construction.py",
+      "path": "tools/close_regmgr_handler_construction.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_regmgr_readonly_and_consumers.py",
+      "path": "tools/close_regmgr_readonly_and_consumers.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_regmgr_stat_records.py",
+      "path": "tools/close_regmgr_stat_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_root_diag_records.py",
+      "path": "tools/close_root_diag_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_sameboot_comparison.py",
+      "path": "tools/close_sameboot_comparison.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "close_testmode_efs_records.py",
+      "path": "tools/close_testmode_efs_records.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "collect_connectivity_apn.py",
+      "path": "tools/collect_connectivity_apn.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "collect_flash_capability.py",
+      "path": "tools/collect_flash_capability.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "collect_ims_bearer_logcat.py",
+      "path": "tools/collect_ims_bearer_logcat.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "collect_lifecycle_readonly.py",
+      "path": "tools/collect_lifecycle_readonly.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "collect_modem_paths.py",
+      "path": "tools/collect_modem_paths.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "collect_natural_boot.py",
+      "path": "tools/collect_natural_boot.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "collect_publication_readonly.py",
+      "path": "tools/collect_publication_readonly.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "collect_qmuxd_readonly.py",
+      "path": "tools/collect_qmuxd_readonly.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "collect_radio_hidl_logs.py",
+      "path": "tools/collect_radio_hidl_logs.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "collect_ril_sockets.py",
+      "path": "tools/collect_ril_sockets.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "collect_sim_properties.py",
+      "path": "tools/collect_sim_properties.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "collect_startup_timeline.py",
+      "path": "tools/collect_startup_timeline.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "collect_uicc_dumpsys.py",
+      "path": "tools/collect_uicc_dumpsys.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "collect_uicc_probe_logs.py",
+      "path": "tools/collect_uicc_probe_logs.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "compare_natural_window_retained.py",
+      "path": "tools/compare_natural_window_retained.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "complete_dsi_outlet_readiness.py",
+      "path": "tools/complete_dsi_outlet_readiness.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "complete_key2_clone_inventory.py",
+      "path": "tools/complete_key2_clone_inventory.py",
+      "status": "archived_research_tool",
+      "summary": "Upstream ikimi615/qualcomm-volte-enabler reference comparison & ARM32 kernel adaptation audit"
+    },
+    {
+      "name": "continue_direct_edges.py",
+      "path": "tools/continue_direct_edges.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "continue_missing_targets.py",
+      "path": "tools/continue_missing_targets.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "continue_passive_state.py",
+      "path": "tools/continue_passive_state.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "continue_response_timer.py",
+      "path": "tools/continue_response_timer.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "continue_timer_property.py",
+      "path": "tools/continue_timer_property.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "continue_timer_verdict.py",
+      "path": "tools/continue_timer_verdict.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "correlate_natural_setup.py",
+      "path": "tools/correlate_natural_setup.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "decode_q6zip_native_v0.py",
+      "path": "tools/decode_q6zip_native_v0.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "decode_wds_frames.py",
+      "path": "tools/decode_wds_frames.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "derive_control_trace.py",
+      "path": "tools/derive_control_trace.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "device_ims_bearer.py",
+      "path": "tools/device_ims_bearer.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "device_lab.py",
+      "path": "tools/device_lab.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "device_observer_lab.py",
+      "path": "tools/device_observer_lab.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "device_pdc_activate.py",
+      "path": "tools/device_pdc_activate.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "device_pdc_load_elf.py",
+      "path": "tools/device_pdc_load_elf.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "device_pdc_load_only.py",
+      "path": "tools/device_pdc_load_only.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "device_pdc_load_swdef.py",
+      "path": "tools/device_pdc_load_swdef.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "device_pdc_reader.py",
+      "path": "tools/device_pdc_reader.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "device_pdc_reader10.py",
+      "path": "tools/device_pdc_reader10.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "device_pdc_reader11.py",
+      "path": "tools/device_pdc_reader11.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "device_pdc_reader12.py",
+      "path": "tools/device_pdc_reader12.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "device_pdc_reader13.py",
+      "path": "tools/device_pdc_reader13.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "device_pdc_reader14.py",
+      "path": "tools/device_pdc_reader14.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "device_pdc_reader7.py",
+      "path": "tools/device_pdc_reader7.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "device_pdc_reader8.py",
+      "path": "tools/device_pdc_reader8.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "device_pdc_reader9.py",
+      "path": "tools/device_pdc_reader9.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "device_publication_timeline.py",
+      "path": "tools/device_publication_timeline.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "device_publication_timeline2.py",
+      "path": "tools/device_publication_timeline2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "device_publication_timeline3.py",
+      "path": "tools/device_publication_timeline3.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "device_radio_hidl.py",
+      "path": "tools/device_radio_hidl.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "device_ril_sim_status.py",
+      "path": "tools/device_ril_sim_status.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "device_swoop_reader.py",
+      "path": "tools/device_swoop_reader.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "device_transport_lab.py",
+      "path": "tools/device_transport_lab.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "device_uicc_probe.py",
+      "path": "tools/device_uicc_probe.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "device_wds_ims_bearer.py",
+      "path": "tools/device_wds_ims_bearer.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "device_wds_profile.py",
+      "path": "tools/device_wds_profile.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "dex_inventory.py",
+      "path": "tools/dex_inventory.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "emulate_qmi_discovery.py",
+      "path": "tools/emulate_qmi_discovery.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "enable_passport_debug_root.py",
+      "path": "tools/enable_passport_debug_root.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "export_expanded_imss_packets.py",
+      "path": "tools/export_expanded_imss_packets.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "export_hexagon_gp_writers.py",
+      "path": "tools/export_hexagon_gp_writers.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "export_imss_accessor_packets.py",
+      "path": "tools/export_imss_accessor_packets.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "export_imss_file_read_primitives.py",
+      "path": "tools/export_imss_file_read_primitives.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "export_imss_firmware_references.py",
+      "path": "tools/export_imss_firmware_references.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "export_imss_firmware_references_v2.py",
+      "path": "tools/export_imss_firmware_references_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "export_imss_getter_arguments.py",
+      "path": "tools/export_imss_getter_arguments.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "export_imss_group_read_chain.py",
+      "path": "tools/export_imss_group_read_chain.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "export_imss_group_read_chain_v2.py",
+      "path": "tools/export_imss_group_read_chain_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "export_imss_group_read_chain_v3.py",
+      "path": "tools/export_imss_group_read_chain_v3.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "export_imss_native_read_bindings.py",
+      "path": "tools/export_imss_native_read_bindings.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "export_imss_path_match.py",
+      "path": "tools/export_imss_path_match.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "export_imss_table_packets.py",
+      "path": "tools/export_imss_table_packets.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "export_q6_bounded_plan.py",
+      "path": "tools/export_q6_bounded_plan.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "export_q6_native_containing_plan.py",
+      "path": "tools/export_q6_native_containing_plan.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "export_q6_native_plan.py",
+      "path": "tools/export_q6_native_plan.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "export_q6_native_windows.py",
+      "path": "tools/export_q6_native_windows.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "export_q6_static_data_plan.py",
+      "path": "tools/export_q6_static_data_plan.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "export_q6_static_data_plan_v2.py",
+      "path": "tools/export_q6_static_data_plan_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "export_q6zip_decoder.py",
+      "path": "tools/export_q6zip_decoder.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "export_q6zip_loader.py",
+      "path": "tools/export_q6zip_loader.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "export_regmgr_dispatch_callers.py",
+      "path": "tools/export_regmgr_dispatch_callers.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "export_regmgr_getter_caller.py",
+      "path": "tools/export_regmgr_getter_caller.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "export_regmgr_request_dispatch.py",
+      "path": "tools/export_regmgr_request_dispatch.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "extract_backend_schema.py",
+      "path": "tools/extract_backend_schema.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "extract_mmtel_framework.py",
+      "path": "tools/extract_mmtel_framework.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "extract_mmtel_framework_v2.py",
+      "path": "tools/extract_mmtel_framework_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "extract_pure_ims_stage3_payloads.py",
+      "path": "tools/extract_pure_ims_stage3_payloads.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "extract_rcfs_readonly.py",
+      "path": "tools/extract_rcfs_readonly.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "extract_wds_cmd_table.py",
+      "path": "tools/extract_wds_cmd_table.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "fastboot_capability.py",
+      "path": "tools/fastboot_capability.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "fat_offset_map.py",
+      "path": "tools/fat_offset_map.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "fetch_aosp_reference.py",
+      "path": "tools/fetch_aosp_reference.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "fetch_passport_autoloader.py",
+      "path": "tools/fetch_passport_autoloader.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "fetch_perfetto_decoder_binary.py",
+      "path": "tools/fetch_perfetto_decoder_binary.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "fetch_public_lab_signer.py",
+      "path": "tools/fetch_public_lab_signer.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "fetch_qualcomm_volte_reference.py",
+      "path": "tools/fetch_qualcomm_volte_reference.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "fetch_ranges.py",
+      "path": "tools/fetch_ranges.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "fetch_toolchain.py",
+      "path": "tools/fetch_toolchain.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "fetch_wseries_init.py",
+      "path": "tools/fetch_wseries_init.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "fetch_wseries_sepolicy.py",
+      "path": "tools/fetch_wseries_sepolicy.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "fetch_zip_entry_deflated.py",
+      "path": "tools/fetch_zip_entry_deflated.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "finalize_key2_repository_preparation.py",
+      "path": "tools/finalize_key2_repository_preparation.py",
+      "status": "archived_research_tool",
+      "summary": "Upstream ikimi615/qualcomm-volte-enabler reference comparison & ARM32 kernel adaptation audit"
+    },
+    {
+      "name": "finalize_key2_repository_preparation_v2.py",
+      "path": "tools/finalize_key2_repository_preparation_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Upstream ikimi615/qualcomm-volte-enabler reference comparison & ARM32 kernel adaptation audit"
+    },
+    {
+      "name": "find_imss_dispatch_candidates.py",
+      "path": "tools/find_imss_dispatch_candidates.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "find_passport_kernel_local.py",
+      "path": "tools/find_passport_kernel_local.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "finish_continuation_round.py",
+      "path": "tools/finish_continuation_round.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "finish_imss_table_analysis.py",
+      "path": "tools/finish_imss_table_analysis.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "finish_imss_wire_mapping.py",
+      "path": "tools/finish_imss_wire_mapping.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "finish_q6_config_error_chain.py",
+      "path": "tools/finish_q6_config_error_chain.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "finish_q6_regmgr_phase.py",
+      "path": "tools/finish_q6_regmgr_phase.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "finish_q6_runtime_config_phase.py",
+      "path": "tools/finish_q6_runtime_config_phase.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "finish_registration_status_phase.py",
+      "path": "tools/finish_registration_status_phase.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "finish_regmgr_cache_failure_phase.py",
+      "path": "tools/finish_regmgr_cache_failure_phase.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "finish_regmgr_gate_phase.py",
+      "path": "tools/finish_regmgr_gate_phase.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "finish_runtime_round.py",
+      "path": "tools/finish_runtime_round.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "flash_modem_image.py",
+      "path": "tools/flash_modem_image.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "generate_radio_hidl_minimal.py",
+      "path": "tools/generate_radio_hidl_minimal.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "generate_regconfig_provision_v2_payloads.py",
+      "path": "tools/generate_regconfig_provision_v2_payloads.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "generate_regconfig_provision_v3_payloads.py",
+      "path": "tools/generate_regconfig_provision_v3_payloads.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "generate_regconfig_provision_v4_payloads.py",
+      "path": "tools/generate_regconfig_provision_v4_payloads.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "generate_regconfig_provision_v6_payloads.py",
+      "path": "tools/generate_regconfig_provision_v6_payloads.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "index_debug_history.py",
+      "path": "tools/index_debug_history.py",
+      "status": "active_infrastructure_or_promoted_builder",
+      "summary": "Research evidence journal & SHA-256 lineage verifier."
+    },
+    {
+      "name": "inspect_core_ims_item_schemas.py",
+      "path": "tools/inspect_core_ims_item_schemas.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_diag_export_contracts.py",
+      "path": "tools/inspect_diag_export_contracts.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_diag_peek_candidates.py",
+      "path": "tools/inspect_diag_peek_candidates.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_diag_root_descriptors.py",
+      "path": "tools/inspect_diag_root_descriptors.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_dsi_serial_outlets.py",
+      "path": "tools/inspect_dsi_serial_outlets.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_ep15_rodata.py",
+      "path": "tools/inspect_ep15_rodata.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_ep39_ims_listener_bytecode.py",
+      "path": "tools/inspect_ep39_ims_listener_bytecode.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_existing_diag_sources.py",
+      "path": "tools/inspect_existing_diag_sources.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_ims_packages.py",
+      "path": "tools/inspect_ims_packages.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_imss_ap_counterparts.py",
+      "path": "tools/inspect_imss_ap_counterparts.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_imss_build_failure.py",
+      "path": "tools/inspect_imss_build_failure.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_imss_compressed_segments.py",
+      "path": "tools/inspect_imss_compressed_segments.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_modem_conditions.py",
+      "path": "tools/inspect_modem_conditions.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_native_cancel_entry.py",
+      "path": "tools/inspect_native_cancel_entry.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_native_cancel_helper.py",
+      "path": "tools/inspect_native_cancel_helper.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_passport_usb_presence.py",
+      "path": "tools/inspect_passport_usb_presence.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_registration_unavailable_reasons.py",
+      "path": "tools/inspect_registration_unavailable_reasons.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_ril26_and_efs_command_table.py",
+      "path": "tools/inspect_ril26_and_efs_command_table.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inspect_standard_diag_exports.py",
+      "path": "tools/inspect_standard_diag_exports.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "inventory_mcfg_configs.py",
+      "path": "tools/inventory_mcfg_configs.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "inventory_radio_hidl_abi.py",
+      "path": "tools/inventory_radio_hidl_abi.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "list_fat_files.py",
+      "path": "tools/list_fat_files.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "list_passport_kernel_remaining_archives.py",
+      "path": "tools/list_passport_kernel_remaining_archives.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "locate_imss_getter_metadata.py",
+      "path": "tools/locate_imss_getter_metadata.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "locate_regmgr_readonly_logs.py",
+      "path": "tools/locate_regmgr_readonly_logs.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "map_cci_qmux_ops.py",
+      "path": "tools/map_cci_qmux_ops.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "map_imss_file_selection.py",
+      "path": "tools/map_imss_file_selection.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "map_imss_metadata_table.py",
+      "path": "tools/map_imss_metadata_table.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "map_pdc_client_conditions.py",
+      "path": "tools/map_pdc_client_conditions.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "map_q6_config_tables.py",
+      "path": "tools/map_q6_config_tables.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "map_q6_efs_stat_registration.py",
+      "path": "tools/map_q6_efs_stat_registration.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "map_q6_efs_stat_table.py",
+      "path": "tools/map_q6_efs_stat_table.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "map_q6_imss_reply_table.py",
+      "path": "tools/map_q6_imss_reply_table.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "map_q6_imss_request_table.py",
+      "path": "tools/map_q6_imss_request_table.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "map_regmgr_record_layout.py",
+      "path": "tools/map_regmgr_record_layout.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "map_service_ids.py",
+      "path": "tools/map_service_ids.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "materialize_key2_kernel_reference.py",
+      "path": "tools/materialize_key2_kernel_reference.py",
+      "status": "archived_research_tool",
+      "summary": "Upstream ikimi615/qualcomm-volte-enabler reference comparison & ARM32 kernel adaptation audit"
+    },
+    {
+      "name": "modem_ims_enable_xref.py",
+      "path": "tools/modem_ims_enable_xref.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "native_inventory.py",
+      "path": "tools/native_inventory.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "natural_setup_events.py",
+      "path": "tools/natural_setup_events.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_diag_access_qualification.py",
+      "path": "tools/observe_diag_access_qualification.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_diag_entry_and_root_metadata.py",
+      "path": "tools/observe_diag_entry_and_root_metadata.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_diag_group_name.py",
+      "path": "tools/observe_diag_group_name.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_dsi_trace_prerequisites.py",
+      "path": "tools/observe_dsi_trace_prerequisites.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_existing_diag_outlets.py",
+      "path": "tools/observe_existing_diag_outlets.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_existing_qcdiag.py",
+      "path": "tools/observe_existing_qcdiag.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_ims_bearer_with_carrier_override.py",
+      "path": "tools/observe_ims_bearer_with_carrier_override.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_imss_allocation_context.py",
+      "path": "tools/observe_imss_allocation_context.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_imss_allocation_context_v2.py",
+      "path": "tools/observe_imss_allocation_context_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_imss_reader_crash.py",
+      "path": "tools/observe_imss_reader_crash.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_key2_config_digest.py",
+      "path": "tools/observe_key2_config_digest.py",
+      "status": "archived_research_tool",
+      "summary": "Upstream ikimi615/qualcomm-volte-enabler reference comparison & ARM32 kernel adaptation audit"
+    },
+    {
+      "name": "observe_key2_kernel_preflight.py",
+      "path": "tools/observe_key2_kernel_preflight.py",
+      "status": "archived_research_tool",
+      "summary": "Upstream ikimi615/qualcomm-volte-enabler reference comparison & ARM32 kernel adaptation audit"
+    },
+    {
+      "name": "observe_mmtel_discovery.py",
+      "path": "tools/observe_mmtel_discovery.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_mmtel_discovery_v2.py",
+      "path": "tools/observe_mmtel_discovery_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_native_hal_markers.py",
+      "path": "tools/observe_native_hal_markers.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_natural_setup_downstream.py",
+      "path": "tools/observe_natural_setup_downstream.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_natural_setup_once.py",
+      "path": "tools/observe_natural_setup_once.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_passive_binder_radio.py",
+      "path": "tools/observe_passive_binder_radio.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_runtime_inventory.py",
+      "path": "tools/observe_runtime_inventory.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_sameboot_trial_readiness.py",
+      "path": "tools/observe_sameboot_trial_readiness.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_timer_control.py",
+      "path": "tools/observe_timer_control.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_timer_control_binary.py",
+      "path": "tools/observe_timer_control_binary.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_timer_control_directory.py",
+      "path": "tools/observe_timer_control_directory.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "observe_trace_preflight.py",
+      "path": "tools/observe_trace_preflight.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "parse_mcfg_profile.py",
+      "path": "tools/parse_mcfg_profile.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "prepare_combined_ims_trial.py",
+      "path": "tools/prepare_combined_ims_trial.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_combined_runner_sources.py",
+      "path": "tools/prepare_combined_runner_sources.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_exact_regconfig_stat_runner.py",
+      "path": "tools/prepare_exact_regconfig_stat_runner.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_imss_accessor_export.py",
+      "path": "tools/prepare_imss_accessor_export.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_imss_buffer_candidate.py",
+      "path": "tools/prepare_imss_buffer_candidate.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_imss_buffer_runner.py",
+      "path": "tools/prepare_imss_buffer_runner.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_imss_enabled_read_proposal.py",
+      "path": "tools/prepare_imss_enabled_read_proposal.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_imss_reference_candidate.py",
+      "path": "tools/prepare_imss_reference_candidate.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_imss_table_decode.py",
+      "path": "tools/prepare_imss_table_decode.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_key2_reference_sources.py",
+      "path": "tools/prepare_key2_reference_sources.py",
+      "status": "archived_research_tool",
+      "summary": "Upstream ikimi615/qualcomm-volte-enabler reference comparison & ARM32 kernel adaptation audit"
+    },
+    {
+      "name": "prepare_mmtel_listener_candidate.py",
+      "path": "tools/prepare_mmtel_listener_candidate.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_mmtel_state_candidate.py",
+      "path": "tools/prepare_mmtel_state_candidate.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_mmtel_state_qualification.py",
+      "path": "tools/prepare_mmtel_state_qualification.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_mmtel_state_runner.py",
+      "path": "tools/prepare_mmtel_state_runner.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_operation_mode_efs_read.py",
+      "path": "tools/prepare_operation_mode_efs_read.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_operation_mode_runner.py",
+      "path": "tools/prepare_operation_mode_runner.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_perfetto_decoder.py",
+      "path": "tools/prepare_perfetto_decoder.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_q6_chain_assessment_v2.py",
+      "path": "tools/prepare_q6_chain_assessment_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_regmgr_dispatch_callers.py",
+      "path": "tools/prepare_regmgr_dispatch_callers.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_regmgr_reply_trace.py",
+      "path": "tools/prepare_regmgr_reply_trace.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_regmgr_request_dispatch.py",
+      "path": "tools/prepare_regmgr_request_dispatch.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_regmgr_stat_runner.py",
+      "path": "tools/prepare_regmgr_stat_runner.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_sameboot_comparison_proposal.py",
+      "path": "tools/prepare_sameboot_comparison_proposal.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_testmode_efs_read.py",
+      "path": "tools/prepare_testmode_efs_read.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_testmode_efs_read_v2.py",
+      "path": "tools/prepare_testmode_efs_read_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_testmode_efs_read_v3.py",
+      "path": "tools/prepare_testmode_efs_read_v3.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "prepare_testmode_efs_read_v4.py",
+      "path": "tools/prepare_testmode_efs_read_v4.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "probe_autoloader_regions.py",
+      "path": "tools/probe_autoloader_regions.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "probe_persist_swoop.py",
+      "path": "tools/probe_persist_swoop.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "probe_q6zip_v0_pages.py",
+      "path": "tools/probe_q6zip_v0_pages.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "pull_current_framework.py",
+      "path": "tools/pull_current_framework.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "pull_hidl_hwbinder.py",
+      "path": "tools/pull_hidl_hwbinder.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_combined_ims_backend.py",
+      "path": "tools/qualify_combined_ims_backend.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_combined_ims_backend_v2.py",
+      "path": "tools/qualify_combined_ims_backend_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_combined_ims_pdn26_v2.py",
+      "path": "tools/qualify_combined_ims_pdn26_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_combined_ims_pdn26_v2_r2.py",
+      "path": "tools/qualify_combined_ims_pdn26_v2_r2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_diag_route_enum.py",
+      "path": "tools/qualify_diag_route_enum.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_exact_regconfig_stat_runner.py",
+      "path": "tools/qualify_exact_regconfig_stat_runner.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_existing_diag_utilities.py",
+      "path": "tools/qualify_existing_diag_utilities.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_ims_put_ack_v2.py",
+      "path": "tools/qualify_ims_put_ack_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_ims_reboot_runner.py",
+      "path": "tools/qualify_ims_reboot_runner.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_ims_reboot_runner_v2.py",
+      "path": "tools/qualify_ims_reboot_runner_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_ims_reboot_sync.py",
+      "path": "tools/qualify_ims_reboot_sync.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_ims_reboot_sync_v2.py",
+      "path": "tools/qualify_ims_reboot_sync_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_ims_toggle.py",
+      "path": "tools/qualify_ims_toggle.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_ims_toggle_runner.py",
+      "path": "tools/qualify_ims_toggle_runner.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_ims_toggle_runner_v2.py",
+      "path": "tools/qualify_ims_toggle_runner_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_imss_buffer_trial.py",
+      "path": "tools/qualify_imss_buffer_trial.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_imss_buffer_trial_v2.py",
+      "path": "tools/qualify_imss_buffer_trial_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_imss_original_trial.py",
+      "path": "tools/qualify_imss_original_trial.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_mmtel_backend_runner.py",
+      "path": "tools/qualify_mmtel_backend_runner.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_mmtel_lifecycle.py",
+      "path": "tools/qualify_mmtel_lifecycle.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_mmtel_lifecycle_v2.py",
+      "path": "tools/qualify_mmtel_lifecycle_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_mmtel_listener.py",
+      "path": "tools/qualify_mmtel_listener.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_mmtel_state_runner.py",
+      "path": "tools/qualify_mmtel_state_runner.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_natural_setup_watcher.py",
+      "path": "tools/qualify_natural_setup_watcher.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_natural_setup_watcher_v2.py",
+      "path": "tools/qualify_natural_setup_watcher_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_operation_mode_efs_runner.py",
+      "path": "tools/qualify_operation_mode_efs_runner.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_passport_legacy_codec.py",
+      "path": "tools/qualify_passport_legacy_codec.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_regconfig_sameboot_trial.py",
+      "path": "tools/qualify_regconfig_sameboot_trial.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_regmgr_stat_runner.py",
+      "path": "tools/qualify_regmgr_stat_runner.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_root_efs_get_v3.py",
+      "path": "tools/qualify_root_efs_get_v3.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "qualify_testmode_efs_runner.py",
+      "path": "tools/qualify_testmode_efs_runner.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "query_pro_history.py",
+      "path": "tools/query_pro_history.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "r01_corrected_evidence.py",
+      "path": "tools/r01_corrected_evidence.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "range_fetch.py",
+      "path": "tools/range_fetch.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "read_key2_reference.py",
+      "path": "tools/read_key2_reference.py",
+      "status": "archived_research_tool",
+      "summary": "Upstream ikimi615/qualcomm-volte-enabler reference comparison & ARM32 kernel adaptation audit"
+    },
+    {
+      "name": "readonly_probe.py",
+      "path": "tools/readonly_probe.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "record_host_run.py",
+      "path": "tools/record_host_run.py",
+      "status": "active_infrastructure_or_promoted_builder",
+      "summary": "Research evidence recorder for host-side commands."
+    },
+    {
+      "name": "record_ims_reboot_launch_failure.py",
+      "path": "tools/record_ims_reboot_launch_failure.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "record_imss_read_authorization.py",
+      "path": "tools/record_imss_read_authorization.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "record_mmtel_backend_launch_failure.py",
+      "path": "tools/record_mmtel_backend_launch_failure.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "record_natural_observer_preparation.py",
+      "path": "tools/record_natural_observer_preparation.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "record_oem_hook_table.py",
+      "path": "tools/record_oem_hook_table.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "register_pdc_material.py",
+      "path": "tools/register_pdc_material.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "rehearse_passport_legacy_codec.py",
+      "path": "tools/rehearse_passport_legacy_codec.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "remote_zip_inventory.py",
+      "path": "tools/remote_zip_inventory.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "render_interface_matrix.py",
+      "path": "tools/render_interface_matrix.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "repair_ep34_json_sanitization.py",
+      "path": "tools/repair_ep34_json_sanitization.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "replay_bearer_verdicts.py",
+      "path": "tools/replay_bearer_verdicts.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "replay_bearer_verdicts_v2.py",
+      "path": "tools/replay_bearer_verdicts_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "reproduce_imss_send_headroom.py",
+      "path": "tools/reproduce_imss_send_headroom.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "reproduce_imss_send_headroom_v2.py",
+      "path": "tools/reproduce_imss_send_headroom_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "reproduce_imss_send_headroom_v3.py",
+      "path": "tools/reproduce_imss_send_headroom_v3.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "reproduce_imss_send_headroom_v4.py",
+      "path": "tools/reproduce_imss_send_headroom_v4.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "requirements-analysis.txt",
+      "path": "tools/requirements-analysis.txt",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "requirements-discovery.txt",
+      "path": "tools/requirements-discovery.txt",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "resolve_cci_abi.py",
+      "path": "tools/resolve_cci_abi.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "resolve_dsi_log_sinks.py",
+      "path": "tools/resolve_dsi_log_sinks.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "resolve_native_cancel_slot.py",
+      "path": "tools/resolve_native_cancel_slot.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "resolve_q6zip_dictionary_layout.py",
+      "path": "tools/resolve_q6zip_dictionary_layout.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "resolve_qmux_if_abi.py",
+      "path": "tools/resolve_qmux_if_abi.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "restore_modem_image.py",
+      "path": "tools/restore_modem_image.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_01_pdn_trial.py",
+      "path": "tools/run_01_pdn_trial.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_combined_ims_backend.py",
+      "path": "tools/run_combined_ims_backend.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_combined_ims_pdn26.py",
+      "path": "tools/run_combined_ims_pdn26.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_combined_ims_pdn26_v2.py",
+      "path": "tools/run_combined_ims_pdn26_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_efs_ds_audit.py",
+      "path": "tools/run_efs_ds_audit.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_efs_ims_audit.py",
+      "path": "tools/run_efs_ims_audit.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_enabled_regconfig_read.py",
+      "path": "tools/run_enabled_regconfig_read.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_exact_regconfig_stat.py",
+      "path": "tools/run_exact_regconfig_stat.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_ims_buffer_setting_trial.py",
+      "path": "tools/run_ims_buffer_setting_trial.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_ims_buffer_setting_trial_v2.py",
+      "path": "tools/run_ims_buffer_setting_trial_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_ims_original_setting_trial.py",
+      "path": "tools/run_ims_original_setting_trial.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_ims_reboot.py",
+      "path": "tools/run_ims_reboot.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_ims_reboot_v2.py",
+      "path": "tools/run_ims_reboot_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_ims_toggle.py",
+      "path": "tools/run_ims_toggle.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_ims_toggle_v2.py",
+      "path": "tools/run_ims_toggle_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_imss_buffer_reader.py",
+      "path": "tools/run_imss_buffer_reader.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_imss_current00.py",
+      "path": "tools/run_imss_current00.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_imss_original_reader.py",
+      "path": "tools/run_imss_original_reader.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_mmtel_backend_link.py",
+      "path": "tools/run_mmtel_backend_link.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_mmtel_backend_link_v2.py",
+      "path": "tools/run_mmtel_backend_link_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_mmtel_lifecycle_probe.py",
+      "path": "tools/run_mmtel_lifecycle_probe.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_mmtel_listener.py",
+      "path": "tools/run_mmtel_listener.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_mmtel_state_link.py",
+      "path": "tools/run_mmtel_state_link.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_operation_mode_efs_read.py",
+      "path": "tools/run_operation_mode_efs_read.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_passport_legacy_codec.py",
+      "path": "tools/run_passport_legacy_codec.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_passport_volte_deployment.py",
+      "path": "tools/run_passport_volte_deployment.py",
+      "status": "active_infrastructure_or_promoted_builder",
+      "summary": "Guarded research-repo end-to-end deploy/status/rollback runner (clean standalone CLI provided at cli/volte_ctl.py)."
+    },
+    {
+      "name": "run_passport_volte_v2r3_upgrade.py",
+      "path": "tools/run_passport_volte_v2r3_upgrade.py",
+      "status": "active_infrastructure_or_promoted_builder",
+      "summary": "Guarded in-place v2r2->v2r3 APK upgrade runner."
+    },
+    {
+      "name": "run_pdn_hold_ril.py",
+      "path": "tools/run_pdn_hold_ril.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_pdn_hold_ril_v2.py",
+      "path": "tools/run_pdn_hold_ril_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_provisioned_ims_stage3_trial.py",
+      "path": "tools/run_provisioned_ims_stage3_trial.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_provisioned_ims_stage4_trial.py",
+      "path": "tools/run_provisioned_ims_stage4_trial.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_provisioned_ims_stage5_trial.py",
+      "path": "tools/run_provisioned_ims_stage5_trial.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_provisioned_ims_stage5cd_trial.py",
+      "path": "tools/run_provisioned_ims_stage5cd_trial.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_provisioned_ims_stage6_trial.py",
+      "path": "tools/run_provisioned_ims_stage6_trial.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_provisioned_ims_trial.py",
+      "path": "tools/run_provisioned_ims_trial.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_provisioned_ims_trial_v2.py",
+      "path": "tools/run_provisioned_ims_trial_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_provisioned_ims_trial_v3.py",
+      "path": "tools/run_provisioned_ims_trial_v3.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_regconfig_rehearsal.py",
+      "path": "tools/run_regconfig_rehearsal.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_regconfig_sameboot_trial.py",
+      "path": "tools/run_regconfig_sameboot_trial.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_regmgr_efs_stat.py",
+      "path": "tools/run_regmgr_efs_stat.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_root_diag_probe.py",
+      "path": "tools/run_root_diag_probe.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_root_diag_probe_v2.py",
+      "path": "tools/run_root_diag_probe_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_root_diag_probe_v3.py",
+      "path": "tools/run_root_diag_probe_v3.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_testmode_efs_read.py",
+      "path": "tools/run_testmode_efs_read.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "run_transport_session.py",
+      "path": "tools/run_transport_session.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "runtime_observation_session.py",
+      "path": "tools/runtime_observation_session.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "runtime_observation_session_v2.py",
+      "path": "tools/runtime_observation_session_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "scan_autoloader_remote.py",
+      "path": "tools/scan_autoloader_remote.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "scan_efs_descriptors.py",
+      "path": "tools/scan_efs_descriptors.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "scan_expanded_imss_references.py",
+      "path": "tools/scan_expanded_imss_references.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "scan_extracted_radio.py",
+      "path": "tools/scan_extracted_radio.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "scan_imss_raw_extenders.py",
+      "path": "tools/scan_imss_raw_extenders.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "scan_nv_tables.py",
+      "path": "tools/scan_nv_tables.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "scan_q6_byte_offsets.py",
+      "path": "tools/scan_q6_byte_offsets.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "scan_remote_image_strings.py",
+      "path": "tools/scan_remote_image_strings.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "search_key2_archives.py",
+      "path": "tools/search_key2_archives.py",
+      "status": "archived_research_tool",
+      "summary": "Upstream ikimi615/qualcomm-volte-enabler reference comparison & ARM32 kernel adaptation audit"
+    },
+    {
+      "name": "search_local_modem_images.py",
+      "path": "tools/search_local_modem_images.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "stage_opensource_and_archive_layout.py",
+      "path": "tools/stage_opensource_and_archive_layout.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "summarize_adapter.py",
+      "path": "tools/summarize_adapter.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "summarize_backend_diagnosis.py",
+      "path": "tools/summarize_backend_diagnosis.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "summarize_ims_lifecycle.py",
+      "path": "tools/summarize_ims_lifecycle.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "summarize_mcfg_candidate_matrix.py",
+      "path": "tools/summarize_mcfg_candidate_matrix.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "summarize_milestone.py",
+      "path": "tools/summarize_milestone.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "summarize_modem_conditions.py",
+      "path": "tools/summarize_modem_conditions.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "summarize_publication_progress.py",
+      "path": "tools/summarize_publication_progress.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "summarize_publication_timing.py",
+      "path": "tools/summarize_publication_timing.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "summarize_qmi_discovery.py",
+      "path": "tools/summarize_qmi_discovery.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "summarize_qmux_disabled_conns.py",
+      "path": "tools/summarize_qmux_disabled_conns.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "summarize_radio_markers.py",
+      "path": "tools/summarize_radio_markers.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "summarize_transport_runtime.py",
+      "path": "tools/summarize_transport_runtime.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "summarize_uicc_cached_status.py",
+      "path": "tools/summarize_uicc_cached_status.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "summarize_volte_config_state.py",
+      "path": "tools/summarize_volte_config_state.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_check_ims_daemon_state.py",
+      "path": "tools/test_check_ims_daemon_state.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_evidence_recorder.py",
+      "path": "tools/test_evidence_recorder.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_ims_bearer.py",
+      "path": "tools/test_ims_bearer.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_inspect_ims_packages.py",
+      "path": "tools/test_inspect_ims_packages.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_key2_kernel_preflight.py",
+      "path": "tools/test_key2_kernel_preflight.py",
+      "status": "archived_research_tool",
+      "summary": "Upstream ikimi615/qualcomm-volte-enabler reference comparison & ARM32 kernel adaptation audit"
+    },
+    {
+      "name": "test_natural_boot.py",
+      "path": "tools/test_natural_boot.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_observer_lab.py",
+      "path": "tools/test_observer_lab.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_pdc_activate.py",
+      "path": "tools/test_pdc_activate.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "test_pdc_load_elf.py",
+      "path": "tools/test_pdc_load_elf.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "test_pdc_load_only.py",
+      "path": "tools/test_pdc_load_only.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "test_pdc_load_swdef.py",
+      "path": "tools/test_pdc_load_swdef.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "test_pdc_reader.py",
+      "path": "tools/test_pdc_reader.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "test_pdc_reader10.py",
+      "path": "tools/test_pdc_reader10.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "test_pdc_reader11.py",
+      "path": "tools/test_pdc_reader11.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "test_pdc_reader12.py",
+      "path": "tools/test_pdc_reader12.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "test_pdc_reader13.py",
+      "path": "tools/test_pdc_reader13.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "test_pdc_reader14.py",
+      "path": "tools/test_pdc_reader14.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "test_pdc_reader7.py",
+      "path": "tools/test_pdc_reader7.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "test_pdc_reader8.py",
+      "path": "tools/test_pdc_reader8.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "test_pdc_reader9.py",
+      "path": "tools/test_pdc_reader9.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "test_probe_persist_swoop.py",
+      "path": "tools/test_probe_persist_swoop.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_publication_timeline_runner.py",
+      "path": "tools/test_publication_timeline_runner.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_publication_timeline_runner2.py",
+      "path": "tools/test_publication_timeline_runner2.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_publication_timeline_runner3.py",
+      "path": "tools/test_publication_timeline_runner3.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_radio_hidl.py",
+      "path": "tools/test_radio_hidl.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_ril_sim_status.py",
+      "path": "tools/test_ril_sim_status.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_swoop_reader.py",
+      "path": "tools/test_swoop_reader.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_transport_lab.py",
+      "path": "tools/test_transport_lab.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_transport_stop_status.py",
+      "path": "tools/test_transport_stop_status.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_uicc_probe.py",
+      "path": "tools/test_uicc_probe.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_wds_ims_bearer.py",
+      "path": "tools/test_wds_ims_bearer.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "test_wds_profile.py",
+      "path": "tools/test_wds_profile.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "trace_branding_callers.py",
+      "path": "tools/trace_branding_callers.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "trace_expanded_regmgr_calls.py",
+      "path": "tools/trace_expanded_regmgr_calls.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "trace_imss_accessor_calls.py",
+      "path": "tools/trace_imss_accessor_calls.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "trace_imss_log_keys.py",
+      "path": "tools/trace_imss_log_keys.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "trace_imss_log_metadata.py",
+      "path": "tools/trace_imss_log_metadata.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "trace_imss_table_address_forms.py",
+      "path": "tools/trace_imss_table_address_forms.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "trace_log_gate_details.py",
+      "path": "tools/trace_log_gate_details.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "trace_log_outlets_readonly.py",
+      "path": "tools/trace_log_outlets_readonly.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "trace_pdc_pointer_users.py",
+      "path": "tools/trace_pdc_pointer_users.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "trace_pdc_reachability.py",
+      "path": "tools/trace_pdc_reachability.py",
+      "status": "archived_research_tool",
+      "summary": "Archived QMI_PDC / MCFG investigation script (excluded route)"
+    },
+    {
+      "name": "trace_phone_callback_scope.py",
+      "path": "tools/trace_phone_callback_scope.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "trace_q6_config_init_edges.py",
+      "path": "tools/trace_q6_config_init_edges.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "trace_q6_edges_plan.py",
+      "path": "tools/trace_q6_edges_plan.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "trace_q6_efs_stat_edges.py",
+      "path": "tools/trace_q6_efs_stat_edges.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "trace_q6_efs_stat_edges_v2.py",
+      "path": "tools/trace_q6_efs_stat_edges_v2.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "trace_q6_efs_stat_registration.py",
+      "path": "tools/trace_q6_efs_stat_registration.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "trace_q6_imss_wire_edges.py",
+      "path": "tools/trace_q6_imss_wire_edges.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "trace_q6_runtime_config.py",
+      "path": "tools/trace_q6_runtime_config.py",
+      "status": "archived_research_tool",
+      "summary": "Hexagon Q6ZIP firmware decompression & static call-graph forensics"
+    },
+    {
+      "name": "trace_regmgr_common_dispatch.py",
+      "path": "tools/trace_regmgr_common_dispatch.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "trace_regmgr_gate_strings.py",
+      "path": "tools/trace_regmgr_gate_strings.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "trace_regmgr_reply_path.py",
+      "path": "tools/trace_regmgr_reply_path.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "trace_runtime_archives.py",
+      "path": "tools/trace_runtime_archives.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "trace_vendor_log_outlets.py",
+      "path": "tools/trace_vendor_log_outlets.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "update_testmode_handoff_title.py",
+      "path": "tools/update_testmode_handoff_title.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "validate_adapter.py",
+      "path": "tools/validate_adapter.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "validate_atrace_reference.py",
+      "path": "tools/validate_atrace_reference.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "validate_backend_diagnosis.py",
+      "path": "tools/validate_backend_diagnosis.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "validate_ims_lifecycle.py",
+      "path": "tools/validate_ims_lifecycle.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "validate_milestone.py",
+      "path": "tools/validate_milestone.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "validate_publication_progress.py",
+      "path": "tools/validate_publication_progress.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "validate_publication_timing.py",
+      "path": "tools/validate_publication_timing.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "validate_qmi_discovery.py",
+      "path": "tools/validate_qmi_discovery.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "validate_transport_runtime.py",
+      "path": "tools/validate_transport_runtime.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "verify_key2_helper_provenance.py",
+      "path": "tools/verify_key2_helper_provenance.py",
+      "status": "archived_research_tool",
+      "summary": "Upstream ikimi615/qualcomm-volte-enabler reference comparison & ARM32 kernel adaptation audit"
+    },
+    {
+      "name": "verify_prototype_abi.py",
+      "path": "tools/verify_prototype_abi.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "verify_timer_chain_and_markers.py",
+      "path": "tools/verify_timer_chain_and_markers.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "verify_trace_transport.py",
+      "path": "tools/verify_trace_transport.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "write_imss_allocation_handoff.py",
+      "path": "tools/write_imss_allocation_handoff.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "write_imss_enabled_read_handoff.py",
+      "path": "tools/write_imss_enabled_read_handoff.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "write_imss_getter_handoff.py",
+      "path": "tools/write_imss_getter_handoff.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "write_mmtel_state_handoff.py",
+      "path": "tools/write_mmtel_state_handoff.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "write_regmgr_stat_handoff.py",
+      "path": "tools/write_regmgr_stat_handoff.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    },
+    {
+      "name": "write_testmode_efs_handoff.py",
+      "path": "tools/write_testmode_efs_handoff.py",
+      "status": "archived_research_tool",
+      "summary": "Historical hypothesis test, build qualification, or read-only observation script"
+    }
+  ]
+}

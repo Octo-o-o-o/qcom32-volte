@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.passport.volteims"
+    android:sharedUserId="android.uid.phone"
+    android:versionCode="3"
+    android:versionName="2.3-passport-volte">
+
+    <uses-sdk
+        android:minSdkVersion="30"
+        android:targetSdkVersion="30" />
+
+    <!-- Intentionally zero <uses-permission> declarations so com.android.phone retains its exact 120 granted permissions. -->
+    <application
+        android:label="Passport VoLTE IMS"
+        android:process=":volteims"
+        android:directBootAware="true"
+        android:extractNativeLibs="true"
+        android:allowBackup="false"
+        android:debuggable="false">
+
+        <service
+            android:name=".PassportVolteImsService"
+            android:exported="true"
+            android:directBootAware="true"
+            android:permission="android.permission.BIND_IMS_SERVICE">
+            <intent-filter>
+                <action android:name="android.telephony.ims.ImsService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.telephony.ims.MMTEL_FEATURE"
+                android:value="true" />
+        </service>
+
+        <service
+            android:name=".VolteBootstrapService"
+            android:exported="false"
+            android:directBootAware="true" />
+
+        <receiver
+            android:name=".CarrierConfigBootstrapReceiver"
+            android:exported="true"
+            android:directBootAware="true">
+            <intent-filter>
+                <action android:name="android.telephony.action.CARRIER_CONFIG_CHANGED" />
+                <action android:name="android.telephony.action.DEFAULT_SUBSCRIPTION_CHANGED" />
+                <action android:name="android.intent.action.SIM_STATE_CHANGED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".VolteAdminReceiver"
+            android:exported="true"
+            android:directBootAware="true"
+            android:permission="android.permission.MODIFY_PHONE_STATE">
+            <intent-filter>
+                <action android:name="org.passport.volteims.ACTION_ADMIN" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

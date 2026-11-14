@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Complete Setup &amp; Integration Guide | Passport Android 11 VoLTE</title>
+  <meta name="description" content="Step-by-step setup guide for BlackBerry Passport Android 11 (LineageOS 18.1) VoLTE: Rooted Debugging, Windows EXE, Magisk Companion APK, Portable CLI, ROM integration, SIM swap, call acceptance, and factory rollback.">
+  <meta name="theme-color" content="#f4f5f0">
+  <link rel="icon" type="image/png" href="../assets/icon.png">
+  <link rel="canonical" href="https://passport-volte.octoooo.com/en/guide">
+  <link rel="alternate" hreflang="zh-CN" href="https://passport-volte.octoooo.com/guide">
+  <link rel="alternate" hreflang="en" href="https://passport-volte.octoooo.com/en/guide">
+  <link rel="alternate" hreflang="x-default" href="https://passport-volte.octoooo.com/guide">
+  <meta property="og:title" content="Complete Setup &amp; Integration Guide | Passport Android 11 VoLTE">
+  <meta property="og:description" content="All four activation methods, live call acceptance checklist, and full factory modem EFS rollback.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://passport-volte.octoooo.com/en/guide">
+  <script src="../appearance.js"></script>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../guide.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="sister-bar">
+    <div class="shell">
+      <span><strong>OS Check:</strong> This guide is for BlackBerry Passport flashed to <strong>Android 11 (LineageOS 18.1)</strong>.</span>
+      <span>Stock BB10 OS 10.3.3 users: open the <a href="https://bb10-volte.octoooo.com/en/guide" target="_blank" rel="noopener noreferrer">BB10 VoLTE Guide →</a></span>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="shell">
+      <a class="brand" href="index.html" aria-label="Passport VoLTE Home">
+        <img class="brand-mark" src="../assets/icon.png" alt="" width="38" height="38">
+        <span class="brand-name">Passport VoLTE</span>
+        <span class="brand-edition">ANDROID 11 · OCTOLAB</span>
+      </a>
+      <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+        <a href="index.html#how">How It Works</a>
+        <a href="index.html#methods">4 Ways to Use</a>
+        <a href="index.html#comparison">Comparison</a>
+        <a href="guide.html" aria-current="page">Setup Guide</a>
+        <a href="index.html#compatibility">Compatibility</a>
+        <a href="index.html#download">Download</a>
+      </nav>
+      <div class="header-actions">
+        <a class="language-switch" data-language-switch="zh-CN" href="../guide.html" lang="zh-CN" hreflang="zh-CN" aria-label="切换为中文">中文</a>
+        <a class="github-link" href="https://github.com/Octo-o-o-o/passport-android11-volte" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <select class="theme-select" id="appearance" aria-label="Appearance">
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-controls="site-nav" aria-expanded="false" aria-label="Open navigation menu"><span class="menu-lines" aria-hidden="true"></span></button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="guide-hero" aria-labelledby="guide-title">
+      <div class="shell">
+        <p class="eyebrow">SETUP &amp; INTEGRATION GUIDE · <span data-release-version>v1.0.0-r1</span></p>
+        <h1 id="guide-title">From USB connection to unplugged 4G voice calls</h1>
+        <p class="guide-intro">Follow each stage in order: verify prerequisites → enable Rooted Debugging → run one of the four activation workflows → verify real incoming and outgoing calls with USB unplugged.</p>
+        <div class="guide-actions">
+          <a class="button button-primary" data-download="windows" href="https://passport-downloads.octoooo.com/v1.0.0-r1/passport-android11-volte-1.0.0-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>Download Windows EXE</span><small>Recommended · No Magisk</small></span></a>
+          <a class="button button-secondary" data-download="manager" href="https://passport-downloads.octoooo.com/v1.0.0-r1/PassportVolteManager-1.0.0-r1.apk" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>Download Companion APK</span><small>Optional for Magisk</small></span></a>
+        </div>
+      </div>
+    </section>
+
+    <div class="shell guide-layout">
+      <aside class="guide-toc" aria-labelledby="toc-title">
+        <p class="guide-toc-title" id="toc-title">On This Page</p>
+        <nav aria-label="Guide sections">
+          <ol>
+            <li><a href="#prepare">Prerequisites &amp; Safety</a></li>
+            <li><a href="#root-debug">Enable Rooted Debugging</a></li>
+            <li><a href="#method-windows">Method 1: Windows EXE</a></li>
+            <li><a href="#method-manager">Method 2: Companion APK</a></li>
+            <li><a href="#method-cli">Method 3: Portable CLI / GUI</a></li>
+            <li><a href="#method-rom">Method 4: ROM &amp; Porting</a></li>
+            <li><a href="#sim-swap">SIM Swapping &amp; Carriers</a></li>
+            <li><a href="#acceptance">Live Call Acceptance</a></li>
+            <li><a href="#rollback">Factory Modem Rollback</a></li>
+            <li><a href="#verify">Verify SHA-256 Checksums</a></li>
+          </ol>
+        </nav>
+      </aside>
+
+      <div class="guide-content">
+        <section class="guide-section" id="prepare">
+          <h2>01. Prerequisites &amp; Safety Boundaries</h2>
+          <ol class="step-list">
+            <li><strong>Target Device &amp; OS:</strong> BlackBerry Passport (<code>SQW100-1 / SQW100-3 / SQW100-4</code>, codename <code>wolverine</code>) running <code>LineageOS 18.1-UNOFFICIAL-wseries</code> (Android 11 / API 30, SELinux <code>Enforcing</code>). Non-<code>wolverine</code> devices are rejected automatically.</li>
+            <li><strong>Provisioned SIM:</strong> Insert an active 4G/5G USIM with VoLTE enabled on your carrier account and confirm LTE data attaches normally.</li>
+            <li><strong>Idle Phone State:</strong> Ensure no call is active, battery is above 30%, and use a reliable USB data cable.</li>
+          </ol>
+          <div class="callout"><strong>Data Safety:</strong> Activation only provisions the 54 targeted IMS modem items (after saving a local backup) and installs the bridge APK—it <strong>does not wipe user data</strong>. Never rely on experimental legacy modifications as your sole emergency (911/112) device.</div>
+        </section>
+
+        <section class="guide-section" id="root-debug">
+          <h2>02. Enable LineageOS 18.1 USB &amp; Rooted Debugging</h2>
+          <p>When using Method 1 (Windows EXE) or Method 3 (Portable CLI), <strong>Magisk is not required</strong>:</p>
+          <ol class="step-list">
+            <li>Open <strong>Settings → About phone</strong> and tap <strong>Build number</strong> 7 times to unlock Developer Options.</li>
+            <li>Open <strong>Settings → System → Advanced → Developer options</strong>.</li>
+            <li>Turn ON <strong>Android debugging</strong> (USB debugging).</li>
+            <li>Turn ON <strong>Rooted debugging</strong> on the same screen.</li>
+            <li>Connect via USB and accept the “Allow USB debugging?” RSA fingerprint dialog on the phone.</li>
+          </ol>
+        </section>
+
+        <section class="guide-section" id="method-windows">
+          <h2>03. Method 1: Windows Desktop One-Click EXE (Recommended)</h2>
+          <ol class="step-list">
+            <li>Download and launch <code>passport-android11-volte-1.0.0-r1-windows-x64.exe</code>.</li>
+            <li>Verify your Passport serial appears in the “ADB Device” selector and click <strong>“1. Check Status (Read-Only)”</strong>.</li>
+            <li>Click <strong>“2. Backup &amp; Activate VoLTE (Recommended)”</strong> and confirm.</li>
+            <li>The tool switches to <code>adb root</code>, saves a pre-deployment EFS snapshot under <code>%LOCALAPPDATA%\passport-android11-volte\backups\</code>, provisions Stage 6A + <code>EFS_SYNC</code>, installs <code>PassportVolteIms.apk</code> v2.3 with persistent <code>CarrierConfig</code>, reboots normally, and polls until <code>volte_stack_healthy: true</code>.</li>
+          </ol>
+        </section>
+
+        <section class="guide-section" id="method-manager">
+          <h2>04. Method 2: On-Device Companion App (For Magisk Users)</h2>
+          <ol class="step-list">
+            <li>Install <code>PassportVolteManager-1.0.0-r1.apk</code> on your Passport (directly on the phone or via the desktop button “Install Mobile Companion App”).</li>
+            <li>Tap “Refresh Status” anytime to inspect IMS service &amp; <code>QMI_IMSA</code> registration (works even without root).</li>
+            <li>If Magisk (<code>su</code>) is installed, tap “Activate / Repair Native VoLTE (Root)” and grant the Magisk superuser prompt to run SHA-256-verified backup, Stage 6A provisioning, APK installation, and normal reboot right on the device.</li>
+          </ol>
+        </section>
+
+        <section class="guide-section" id="method-cli">
+          <h2>05. Method 3: macOS / Linux / Cross-Platform Portable ZIP</h2>
+          <p>Extract <code>passport-android11-volte-1.0.0-r1-portable.zip</code> (requires Python 3.9+ and <code>adb</code>):</p>
+          <pre class="code-block"><code>python3 cli/volte_ctl.py self-test
+python3 cli/volte_ctl.py status
+python3 cli/volte_ctl.py deploy
+# Or launch the cross-platform Tkinter GUI:
+python3 cli/gui.py</code></pre>
+        </section>
+
+        <section class="guide-section" id="method-rom">
+          <h2>06. Method 4: LineageOS 18.1 ROM Integration &amp; MSM8974 Porting</h2>
+          <p>ROM builders can include <code>PassportVolteIms</code> directly in <code>/system/priv-app/</code> using <code>rom-integration/Android.bp</code> and <code>device-passport-volte.mk</code>:</p>
+          <pre class="code-block"><code>mkdir -p packages/apps/PassportVolteIms
+cp -r src/android-ims-service/* src/qmi-imsa-probe rom-integration/Android.bp packages/apps/PassportVolteIms/
+# Add to device/blackberry/wolverine/device.mk:
+$(call inherit-product, packages/apps/PassportVolteIms/device-passport-volte.mk)</code></pre>
+          <p>Because Android ROM zips do not overwrite Qualcomm’s dedicated modem EFS partition, Stage 6A modem provisioning must still be run once per physical handset. For porting notes covering OnePlus One, Xperia Z2/Z3, Galaxy S5, Mi 4, LG G3, and HTC One M8, see <a href="https://github.com/Octo-o-o-o/passport-android11-volte/blob/main/docs/guide/MSM8974_PORTING_GUIDE.md" target="_blank" rel="noopener noreferrer">MSM8974_PORTING_GUIDE.md</a>.</p>
+        </section>
+
+        <section class="guide-section" id="sim-swap">
+          <h2>07. SIM Swapping &amp; Multi-Carrier Notes</h2>
+          <p>Stage 6A modem EFS settings use the standard <code>ims</code> APN and dynamic PCO (<code>mode=0</code>) and remain stored across SIM swaps. Because Android’s <code>CarrierConfig</code> is keyed per SIM <code>subId</code>, after inserting a different VoLTE SIM simply click <strong>“Upgrade Bridge APK Only”</strong> (or run <code>python3 cli/volte_ctl.py upgrade-apk</code>) to bind CarrierConfig to the new SIM.</p>
+        </section>
+
+        <section class="guide-section" id="acceptance">
+          <h2>08. Live Call Acceptance Checklist</h2>
+          <ol class="step-list">
+            <li><strong>Unplug the USB cable</strong> so the phone operates completely standalone;</li>
+            <li>Place an outgoing call in the stock Dialer: confirm <strong>clear two-way audio</strong> and verify the status bar stays on <strong>LTE / 4G</strong> throughout the call;</li>
+            <li>Receive an incoming call: confirm <strong>ringing, accurate Caller ID display (not “Unknown”), and clean hangup</strong>;</li>
+            <li><strong>Reboot the phone normally</strong>, wait ~30 seconds after unlock, and place another call to confirm hands-free boot recovery.</li>
+          </ol>
+        </section>
+
+        <section class="guide-section" id="rollback">
+          <h2>09. Full Factory Modem EFS Rollback</h2>
+          <p>Click <strong>“Restore Factory Modem EFS &amp; Uninstall”</strong> in the desktop GUI or run:</p>
+          <pre class="code-block"><code>python3 cli/volte_ctl.py rollback</code></pre>
+        </section>
+
+        <section class="guide-section" id="verify">
+          <h2>10. Verify SHA-256 Checksums</h2>
+          <pre class="code-block"><code># Windows PowerShell:
+Get-FileHash "$HOME\Downloads\passport-android11-volte-1.0.0-r1-windows-x64.exe" -Algorithm SHA256
+
+# macOS / Linux:
+shasum -a 256 ~/Downloads/passport-android11-volte-1.0.0-r1-portable.zip</code></pre>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="shell">
+      <div class="footer-brand">
+        <a class="brand" href="index.html"><img class="brand-mark" src="../assets/icon.png" alt="" width="38" height="38"><span class="brand-name">Passport VoLTE</span></a>
+        <p>Keep your Android 11 BlackBerry Passport on 4G voice.</p>
+      </div>
+      <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="https://bb10-volte.octoooo.com/en/" target="_blank" rel="noopener noreferrer">Sister Project: BB10 VoLTE</a>
+        <a href="https://github.com/Octo-o-o-o/passport-android11-volte" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://octoooo.com" target="_blank" rel="noopener noreferrer">OctoLab</a>
+      </div>
+      <div class="footer-bottom">
+        <span>© <span data-current-year>2026</span> OctoLab · Apache-2.0 License</span>
+        <span>Independent open-source project; not affiliated with BlackBerry Limited or Qualcomm.</span>
+      </div>
+    </div>
+  </footer>
+  <script type="module" src="../site.js"></script>
+</body>
+</html>

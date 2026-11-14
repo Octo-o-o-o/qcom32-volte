@@ -1,0 +1,20 @@
+# Local device system files, prior notes and private diagnostic material.
+/private/
+
+# Local raw captures and secrets must not be committed.
+/raw-logs/
+*.pem
+*.key
+*.pk8
+*.jks
+*.keystore
+
+# Generated development output.
+/build/
+/dist/
+/website/dist/
+node_modules/
+.gradle/
+local.properties
+__pycache__/
+*.pyc

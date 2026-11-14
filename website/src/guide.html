@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>完整使用与集成指南 | Passport Android 11 VoLTE</title>
+  <meta name="description" content="黑莓 Passport Android 11（LineageOS 18.1）原生 VoLTE 分步教程：开启 Root 调试、Windows 一键版、Magisk 手机管理版、跨平台 CLI、ROM 源码集成、换卡、真机通话验收与出厂基带回滚。">
+  <meta name="theme-color" content="#f4f5f0">
+  <link rel="icon" type="image/png" href="assets/icon.png">
+  <link rel="canonical" href="https://passport-volte.octoooo.com/guide">
+  <link rel="alternate" hreflang="zh-CN" href="https://passport-volte.octoooo.com/guide">
+  <link rel="alternate" hreflang="en" href="https://passport-volte.octoooo.com/en/guide">
+  <link rel="alternate" hreflang="x-default" href="https://passport-volte.octoooo.com/guide">
+  <meta property="og:title" content="完整使用与集成指南 | Passport Android 11 VoLTE">
+  <meta property="og:description" content="四种激活与集成方式的完整分步手册、通话验收清单与一键基带回滚说明。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://passport-volte.octoooo.com/guide">
+  <script src="appearance.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="guide.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到正文</a>
+
+  <div class="sister-bar">
+    <div class="shell">
+      <span><strong>系统确认：</strong>本指南仅适用于刷了 <strong>Android 11（LineageOS 18.1）</strong> 的黑莓 Passport。</span>
+      <span>原厂 BB10 OS 10.3.3 用户请前往 <a href="https://bb10-volte.octoooo.com/guide" target="_blank" rel="noopener noreferrer">BB10 VoLTE 使用指南 →</a></span>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="shell">
+      <a class="brand" href="index.html" aria-label="Passport VoLTE 首页">
+        <img class="brand-mark" src="assets/icon.png" alt="" width="38" height="38">
+        <span class="brand-name">Passport VoLTE</span>
+        <span class="brand-edition">ANDROID 11 · OCTOLAB</span>
+      </a>
+      <nav class="site-nav" id="site-nav" aria-label="主导航">
+        <a href="index.html#how">工作原理</a>
+        <a href="index.html#methods">四种用法</a>
+        <a href="index.html#comparison">方案对比</a>
+        <a href="guide.html" aria-current="page">完整指南</a>
+        <a href="index.html#compatibility">兼容与移植</a>
+        <a href="index.html#download">下载</a>
+      </nav>
+      <div class="header-actions">
+        <a class="language-switch" data-language-switch="en" href="en/guide.html" lang="en" hreflang="en" aria-label="Switch to English">English</a>
+        <a class="github-link" href="https://github.com/Octo-o-o-o/passport-android11-volte" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <select class="theme-select" id="appearance" aria-label="外观">
+          <option value="system">跟随系统</option>
+          <option value="light">浅色</option>
+          <option value="dark">深色</option>
+        </select>
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-controls="site-nav" aria-expanded="false" aria-label="打开导航菜单"><span class="menu-lines" aria-hidden="true"></span></button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="guide-hero" aria-labelledby="guide-title">
+      <div class="shell">
+        <p class="eyebrow">SETUP &amp; INTEGRATION GUIDE · <span data-release-version>v1.0.0-r1</span></p>
+        <h1 id="guide-title">从首次连接到拔线通话验收</h1>
+        <p class="guide-intro">按顺序完成：检查前提条件 → 开启 USB/Root 调试 → 选择四种方式之一完成备份与激活 → 使用系统自带拨号器完成真实双向通话验收。</p>
+        <div class="guide-actions">
+          <a class="button button-primary" data-download="windows" href="https://passport-downloads.octoooo.com/v1.0.0-r1/passport-android11-volte-1.0.0-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>下载 Windows 一键版 EXE</span><small>推荐 · 无需 Magisk</small></span></a>
+          <a class="button button-secondary" data-download="manager" href="https://passport-downloads.octoooo.com/v1.0.0-r1/PassportVolteManager-1.0.0-r1.apk" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>下载手机端管理 APK</span><small>Magisk 用户可选</small></span></a>
+        </div>
+      </div>
+    </section>
+
+    <div class="shell guide-layout">
+      <aside class="guide-toc" aria-labelledby="toc-title">
+        <p class="guide-toc-title" id="toc-title">本页目录</p>
+        <nav aria-label="指南章节">
+          <ol>
+            <li><a href="#prepare">前提条件与风险说明</a></li>
+            <li><a href="#root-debug">开启 USB 与 Root 调试</a></li>
+            <li><a href="#method-windows">方式一：Windows 一键版</a></li>
+            <li><a href="#method-manager">方式二：手机端管理 App</a></li>
+            <li><a href="#method-cli">方式三：跨平台 CLI / GUI</a></li>
+            <li><a href="#method-rom">方式四：ROM 集成与移植</a></li>
+            <li><a href="#sim-swap">换 SIM 卡与多运营商说明</a></li>
+            <li><a href="#acceptance">真实通话验收清单</a></li>
+            <li><a href="#rollback">完整回滚出厂基带配置</a></li>
+            <li><a href="#verify">校验安装包 SHA-256</a></li>
+          </ol>
+        </nav>
+      </aside>
+
+      <div class="guide-content">
+        <section class="guide-section" id="prepare">
+          <h2>01. 前提条件与安全边界</h2>
+          <ol class="step-list">
+            <li><strong>目标设备与系统：</strong>黑莓 Passport（<code>SQW100-1 / SQW100-3 / SQW100-4</code>，代号 <code>wolverine</code>），运行 <code>LineageOS 18.1-UNOFFICIAL-wseries</code>（Android 11 / API 30，SELinux 保持 <code>Enforcing</code>）。工具会自动校验机型，非 <code>wolverine</code> 拒绝写入。</li>
+            <li><strong>SIM 卡要求：</strong>已插入开通了 VoLTE 高清语音业务的 4G/5G USIM 卡，且手机状态栏当前能够正常驻留 <code>LTE</code> 数据网络。</li>
+            <li><strong>保持空闲状态：</strong>执行写入与重启前，请确认当前没有正在进行的通话，电量建议高于 30%，并使用可靠的数据线连接电脑。</li>
+          </ol>
+          <div class="callout"><strong>重要提醒：</strong>激活流程只修改指定的 54 项 IMS 相关基带配置（且先备份原值），<strong>不会清空你的照片、联系人或用户数据</strong>。但请勿将本实验性开源方案作为唯一的紧急呼叫（110/119/120/911）依赖。</div>
+        </section>
+
+        <section class="guide-section" id="root-debug">
+          <h2>02. 开启 LineageOS 18.1 的 USB 调试与 Root 调试</h2>
+          <p>如果你使用推荐的电脑端激活方式（方式一或方式三），<strong>完全不需要刷入 Magisk</strong>，只需打开系统自带的开发者开关：</p>
+          <ol class="step-list">
+            <li>在手机上进入 <strong>设置 → 关于手机</strong>，连续点击 7 次最下方的 <strong>版本号（Build number）</strong> 启用开发者选项。</li>
+            <li>返回上一级，进入 <strong>设置 → 系统 → 高级 → 开发者选项</strong>。</li>
+            <li>开启 <strong>Android 调试（USB 调试）</strong>。</li>
+            <li>在同页面找到 <strong>Root 调试（Rooted debugging）</strong> 并开启允许。</li>
+            <li>用数据线连接电脑，在手机弹出的「允许 USB 调试吗？」对话框中勾选一律允许并点击确定。</li>
+          </ol>
+        </section>
+
+        <section class="guide-section" id="method-windows">
+          <h2>03. 方式一：Windows 桌面一键激活工具（最推荐）</h2>
+          <ol class="step-list">
+            <li>下载 <code>passport-android11-volte-1.0.0-r1-windows-x64.exe</code> 并双击运行（无需安装 Python 或 ADB）。</li>
+            <li>确认顶部「ADB 设备」下拉框已识别到你的手机序列号，点击 <strong>「1. 只读检查状态」</strong> 确认连接正常。</li>
+            <li>点击绿色主按钮 <strong>「2. 备份并一键激活 VoLTE」</strong> 并确认提示框。</li>
+            <li>程序将自动：切换 <code>adb root</code> → 将原始基带快照保存至电脑 <code>%LOCALAPPDATA%\passport-android11-volte\backups\</code> → 写入 Stage 6A 基带配置并执行 <code>EFS_SYNC</code> → 安装 <code>PassportVolteIms.apk</code> v2.3 并写入持久化 <code>CarrierConfig</code> → 正常重启手机并轮询确认 <code>volte_stack_healthy: true</code>。</li>
+            <li>看到绿色「VoLTE 栈运行正常」横幅后，即可拔掉 USB 数据线进行通话测试。</li>
+          </ol>
+        </section>
+
+        <section class="guide-section" id="method-manager">
+          <h2>04. 方式二：手机端独立管理 App（适合已刷 Magisk 用户）</h2>
+          <p>如果你的 Passport 已经刷入了 Magisk（手机本地存在 <code>su</code> 超级用户守护进程），可以安装 <code>PassportVolteManager-1.0.0-r1.apk</code>，在手机屏幕上直接管理：</p>
+          <ol class="step-list">
+            <li>下载 <code>PassportVolteManager-1.0.0-r1.apk</code> 到手机并点击安装（也可以在电脑桌面工具里点击「安装手机端管理 App」一键推送）。</li>
+            <li>打开桌面上的 <strong>Passport VoLTE</strong> 图标，点击「刷新状态」可随时查看 IMS 服务与基带 <code>QMI_IMSA</code> 注册状态（无需 Root 也可只读查看）。</li>
+            <li>点击「激活 / 修复原生 VoLTE（需 Magisk）」，在弹出的 Magisk 超级用户授权框中点击允许，应用会先校验内嵌载荷的 SHA-256、保存基带快照到应用私有目录，再完成 Stage 6A 配置、系统通话桥接安装与自动重启。</li>
+          </ol>
+        </section>
+
+        <section class="guide-section" id="method-cli">
+          <h2>05. 方式三：macOS / Linux / 跨平台便携包（CLI &amp; GUI）</h2>
+          <p>下载并解压 <code>passport-android11-volte-1.0.0-r1-portable.zip</code>（已包含预编译签名的 ARM32 工具与 APK，仅需系统装有 Python 3.9+ 与 <code>adb</code>）：</p>
+          <pre class="code-block"><code># 1. 离线单元测试自检
+python3 cli/volte_ctl.py self-test
+
+# 2. 只读检查当前手机 VoLTE / QMI_IMSA / ImsResolver 状态
+python3 cli/volte_ctl.py status
+
+# 3. 备份基带原值 + 一键写入 Stage 6A + 安装 APK + 重启自动验收
+python3 cli/volte_ctl.py deploy
+
+# 4. 或启动跨平台桌面图形界面（需 Python tkinter）
+python3 cli/gui.py</code></pre>
+        </section>
+
+        <section class="guide-section" id="method-rom">
+          <h2>06. 方式四：LineageOS 18.1 ROM 源码集成与骁龙 801 移植</h2>
+          <p>面向自定义 ROM 编译维护者，仓库内的 <code>rom-integration/</code> 目录提供了完整的 Soong <code>Android.bp</code> 与 <code>device-passport-volte.mk</code>：</p>
+          <pre class="code-block"><code># 在 LineageOS 18.1 源码树中引入通话桥接服务：
+mkdir -p packages/apps/PassportVolteIms
+cp -r src/android-ims-service/* src/qmi-imsa-probe rom-integration/Android.bp packages/apps/PassportVolteIms/
+
+# 在 device/blackberry/wolverine/device.mk 末尾加入：
+$(call inherit-product, packages/apps/PassportVolteIms/device-passport-volte.mk)</code></pre>
+          <p>注意：ROM 刷机包只会更新 <code>/system</code> 分区，不会改写高通独立基带分区（Modem EFS），每台实体机首次仍需执行一次 Stage 6A 基带激活。针对一加 1、小米 4、索尼 Z2/Z3、三星 S5 等同代 <code>MSM8974</code> 机型的移植分析，请查阅仓库文档 <a href="https://github.com/Octo-o-o-o/passport-android11-volte/blob/main/docs/guide/MSM8974_PORTING_GUIDE.md" target="_blank" rel="noopener noreferrer">MSM8974_PORTING_GUIDE.md</a>。</p>
+        </section>
+
+        <section class="guide-section" id="sim-swap">
+          <h2>07. 换 SIM 卡与多运营商说明</h2>
+          <p>Stage 6A 基带配置使用 3GPP 标准 <code>ims</code> APN 与 <code>mode=0</code> 动态 PCO 地址下发（不硬编码特定省市 P-CSCF IP），且持久保存在手机基带 EFS 中。当你更换另一张已开通 VoLTE 的 SIM 卡时：</p>
+          <ol class="step-list">
+            <li>无需重新刷写基带 EFS；</li>
+            <li>由于 Android 的 <code>CarrierConfig</code> 按 SIM 卡 <code>subId</code> 存储，换新卡后只需在电脑工具点击 <strong>「仅升级通话桥接 APK（零 EFS 写入）」</strong>（或运行 <code>python3 cli/volte_ctl.py upgrade-apk</code>，或在手机管理 App 点击「仅升级 / 重刷 CarrierConfig」），即可为新 SIM 卡绑定 VoLTE 开关。</li>
+          </ol>
+        </section>
+
+        <section class="guide-section" id="acceptance">
+          <h2>08. 真实通话验收清单（必做）</h2>
+          <p>工具显示 <code>mImsRegistered=true</code> 仅代表信令注册成功，请务必用系统自带拨号器逐项实测：</p>
+          <ol class="step-list">
+            <li><strong>拔掉 USB 数据线</strong>，确认完全脱离电脑运行；</li>
+            <li>用自带拨号器拨打外部电话，接通后确认<strong>双方声音清晰</strong>，且手机顶部信号栏全程保持 <strong>LTE / 4G</strong>（不回落 2G/3G，也不假死）；</li>
+            <li>用另一部手机拨打你的 Passport，确认<strong>响铃正常、来电号码正常显示（非“未知”）</strong>、接听与挂断干脆；</li>
+            <li><strong>正常重启一次手机</strong>，解锁后等待约 20–40 秒，再次拨打一通电话确认开机自愈生效。</li>
+          </ol>
+        </section>
+
+        <section class="guide-section" id="rollback">
+          <h2>09. 完整恢复出厂基带配置并卸载</h2>
+          <p>如需彻底还原手机到修改前的出厂基带基线，连接电脑点击桌面工具的 <strong>「恢复出厂基带配置并卸载」</strong>，或执行：</p>
+          <pre class="code-block"><code>python3 cli/volte_ctl.py rollback</code></pre>
+          <p>该流程会清除持久化 <code>CarrierConfig</code> 覆盖、卸载 <code>org.passport.volteims</code>，调用 <code>pp_regconfig_provision_v6 --rollback-all</code> 将全部 54 项基带条目恢复出厂值并执行 <code>EFS_SYNC</code>，最后正常重启验证。</p>
+        </section>
+
+        <section class="guide-section" id="verify">
+          <h2>10. 校验下载文件 SHA-256</h2>
+          <p>在运行安装包前，可在终端核对下载文件的哈希值是否与发布页的 <code>.sha256</code> 或 <code>SHA256SUMS.txt</code> 完全一致：</p>
+          <pre class="code-block"><code># Windows PowerShell:
+Get-FileHash "$HOME\Downloads\passport-android11-volte-1.0.0-r1-windows-x64.exe" -Algorithm SHA256
+
+# macOS / Linux:
+shasum -a 256 ~/Downloads/passport-android11-volte-1.0.0-r1-portable.zip</code></pre>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="shell">
+      <div class="footer-brand">
+        <a class="brand" href="index.html"><img class="brand-mark" src="assets/icon.png" alt="" width="38" height="38"><span class="brand-name">Passport VoLTE</span></a>
+        <p>让刷了 Android 11 的黑莓 Passport 继续留在主力信号里。</p>
+      </div>
+      <div class="footer-links">
+        <a href="index.html">返回首页</a>
+        <a href="https://bb10-volte.octoooo.com/" target="_blank" rel="noopener noreferrer">姊妹项目：BB10 VoLTE</a>
+        <a href="https://github.com/Octo-o-o-o/passport-android11-volte" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://octoooo.com" target="_blank" rel="noopener noreferrer">OctoLab</a>
+      </div>
+      <div class="footer-bottom">
+        <span>© <span data-current-year>2026</span> OctoLab · Apache-2.0 License</span>
+        <span>独立开源硬件救援项目，与 BlackBerry Limited 或 Qualcomm 官方无关。</span>
+      </div>
+    </div>
+  </footer>
+  <script type="module" src="site.js"></script>
+</body>
+</html>
