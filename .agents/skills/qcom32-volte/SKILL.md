@@ -15,7 +15,7 @@ description: >-
 
 This project is source-available (PolyForm Noncommercial 1.0.0; commercial license available). Only one SQW100-1 wolverine / China Unicom 46001 has complete call and four-method verification. China Telecom 46003/46011 has LTE attach and IMS registration only; calls are untested (EPS-only fix: 149 s without drops). China Mobile is untested; FDD B3/B8 is theoretical, and the device lacks TDD B38–41. SMS over IMS is not implemented. Emergency calls are unsupported and uncertified; keep another phone. VoWiFi, video, supplementary services and non-Chinese carriers are unsupported or untested.
 
-EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE / 实验性，未经真机验证: oslo, wichita, keian, wseries and windermere default to read-only. CLI baseband writes require --experimental-unverified-edition plus typed confirmation or --i-understand-unverified-baseband-write. GUI and Android manager do not activate them; Passport rollback remains available. Non-Passport baseband writes are blocked. Published v1.2.3-r1 artifacts do not contain this gate.
+EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE / 实验性，未经真机验证: oslo, wichita, keian, wseries and windermere default to read-only. CLI baseband writes require --experimental-unverified-edition plus typed confirmation or --i-understand-unverified-baseband-write. GUI and Android manager do not activate them; Passport rollback remains available. Non-Passport baseband writes are blocked. Published v1.2.4-r1 artifacts do not contain this gate or the claims corrections; they still allow one-click writes on oslo, wichita and keian.
 
 Make an independent EFS backup and keep it off-device. Automatic inspection logs contain hashes, not restorable original bytes. Fixed rollback does not guarantee recovery of original values.
 
@@ -102,7 +102,9 @@ Read and follow **every step** in [`PORTING_AND_EFS_SAFETY.md`](./references/POR
    ```
    Only change `"status"` to `"verified"` after full `--rollback-all` verification AND user-confirmed live MO/MT voice calls.
 
-### Route E — Factory Rollback
+### Route E — `POST_DEPLOY_RADIO_LOSS_NEEDS_ROLLBACK` / `NEEDS_ROM_UPGRADE_LEGACY_IMS_DAEMON` / `NEEDS_COMPATIBLE_BASEBAND` / Fixed Rollback
+Deployment requires the edition opt-ins where applicable, no conflicting legacy IMS daemon, the MPSS.DI.4.0.1 and AAAAANAZM baseband identifiers, and firmware build_id AAB982. The desktop tool attempts fixed rollback after qualifying post-reboot radio loss; an IMS-only timeout with a ready SIM does not trigger it. Rollback bypasses both deploy gates on recognized Passport editions. v1.2.4 safety features have only offline/mock evidence, not a live test on the affected device.
+
 This fixed cleanup writes 00 and deletes designated EFS items; it does not restore original bytes from the inspection log. Independently back up EFS and verify recovery before modifying the phone:
 ```bash
 python3 cli/volte_ctl.py rollback
@@ -114,6 +116,7 @@ python3 cli/volte_ctl.py rollback
 
 | Symptom / Error | Root Cause & Fix |
 | --- | --- |
+| No signal after reboot (`"sim_state": ""`, `"network_type": "Unknown"`, `"ims_service": {"present": false}`) | Legacy 32-bit vendor `imsqmidaemon` on older `Permissive` ROMs fighting `rild` once `IMS_enable=01`, OR non-`AAB982` (`DI.2.0.1` / `AAA596`) baseband container. Consider fixed `python3 cli/volte_ctl.py rollback` and check ROM and `AAB982` baseband. Original EFS values and signal recovery are not guaranteed. |
 | `INSTALL_FAILED_SHARED_USER_INCOMPATIBLE` | Target ROM's `com.android.phone` is signed with private `release-keys` instead of AOSP `test-keys`. Re-sign `Qcom32VolteIms.apk` with the ROM's `platform` key (`cli/build_all.py --sign-key ... --sign-cert ...`) or build in-tree via `rom-integration/`. |
 | `QMI_IMSS` returns `INVALID_SERVICE_TYPE (31)` | Normal behavior while `IMS_enable == 00` before Stage 6A provisioning + reboot. |
 | `CAUSE_CODE 54` (`READ_FAILED`) on `GET 0x26` | Only `IMS_enable=01` was flipped without Stage 6A's 405B `qp_ims_reg_config` and companion items. Use full Stage 6A provisioning, never single-byte `IMS_enable` scripts. |

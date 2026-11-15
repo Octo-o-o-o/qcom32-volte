@@ -4,7 +4,7 @@
 Runs identically:
   - From source (`python cli/gui.py` or `Start-GUI.cmd`)
   - From portable ZIP (`python3 cli/gui.py`)
-  - From standalone Windows x64 EXE (`qcom32-volte-1.2.3-r1-windows-x64.exe`, with bundled Python/Tk/ADB/Payloads)
+  - From standalone Windows x64 EXE (`qcom32-volte-1.2.4-r1-windows-x64.exe`, with bundled Python/Tk/ADB/Payloads)
 
 Supports:
   - `--self-test <report.json>` for automated offline build & packaging verification without touching any connected phone
@@ -35,7 +35,7 @@ if str(SCRIPT_DIR) not in sys.path:
 import device_readiness  # noqa: E402
 import volte_ctl  # noqa: E402
 
-APP_VERSION = "1.2.3-r1"
+APP_VERSION = "1.2.4-r1"
 WEBSITE_URL = "https://qcom32-volte.octoooo.com/"
 SISTER_URL = "https://bb10-volte.octoooo.com/"
 GITHUB_URL = "https://github.com/Octo-o-o-o/qcom32-volte"
@@ -74,6 +74,7 @@ STRINGS = {
         "state_idle": "待检测（连接手机并开启 USB 调试后点击“只读检查状态”或“多机型识别与只读体检”）",
         "state_healthy": "VoLTE 栈运行正常（IMS 已注册 + LTE 语音就绪）",
         "state_unhealthy": "已连接设备，但 VoLTE 尚未完成激活或当前 SIM 尚未注册",
+        "state_radio_unavailable": "基带/SIM 未就绪无信号（可执行下方固定基带清理；不保证原值或信号恢复）",
         "actions_box": "操作（wolverine 可激活；其他 Passport 版本只读，回滚保留）",
         "btn_status": "1. 只读检查状态",
         "btn_deploy": "2. 激活 VoLTE（wolverine）",
@@ -87,10 +88,10 @@ STRINGS = {
         "confirm_deploy_title": "确认激活 VoLTE",
         "confirm_deploy_msg": (
             "仅一台 wolverine 已验证。写入基带有风险，请先独立备份并保存在手机之外。即将执行：\n\n"
-            "1. 保存基带检查日志和哈希（不是可还原的原值备份）；\n"
+            "1. 预检旧 IMS 守护进程和 AAB982 基带，保存 EFS 检查日志和哈希（不是可还原的原值备份）；\n"
             "2. 写入机型专属 Stage 6A 协同基带配置并执行 EFS_SYNC；\n"
-            "3. 安装 Qcom32VolteIms.apk v2.7 并写入持久化 CarrierConfig（含开机/换卡通知与电信 46011 保护）；\n"
-            "4. 正常重启手机并自动核验 QMI_IMSA / ImsResolver 注册状态。\n\n"
+            "3. 安装 Qcom32VolteIms.apk v2.8 并写入持久化 CarrierConfig（含开机/换卡通知与电信 46011 保护）；\n"
+            "4. 正常重启并核验注册状态；若符合重启无信号条件，将尝试自动固定回滚，不保证恢复原值或信号。\n\n"
             "请确认手机已插入开通 VoLTE 的 SIM 卡且当前无正在进行的通话。是否继续？"
         ),
         "confirm_rollback_title": "确认执行固定基带清理",
@@ -124,6 +125,7 @@ STRINGS = {
         "state_idle": "Ready (Connect device with USB Debugging enabled and click 'Check Status' or '32-Bit Device Check')",
         "state_healthy": "VoLTE Stack Healthy (IMS REGISTERED + LTE Voice Ready)",
         "state_unhealthy": "Device connected, but VoLTE is not yet provisioned or registered",
+        "state_radio_unavailable": "Cellular radio/SIM unavailable (fixed EFS cleanup is available; original values and signal recovery are not guaranteed)",
         "actions_box": "Operations (wolverine activation; other Passport editions read-only, rollback available)",
         "btn_status": "1. Check Status (Read-Only)",
         "btn_deploy": "2. Activate VoLTE (wolverine)",
@@ -137,10 +139,10 @@ STRINGS = {
         "confirm_deploy_title": "Confirm VoLTE Activation",
         "confirm_deploy_msg": (
             "Only one wolverine unit was verified. Modem EFS writes are risky; make an independent off-device backup first:\n\n"
-            "1. Save an EFS inspection log and hashes (not a restorable backup);\n"
+            "1. Check legacy IMS daemons and AAB982 baseband; save an EFS inspection log and hashes (not a restorable backup);\n"
             "2. Provision Stage 6A modem EFS items + EFS_SYNC;\n"
-            "3. Install Qcom32VolteIms.apk v2.7 & apply persistent CarrierConfig overrides (with boot/SIM-swap notifications);\n"
-            "4. Reboot normally and verify QMI_IMSA / ImsResolver registration.\n\n"
+            "3. Install Qcom32VolteIms.apk v2.8 & apply persistent CarrierConfig overrides (with boot/SIM-swap notifications);\n"
+            "4. Reboot and verify registration; eligible radio loss triggers an attempted fixed rollback, without a guarantee of restoring original values or signal.\n\n"
             "Ensure a VoLTE-provisioned SIM card is inserted and no call is active. Continue?"
         ),
         "confirm_rollback_title": "Confirm Fixed EFS Cleanup",
@@ -529,7 +531,15 @@ class PassportVolteApp:
                 res = payload if isinstance(payload, dict) else {"result": payload}
                 self.last_result = res
                 self._append_log(json.dumps(res, indent=2, ensure_ascii=False))
-                if self.device_write_route == "experimental":
+                if res.get("radio_unavailable") is True:
+                    prefix = (volte_ctl.EXPERIMENTAL_BANNER + " · Read-only / 只读\n"
+                              if self.device_write_route == "experimental" else "")
+                    self.lbl_status_banner.configure(
+                        text=prefix + self._t("state_radio_unavailable"), bg="#fceaea", fg=PALETTE["danger"]
+                    )
+                    if res.get("recovery_hint"):
+                        self._append_log(f"RECOVERY: {res['recovery_hint']}")
+                elif self.device_write_route == "experimental":
                     self.lbl_status_banner.configure(
                         text=volte_ctl.EXPERIMENTAL_BANNER + " · Read-only / 只读", bg="#fff3cf", fg=PALETTE["warn"]
                     )

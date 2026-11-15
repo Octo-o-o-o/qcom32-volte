@@ -8,7 +8,7 @@ Qcom32 VoLTE 包含 Android 11 原生 IMS 服务和按设备隔离的基带 EFS 
 >
 > **基带写入有风险。** 修改前独立备份本机 modem EFS（如 `modemst1`、`modemst2`、`fsg`），将备份保存在手机之外，风险自负。当前工具自动保存的是 EFS 检查日志和哈希，**不是可完整回灌的原始备份**；回滚执行固定值写入和条目删除，不保证恢复本机原值。请核实自己的恢复方案。
 >
-> **已发布的 v1.2.3-r1 制品尚无本次新增门禁**，在未经验证版本上不要运行其写入操作；本仓库的门禁更改尚未发布。
+> **已发布的 v1.2.4-r1 制品尚无本次机型门禁与口径修正**，仍允许 `oslo`、`wichita`、`keian` 一键写入；在未经验证版本上不要运行其写入操作。
 
 ## 验证范围
 
@@ -24,6 +24,8 @@ Qcom32 VoLTE 包含 Android 11 原生 IMS 服务和按设备隔离的基带 EFS 
 ## 使用与回滚
 
 本仓库源码默认只允许 `wolverine` 进行部署；`oslo`（银色版）、`wichita`（AT&T）、`keian`（保时捷）及通用 `wseries` / `windermere` 默认只读。实验性 CLI 写入必须同时提供 `--experimental-unverified-edition` 与交互式强确认；非交互时还需 `--i-understand-unverified-baseband-write`。桌面 GUI 和手机管理端不提供这些机型的一键激活。所有识别出的 Passport 版本保留回滚入口，非 Passport 基带写入拒绝。
+
+部署还必须通过旧 IMS 守护进程检查及基带预检：要求 `MPSS.DI.4.0.1`、`AAAAANAZM` 和固件 `build_id:AAB982`；缺失或冲突时拒绝写入。重启后满足无信号条件时桌面端尝试固定回滚；仅 IMS 注册超时且 SIM 仍就绪时不会自动清理。回滚不受机型实验授权或 ROM/基带部署门禁阻断，也不保证原值或信号恢复。这些 v1.2.4 防护仅经离线／模拟验证，未在故障真机上验证。
 
 ```bash
 python3 cli/volte_ctl.py status
@@ -56,4 +58,4 @@ cd website && npm test
 
 ## Unreleased
 
-限制未经真机验证的 Passport 版本写入，澄清验证范围、紧急呼叫和基带恢复边界。本次修改尚未生成或发布新版制品。
+限制未经真机验证的 Passport 版本写入，澄清验证范围、紧急呼叫和基带恢复边界。**已发布 v1.2.4-r1 制品不含这些门禁与口径修正，仍允许 oslo、wichita、keian 一键写入**；本次修改尚未生成或发布新版制品。

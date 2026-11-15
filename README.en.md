@@ -8,7 +8,7 @@ Qcom32 VoLTE provides an Android 11 IMS service and device-specific modem EFS to
 >
 > **Modem EFS writes are risky.** Make an independent device-specific EFS backup (for example `modemst1`, `modemst2`, `fsg`) first, keep it off-device, and use at your own risk. The tool automatically saves an inspection log and hashes, **not a complete restorable backup**. Rollback writes fixed values and deletes items; it does not guarantee restoration of original bytes. Verify your own recovery plan.
 >
-> **Published v1.2.3-r1 artifacts do not contain the new edition gate.** Do not use their write operations on unverified editions; these source changes have not been released.
+> **Published v1.2.4-r1 artifacts do not contain the new edition gate or claims corrections.** They still allow one-click writes on `oslo`, `wichita` and `keian`; do not use those writes on unverified editions.
 
 ## Verification checklist
 
@@ -24,6 +24,8 @@ Qcom32 VoLTE provides an Android 11 IMS service and device-specific modem EFS to
 ## Use and rollback
 
 The source defaults to deployment only on `wolverine`. `oslo` (Silver Edition), `wichita` (AT&T), `keian` (Porsche), and generic `wseries` / `windermere` are read-only by default. Experimental CLI writes require both `--experimental-unverified-edition` and an interactive typed confirmation, or `--i-understand-unverified-baseband-write` as the second non-interactive acknowledgement. The desktop GUI and Android manager do not offer one-click activation for these editions. Rollback remains available for recognized Passport editions; non-Passport baseband writes are blocked.
+
+Deployment also requires no conflicting legacy IMS daemon, both `MPSS.DI.4.0.1` and `AAAAANAZM` baseband identifiers, and firmware `build_id:AAB982`; missing or conflicting data blocks writes. Desktop deployment attempts fixed rollback after qualifying post-reboot radio loss, but does not auto-clean on an IMS-only timeout with a ready SIM. Rollback bypasses both deployment gates and cannot guarantee original values or signal recovery. The v1.2.4 safety features were checked offline or with mocks, not on the affected hardware.
 
 ```bash
 python3 cli/volte_ctl.py status
@@ -54,4 +56,4 @@ Source-available under [PolyForm Noncommercial 1.0.0](LICENSE); a commercial lic
 
 ## Unreleased
 
-Gates for unverified Passport editions and corrected verification, emergency-calling and recovery claims; no new artifacts have been built or published.
+Gates for unverified Passport editions and corrected verification, emergency-calling and recovery claims are **not in published v1.2.4-r1 artifacts**, which still allow one-click writes on `oslo`, `wichita` and `keian`. No new artifacts have been built or published.

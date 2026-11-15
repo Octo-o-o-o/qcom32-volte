@@ -255,7 +255,7 @@ public final class MainActivity extends Activity {
     private void refreshLabels() {
         if (englishMode) {
             titleView.setText("Qcom32 VoLTE & IMS Stack");
-            subtitleView.setText("OCTOLAB · Android 11 · one wolverine unit verified");
+            subtitleView.setText("OCTOLAB · Android 11 · IMS v2.8 · one wolverine unit verified");
             langButton.setText("中文");
             refreshButton.setText("Check Live VoLTE & SIM Status");
             readinessButton.setText("32-Bit Device Identification & AI Porting Check (Read-Only)");
@@ -266,7 +266,7 @@ public final class MainActivity extends Activity {
             licenseNoteView.setText("Source-available: PolyForm Noncommercial 1.0.0; commercial license available: octoooo@octoooo.com");
         } else {
             titleView.setText("Qcom32 VoLTE 通话栈管理端");
-            subtitleView.setText("OCTOLAB · Android 11 · 仅一台 wolverine 已验证");
+            subtitleView.setText("OCTOLAB · Android 11 · IMS v2.8 · 仅一台 wolverine 已验证");
             langButton.setText("English");
             refreshButton.setText("检查当前 SIM / 4G / VoLTE 状态");
             readinessButton.setText("多机型识别与只读适配体检（AI + GitHub 自助适配）");
@@ -300,6 +300,13 @@ public final class MainActivity extends Activity {
             int sdk = Build.VERSION.SDK_INT;
             String simNum = readLocalSimOperator();
             String netType = readSystemProp("gsm.network.type");
+            String simStateProp = readSystemProp("gsm.sim.state");
+            String basebandProp = readSystemProp("gsm.version.baseband");
+            boolean airplaneMode = false;
+            try {
+                airplaneMode = android.provider.Settings.Global.getInt(
+                        getContentResolver(), android.provider.Settings.Global.AIRPLANE_MODE_ON, 0) != 0;
+            } catch (Exception ignored) {}
 
             boolean imsInstalled = false;
             String imsVer = null;
@@ -351,6 +358,14 @@ public final class MainActivity extends Activity {
                 if (!pNet.isEmpty()) {
                     netType = pNet;
                 }
+                String pSimSt = providerStatus.getString("sim_state", "");
+                if (simStateProp.isEmpty() && !pSimSt.isEmpty()) {
+                    simStateProp = pSimSt;
+                }
+                String pBb = providerStatus.getString("baseband", "");
+                if (basebandProp.isEmpty() && !pBb.isEmpty()) {
+                    basebandProp = pBb;
+                }
                 boolean rilConn = providerStatus.getBoolean("ril_connected", false);
                 boolean voiceReady = providerStatus.getBoolean("voice_ims_ready", false);
                 boolean featReady = providerStatus.getBoolean("feature_ready", false);
@@ -384,7 +399,7 @@ public final class MainActivity extends Activity {
             }
 
             VolteManagerLogic.StatusSnapshot snap = VolteManagerLogic.parseStatusSummary(
-                    model, device, sdk, suOk, svcDump, qmiOut, phoneDump, simNum, netType);
+                    model, device, sdk, suOk, svcDump, qmiOut, phoneDump, simNum, netType, simStateProp, airplaneMode);
             String boardPlatform = readSystemProp("ro.board.platform");
             String cpuAbi = (Build.SUPPORTED_ABIS != null && Build.SUPPORTED_ABIS.length > 0)
                     ? Build.SUPPORTED_ABIS[0] : Build.CPU_ABI;
@@ -394,6 +409,8 @@ public final class MainActivity extends Activity {
             String details = "Model / Device : " + model + " (" + device + ", SDK " + sdk + ")\n"
                     + "Catalog Family : " + (englishMode ? catMatch.displayNameEn : catMatch.displayNameZh) + "\n"
                     + "Device Profile : " + snap.matchedProfileId + "\n"
+                    + "Baseband / SIM : " + (basebandProp.isEmpty() ? "unknown" : basebandProp)
+                    + " | sim_state=" + (simStateProp.isEmpty() ? "<empty>" : simStateProp) + "\n"
                     + "SIM / Network  : " + snap.carrierSummary + "\n"
                     + "Local Root (su): " + (snap.suAvailable ? "YES (UID 0)" : "NO (Use PC ADB Root tool)") + "\n"
                     + "Bundled Assets : " + (assetsVerified ? "Verified (3 payloads SHA-256 OK)" : "Unverified") + "\n"
@@ -413,8 +430,10 @@ public final class MainActivity extends Activity {
             runOnUiThread(() -> {
                 statusBadgeView.setText(VolteManagerLogic.isExperimentalPassportEdition(model, device, sdk)
                         ? "EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE / 实验性，未经真机验证 · Read-only / 只读"
+                            + (snap.radioUnavailable ? "\n" + (englishMode ? snap.headlineEn : snap.headlineZh) : "")
                         : (englishMode ? snap.headlineEn : snap.headlineZh));
-                statusBadgeView.setTextColor(snap.volteHealthy && !VolteManagerLogic.isExperimentalPassportEdition(model, device, sdk) ? COLOR_ACCENT : COLOR_TEXT);
+                statusBadgeView.setTextColor(snap.radioUnavailable ? COLOR_DANGER
+                        : (snap.volteHealthy && !VolteManagerLogic.isExperimentalPassportEdition(model, device, sdk) ? COLOR_ACCENT : COLOR_TEXT));
                 statusDetailsView.setText(details);
                 logView.setText(cleanLog);
                 lastSanitizedReport = cleanLog;
@@ -445,15 +464,35 @@ public final class MainActivity extends Activity {
                     || (suOk && execRootQuiet("test -c /dev/diag && echo YES || echo NO").contains("YES"));
             boolean audioOk = readAudioMarkersPresent(suOk);
             Boolean modemIms = null;
+            String fwContents = "";
             if (suOk) {
                 String hit = execRootQuiet(
                         "grep -a -l 'qp_ims_reg_config' /firmware/image/modem* /vendor/firmware_mnt/image/modem* 2>/dev/null | head -n 1 || true");
                 modemIms = !hit.trim().isEmpty();
+                fwContents = execRootQuiet(
+                        "cat /firmware/IMAGE/CONTENTS.TXT /firmware/image/contents.txt /vendor/firmware_mnt/IMAGE/CONTENTS.TXT /vendor/firmware_mnt/image/contents.txt 2>/dev/null || true");
+            }
+            String basebandProp = readSystemProp("gsm.version.baseband");
+            StringBuilder daemonSb = new StringBuilder();
+            for (String svc : new String[]{"imsqmidaemon", "imsdatadaemon", "ims_rtp_daemon", "imscmservice"}) {
+                String st = readSystemProp("init.svc." + svc);
+                if (!st.isEmpty()) {
+                    if (daemonSb.length() > 0) daemonSb.append(", ");
+                    daemonSb.append(svc).append('=').append(st);
+                }
+            }
+            for (String prop : new String[]{"sys.ims.QMI_DAEMON_STATUS", "sys.ims.DATA_DAEMON_STATUS"}) {
+                String val = readSystemProp(prop);
+                if ("1".equals(val)) {
+                    if (daemonSb.length() > 0) daemonSb.append(", ");
+                    daemonSb.append(prop).append("=1");
+                }
             }
 
             String report = VolteManagerLogic.buildReadOnlyPortingReport(
                     brand, model, device, boardPlatform, cpuAbi, sdk, Build.TAGS,
-                    selinux, suOk, rildPresent, diagPresent, audioOk, modemIms, englishMode);
+                    selinux, suOk, rildPresent, diagPresent, audioOk, modemIms, englishMode,
+                    basebandProp, fwContents, daemonSb.toString());
             String cleanReport = VolteManagerLogic.redactSensitiveDigits(report);
             VolteManagerLogic.DeviceCatalogMatch match = VolteManagerLogic.identifyDeviceCatalog(
                     brand, model, device, boardPlatform, cpuAbi, sdk, Build.TAGS);
@@ -487,8 +526,8 @@ public final class MainActivity extends Activity {
         if (busy) return;
         String title = englishMode ? "Activate VoLTE" : "激活 VoLTE";
         String msg = englishMode
-                ? "Only one wolverine unit has been verified. This writes modem EFS and saves an inspection log, not a restorable full backup. Make an independent off-device backup first. A reboot is required. Proceed at your own risk?"
-                : "仅一台 wolverine 已验证。本操作写入基带 EFS；自动保存的检查日志并非可还原的完整备份。请先独立备份并保存在手机之外。完成后需重启，风险自负。继续？";
+                ? "Only one wolverine unit has been verified. This checks for legacy IMS daemons and AAB982 compatibility, then writes modem EFS. The saved inspection log is not a restorable backup; first make an independent off-device EFS backup. A reboot is required. Proceed at your own risk?"
+                : "仅一台 wolverine 已验证。本操作先检查旧 IMS 守护进程和 AAB982 基带，再写入 EFS；自动保存的检查日志并非可还原的完整备份。请先独立备份并保存在手机之外。完成后需重启，风险自负。继续？";
         new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(msg)
@@ -502,8 +541,8 @@ public final class MainActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle(englishMode ? "Update Qcom32VolteIms APK" : "更新桥接服务 APK")
                 .setMessage(englishMode
-                        ? "Updates Qcom32VolteIms.apk v2.7 in place without touching modem EFS."
-                        : "仅原位更新 Qcom32VolteIms.apk v2.7，不写入任何基带 EFS 项。")
+                        ? "Updates Qcom32VolteIms.apk v2.8 in place without touching modem EFS."
+                        : "仅原位更新 Qcom32VolteIms.apk v2.8，不写入任何基带 EFS 项。")
                 .setPositiveButton(englishMode ? "Update" : "确认更新", (d, w) -> executeRootOperation("upgrade"))
                 .setNegativeButton(englishMode ? "Cancel" : "取消", null)
                 .show();

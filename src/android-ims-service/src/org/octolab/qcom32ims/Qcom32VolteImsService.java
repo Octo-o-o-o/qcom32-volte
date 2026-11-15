@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
  * ImsResolver dynamic-feature-query service instances never touch rild_ims0.
  */
 public final class Qcom32VolteImsService extends ImsService {
-    static final String SERVICE_VERSION = "2.7-qcom32-volte";
+    static final String SERVICE_VERSION = "2.8-qcom32-volte";
     private static final String TAG = "Qcom32VolteIms";
     private static final int KEY_VOLTE_PROVISIONING_STATUS = 10;
     private static final int KEY_VT_PROVISIONING_STATUS = 11;
@@ -428,6 +428,8 @@ public final class Qcom32VolteImsService extends ImsService {
         QmiProbeSummaryParser.Summary qmi = queryCachedQmiSummary(context);
         String simOp = readSafeSimOperator(context);
         String netType = readSafeNetworkType();
+        String simStateProp = RilImsWire.redactPii(readQuickProp("gsm.sim.state"));
+        String basebandProp = RilImsWire.redactPii(readQuickProp("gsm.version.baseband"));
         boolean fwRegistered = publishedReg == RilImsWire.REG_STATE_REGISTERED;
         boolean healthy = serviceRunning
                 && rilConnected
@@ -453,6 +455,8 @@ public final class Qcom32VolteImsService extends ImsService {
         b.putBoolean("qmi_voip_ready", qmi.isRegisteredVoipReady());
         b.putString("sim_operator", simOp);
         b.putString("network_type", netType);
+        b.putString("sim_state", simStateProp);
+        b.putString("baseband", basebandProp);
         b.putBoolean("volte_healthy", healthy);
         b.putString("notification_kind", VolteNotificationManager.getLastKind());
         b.putString("notification_title", VolteNotificationManager.getLastTitle());
@@ -558,7 +562,15 @@ public final class Qcom32VolteImsService extends ImsService {
         return QmiProbeSummaryParser.sanitizeNetworkType(readQuickProp("gsm.network.type"));
     }
 
-    private static String readQuickProp(String key) {
+    static String readQuickProp(String key) {
+        try {
+            Class<?> cls = Class.forName("android.os.SystemProperties");
+            java.lang.reflect.Method m = cls.getMethod("get", String.class, String.class);
+            Object v = m.invoke(null, key, "");
+            if (v != null) {
+                return String.valueOf(v).trim();
+            }
+        } catch (Throwable ignored) { }
         java.lang.Process p = null;
         try {
             p = new ProcessBuilder("getprop", key).redirectErrorStream(true).start();

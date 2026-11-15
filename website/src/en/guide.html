@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Complete Setup &amp; Integration Guide | Qcom32 VoLTE</title>
-  <meta name="description" content="Step-by-step setup guide for Qcom32 VoLTE (32-bit Qualcomm Android 11 VoLTE stack, first verified profile: BlackBerry Passport LineageOS 18.1): Rooted Debugging, Windows EXE, Companion APK, Portable CLI, ROM integration, SIM swaps, and factory rollback.">
+  <meta name="description" content="Step-by-step setup guide for Qcom32 VoLTE (32-bit Qualcomm Android 11 VoLTE stack, first verified profile: BlackBerry Passport LineageOS 18.1): Rooted Debugging, Windows EXE, Companion APK, Portable CLI, ROM integration, SIM swaps, and fixed EFS cleanup.">
   <meta name="theme-color" content="#f4f5f0">
   <link rel="icon" type="image/png" href="../assets/icon.png">
   <link rel="canonical" href="https://qcom32-volte.octoooo.com/en/guide">
@@ -60,13 +60,13 @@
   <main id="main">
     <section class="guide-hero" aria-labelledby="guide-title">
       <div class="shell">
-        <p class="eyebrow">SETUP &amp; INTEGRATION GUIDE · <span data-release-version>v1.2.3-r1</span></p>
+        <p class="eyebrow">SETUP &amp; INTEGRATION GUIDE · <span data-release-version>v1.2.4-r1</span></p>
         <h1 id="guide-title">From device inspection to installation and rollback</h1>
         <p class="guide-intro">Only one Unicom wolverine unit was fully verified.</p>
-        <p class="hero-note"><strong>⚠️ Emergency calls are not supported or certified; keep another phone.</strong> On LTE-only networks 110/112/911 may be unreachable. Back up modem EFS independently and keep it off-device before writing; use at your own risk. Inspection logs are not restorable backups and fixed rollback cannot guarantee original values. Published v1.2.3-r1 artifacts lack the new edition gate; do not use them to write on unverified editions.</p>
+        <p class="hero-note"><strong>⚠️ Emergency calls are not supported or certified; keep another phone.</strong> On LTE-only networks 110/112/911 may be unreachable. Back up modem EFS independently and keep it off-device before writing; use at your own risk. Inspection logs are not restorable backups and fixed rollback cannot guarantee original values. Published v1.2.4-r1 artifacts lack the new edition gate and claims corrections and still permit one-click writes on oslo, wichita and keian; do not use them to write on unverified editions. The v1.2.4 protections have offline/mock evidence only.</p>
         <div class="guide-actions">
-          <a class="button button-primary" data-download="windows" href="https://qcom32-downloads.octoooo.com/v1.2.3-r1/qcom32-volte-1.2.3-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>Download Windows EXE</span><small>Recommended · No Magisk</small></span></a>
-          <a class="button button-secondary" data-download="manager" href="https://qcom32-downloads.octoooo.com/v1.2.3-r1/Qcom32VolteManager-1.2.3-r1.apk" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>Download Companion APK</span><small>Zero-su Dashboard + AI Check</small></span></a>
+          <a class="button button-primary" data-download="windows" href="https://qcom32-downloads.octoooo.com/v1.2.4-r1/qcom32-volte-1.2.4-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>Download Windows EXE</span><small>Recommended · No Magisk</small></span></a>
+          <a class="button button-secondary" data-download="manager" href="https://qcom32-downloads.octoooo.com/v1.2.4-r1/Qcom32VolteManager-1.2.4-r1.apk" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>Download Companion APK</span><small>Zero-su Dashboard + AI Check</small></span></a>
         </div>
       </div>
     </section>
@@ -94,7 +94,8 @@
         <section class="guide-section" id="prepare">
           <h2>01. Prerequisites &amp; Verified Device Profile</h2>
           <ol class="step-list">
-            <li>One SQW100-1 wolverine verified; oslo, wichita, keian, wseries and windermere are not hardware verified and default to read-only; rollback remains available.</li>
+            <li>One SQW100-1 wolverine verified; oslo, wichita, keian, wseries and windermere are not hardware verified and the source defaults to read-only; rollback remains available.</li>
+            <li>Source deployment also checks for legacy IMS daemons, MPSS.DI.4.0.1 and AAAAANAZM baseband identifiers, and firmware build_id AAB982; rollback bypasses deployment gates. Eligible post-reboot radio loss triggers an attempted fixed rollback, without guaranteeing original values or signal recovery. These protections were checked offline or with mocks only.</li>
             <li><strong>Provisioned SIM:</strong> Insert an active 4G/5G USIM with VoLTE enabled on supported FDD-LTE bands and confirm LTE data attaches normally.</li>
             <li><strong>Idle Phone State:</strong> Ensure no call is active, battery is above 30%, and use a reliable USB data cable.</li>
           </ol>
@@ -115,9 +116,9 @@
         <section class="guide-section" id="method-windows">
           <h2>03. Method 1: Windows Desktop One-Click EXE (Recommended)</h2>
           <ol class="step-list">
-            <li>Download and launch <code>qcom32-volte-1.2.3-r1-windows-x64.exe</code>.</li>
+            <li>Download and launch <code>qcom32-volte-1.2.4-r1-windows-x64.exe</code>.</li>
             <li>Verify your device serial appears in “ADB Device” and click <strong>“1. Check Status (Read-Only)”</strong> (for non-Passport 32-bit Qualcomm devices, click <strong>“32-Bit Device Identification &amp; AI Porting Check (Read-Only)”</strong> to run a 0-write 4-Gate audit and copy an AI porting prompt).</li>
-            <li>Once a wolverine profile matches, click <strong>“2. Backup &amp; Activate VoLTE (Recommended)”</strong> and confirm.</li>
+            <li>On the published v1.2.4-r1 GUI, confirm the wolverine profile and select <strong>“2. Backup &amp; Activate VoLTE (Recommended)”</strong>; despite the label, its inspection log is not a restorable EFS backup.</li>
             <li>The tool saves an EFS inspection log and hashes, then writes configuration, installs and reboots; the log cannot restore all original bytes.</li>
             <li>Click <strong>“Install Mobile Companion App”</strong> so you can monitor live IMS status directly on the phone screen while unplugged.</li>
           </ol>
@@ -126,7 +127,7 @@
         <section class="guide-section" id="method-manager">
           <h2>04. Method 2: On-Device Companion App</h2>
           <ol class="step-list">
-            <li>Install <code>Qcom32VolteManager-1.2.3-r1.apk</code> (launcher icon: <strong>Qcom32 VoLTE</strong>).</li>
+            <li>Install <code>Qcom32VolteManager-1.2.4-r1.apk</code> (launcher icon: <strong>Qcom32 VoLTE</strong>).</li>
             <li><strong>Without Magisk (Zero-su Live Dashboard + Read-Only AI Porting Check):</strong> Tap “Refresh Live Status” anytime to read carrier PLMN, <code>rild_ims0</code>, <code>QMI_IMSA</code> bearer/registration, and framework IMS state over <code>content://org.octolab.qcom32ims.status</code>, or tap “32-Bit Device Identification &amp; AI Porting Check (Read-Only)” on any 32-bit phone to copy an AI porting report.</li>
             <li>On-device source allows activation only on wolverine; other Passport editions may inspect or roll back.</li>
           </ol>
@@ -134,7 +135,7 @@
 
         <section class="guide-section" id="method-cli">
           <h2>05. Method 3: macOS / Linux / Cross-Platform Portable ZIP</h2>
-          <p>Extract <code>qcom32-volte-1.2.3-r1-portable.zip</code> (requires Python 3.9+ and <code>adb</code>):</p>
+          <p>Extract <code>qcom32-volte-1.2.4-r1-portable.zip</code> (requires Python 3.9+ and <code>adb</code>):</p>
           <pre class="code-block"><code>python3 cli/volte_ctl.py self-test
 python3 cli/volte_ctl.py list-models
 python3 cli/volte_ctl.py status
@@ -174,7 +175,7 @@ $(call inherit-product, packages/services/Qcom32VolteIms/device-qcom32-volte.mk)
 
         <section class="guide-section" id="rollback">
           <h2>09. Fixed EFS cleanup</h2>
-          <p>Click <strong>“Restore Factory Modem EFS &amp; Uninstall”</strong> in the desktop GUI or run:</p>
+          <p>The published v1.2.4-r1 GUI labels this <strong>“Restore Factory Modem EFS &amp; Uninstall”</strong>; it performs fixed cleanup, not per-device original-byte restoration. Or run:</p>
           <pre class="code-block"><code>python3 cli/volte_ctl.py rollback</code></pre>
           <p>Fixed cleanup writes 00 and deletes items; it does not restore original bytes from the inspection log.</p>
         </section>
@@ -182,10 +183,10 @@ $(call inherit-product, packages/services/Qcom32VolteIms/device-qcom32-volte.mk)
         <section class="guide-section" id="verify">
           <h2>10. Verify SHA-256 Checksums</h2>
           <pre class="code-block"><code># Windows PowerShell:
-Get-FileHash "$HOME\Downloads\qcom32-volte-1.2.3-r1-windows-x64.exe" -Algorithm SHA256
+Get-FileHash "$HOME\Downloads\qcom32-volte-1.2.4-r1-windows-x64.exe" -Algorithm SHA256
 
 # macOS / Linux:
-shasum -a 256 ~/Downloads/qcom32-volte-1.2.3-r1-portable.zip</code></pre>
+shasum -a 256 ~/Downloads/qcom32-volte-1.2.4-r1-portable.zip</code></pre>
         </section>
       </div>
     </div>

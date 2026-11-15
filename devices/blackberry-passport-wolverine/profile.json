@@ -36,7 +36,27 @@
     "reg_config_path": "/nv/item_files/ims/qp_ims_reg_config",
     "reg_config_bytes": 405,
     "reg_config_mode": 0,
-    "total_managed_efs_items": 54
+    "total_managed_efs_items": 54,
+    "verified_baseband_tokens": [
+      "DI.4.0.1",
+      "M8974AAAAANAZM"
+    ],
+    "verified_firmware_build_ids": [
+      "AAB982",
+      "AAB855",
+      "AAB632",
+      "AAB271",
+      "AAB057"
+    ],
+    "unverified_legacy_firmware_prefixes": [
+      "AAA"
+    ],
+    "conflicting_init_services": [
+      "imsqmidaemon",
+      "imsdatadaemon",
+      "ims_rtp_daemon",
+      "imscmservice"
+    ]
   },
   "ims_service": {
     "package": "org.octolab.qcom32ims",
