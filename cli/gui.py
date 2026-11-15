@@ -4,7 +4,7 @@
 Runs identically:
   - From source (`python cli/gui.py` or `Start-GUI.cmd`)
   - From portable ZIP (`python3 cli/gui.py`)
-  - From standalone Windows x64 EXE (`qcom32-volte-1.2.2-r1-windows-x64.exe`, with bundled Python/Tk/ADB/Payloads)
+  - From standalone Windows x64 EXE (`qcom32-volte-1.2.3-r1-windows-x64.exe`, with bundled Python/Tk/ADB/Payloads)
 
 Supports:
   - `--self-test <report.json>` for automated offline build & packaging verification without touching any connected phone
@@ -32,9 +32,10 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+import device_readiness  # noqa: E402
 import volte_ctl  # noqa: E402
 
-APP_VERSION = "1.2.2-r1"
+APP_VERSION = "1.2.3-r1"
 WEBSITE_URL = "https://qcom32-volte.octoooo.com/"
 SISTER_URL = "https://bb10-volte.octoooo.com/"
 GITHUB_URL = "https://github.com/Octo-o-o-o/qcom32-volte"
@@ -61,7 +62,7 @@ STRINGS = {
         "title": f"Qcom32 VoLTE · 高通 32 位 Android 11 原生通话栈工具 v{APP_VERSION}",
         "eyebrow": "32-BIT QUALCOMM SNAPDRAGON (MSM8974) · ANDROID 11 · CLEAN-ROOM IMS",
         "headline": "高通 32 位平台 Android 11 原生 4G VoLTE 通话栈",
-        "subhead": "通用 QCRIL rild_ims0 ↔ Android 11 ImsService 源码公开实现（首发验证机型：BlackBerry Passport wolverine）。免装 Magisk、先备份再写入；个人自用免费，商业代刷/预刷售机需付费授权。",
+        "subhead": "Passport 普通版/银色版 oslo/AT&T wichita/保时捷 keian 全系已放开一键激活；其他高通 32 位机型提供 100% 只读体检面板与 AI+GitHub 自助适配指南。个人自用免费，商用需授权。",
         "lang_btn": "English",
         "web_btn": "官方网站",
         "bb10_btn": "BB10 原生系统项目",
@@ -70,24 +71,25 @@ STRINGS = {
         "serial_lbl": "ADB 设备：",
         "refresh_devs": "刷新列表",
         "status_box": "当前检测状态",
-        "state_idle": "待检测（连接手机并开启 USB 调试后点击“只读检查状态”）",
+        "state_idle": "待检测（连接手机并开启 USB 调试后点击“只读检查状态”或“多机型识别与只读体检”）",
         "state_healthy": "VoLTE 栈运行正常（IMS 已注册 + LTE 语音就绪）",
         "state_unhealthy": "已连接设备，但 VoLTE 尚未完成激活或当前 SIM 尚未注册",
-        "actions_box": "操作流程（所有写操作均校验机型 Profile 并先保存本地备份）",
+        "actions_box": "操作流程（Passport 全系支持备份写入与回滚；其他 32 位高通机型可点右上体检面板用 AI 自助适配）",
         "btn_status": "1. 只读检查状态",
-        "btn_deploy": "2. 备份并一键激活 VoLTE（推荐）",
-        "btn_upgrade": "仅升级 Qcom32VolteIms 桥接 APK（零 EFS 写入）",
-        "btn_manager": "安装手机端管理 App（无 su 可查状态 / Magisk 可激活）",
+        "btn_deploy": "2. 备份并一键激活 VoLTE（Passport 全系）",
+        "btn_upgrade": "仅升级 Qcom32VolteIms 桥接 APK（零写入）",
+        "btn_readiness": "多机型识别与只读体检（AI 自助适配）",
+        "btn_manager": "安装手机端管理 App（含多机型只读体检）",
         "btn_rollback": "恢复出厂基带配置并卸载",
         "btn_export": "导出脱敏诊断报告",
         "btn_notices": "离线说明与使用许可",
         "log_box": "执行进度与诊断输出（自动隐去手机号/ICCID）",
         "confirm_deploy_title": "确认备份并激活 VoLTE",
         "confirm_deploy_msg": (
-            "即将对连接的已验证 32 位高通机型（如 BlackBerry Passport wolverine / LineageOS 18.1）执行：\n\n"
+            "即将对连接的已验证机型（覆盖 BlackBerry Passport 普通版 wolverine / 银色版 oslo / AT&T wichita / 保时捷 keian / LineageOS 18.1）执行：\n\n"
             "1. 通过 ADB Root 读取并保存当前基带 EFS 原始状态到本地备份目录；\n"
             "2. 写入机型专属 Stage 6A 协同基带配置并执行 EFS_SYNC；\n"
-            "3. 安装 Qcom32VolteIms.apk v2.6 并写入持久化 CarrierConfig（含开机/换卡系统通知）；\n"
+            "3. 安装 Qcom32VolteIms.apk v2.7 并写入持久化 CarrierConfig（含开机/换卡通知与电信 46011 保护）；\n"
             "4. 正常重启手机并自动核验 QMI_IMSA / ImsResolver 注册状态。\n\n"
             "请确认手机已插入开通 VoLTE 的 SIM 卡且当前无正在进行的通话。是否继续？"
         ),
@@ -98,12 +100,19 @@ STRINGS = {
         ),
         "busy_msg": "正在执行任务，请等待当前操作完成……",
         "saved_report": "脱敏诊断报告已保存至：\n",
+        "readiness_win_title": "高通 32 位多机型识别 · 100% 只读四门禁体检 · AI + GitHub 自助适配面板",
+        "readiness_run_btn": "对当前连接手机执行 100% 只读四门禁体检",
+        "readiness_matrix_btn": "显示支持机型与 AI 适配矩阵",
+        "readiness_copy_btn": "复制报告与 AI 适配提示词",
+        "readiness_git_btn": "打开 GitHub 仓库（含内置 AI Skill）",
+        "readiness_search_lbl": "检索机型/代号：",
+        "copied_msg": "已复制到剪贴板！可直接粘贴给 Claude Code / Cursor / Codex / Gemini CLI / Antigravity。",
     },
     "en": {
         "title": f"Qcom32 VoLTE · 32-Bit Qualcomm Android 11 IMS Stack v{APP_VERSION}",
         "eyebrow": "32-BIT QUALCOMM SNAPDRAGON (MSM8974) · ANDROID 11 · CLEAN-ROOM IMS",
         "headline": "Clean-Room 4G VoLTE & IMS Stack for 32-Bit Qualcomm Platforms",
-        "subhead": "Generic QCRIL rild_ims0 <-> Android 11 ImsService stack (First verified profile: BlackBerry Passport wolverine). Free for personal non-commercial use; paid license required for commercial use.",
+        "subhead": "All BlackBerry Passport editions (incl. Silver Edition oslo / wichita / keian) unlocked; other 32-bit Qualcomm phones include a 100% read-only readiness panel + AI & GitHub self-porting guide.",
         "lang_btn": "中文",
         "web_btn": "Website",
         "bb10_btn": "Sister Project (BB10 OS)",
@@ -112,24 +121,25 @@ STRINGS = {
         "serial_lbl": "ADB Device:",
         "refresh_devs": "Refresh",
         "status_box": "Live Telemetry Summary",
-        "state_idle": "Ready (Connect device with USB Debugging enabled and click 'Check Status')",
+        "state_idle": "Ready (Connect device with USB Debugging enabled and click 'Check Status' or '32-Bit Device Check')",
         "state_healthy": "VoLTE Stack Healthy (IMS REGISTERED + LTE Voice Ready)",
         "state_unhealthy": "Device connected, but VoLTE is not yet provisioned or registered",
-        "actions_box": "Operations (All EFS writes verify device profile & save local backups first)",
+        "actions_box": "Operations (Passport all editions unlocked; use '32-Bit Device Check & AI Porting' for other Qualcomm 32-bit models)",
         "btn_status": "1. Check Status (Read-Only)",
-        "btn_deploy": "2. Backup & Activate VoLTE (Recommended)",
+        "btn_deploy": "2. Backup & Activate VoLTE (Passport All Editions)",
         "btn_upgrade": "Upgrade Qcom32VolteIms APK Only (Zero EFS Writes)",
-        "btn_manager": "Install Mobile Companion App (Read-Only / Magisk)",
+        "btn_readiness": "32-Bit Device Check & AI Porting",
+        "btn_manager": "Install Mobile Companion App (with Readiness Check)",
         "btn_rollback": "Restore Factory Modem EFS & Uninstall",
         "btn_export": "Export Redacted Report",
         "btn_notices": "Guide & License",
         "log_box": "Progress & Redacted Telemetry Log",
         "confirm_deploy_title": "Confirm Backup & VoLTE Activation",
         "confirm_deploy_msg": (
-            "This will run the guarded activation flow on the connected verified device profile (e.g. BlackBerry Passport wolverine / LineageOS 18.1):\n\n"
+            "This will run the guarded activation flow on the connected verified Passport edition (wolverine / Silver Edition oslo / wichita / keian on LineageOS 18.1):\n\n"
             "1. Enable ADB Root (UID 0) and save a pre-deployment modem EFS snapshot locally;\n"
             "2. Provision Stage 6A modem EFS items + EFS_SYNC;\n"
-            "3. Install Qcom32VolteIms.apk v2.6 & apply persistent CarrierConfig overrides (with boot/SIM-swap notifications);\n"
+            "3. Install Qcom32VolteIms.apk v2.7 & apply persistent CarrierConfig overrides (with boot/SIM-swap notifications);\n"
             "4. Reboot normally and verify QMI_IMSA / ImsResolver registration.\n\n"
             "Ensure a VoLTE-provisioned SIM card is inserted and no call is active. Continue?"
         ),
@@ -140,6 +150,13 @@ STRINGS = {
         ),
         "busy_msg": "Working... please keep the USB cable connected.",
         "saved_report": "Redacted diagnostic report saved to:\n",
+        "readiness_win_title": "32-Bit Qualcomm Catalog · 100% Read-Only 4-Gate Check · AI + GitHub Self-Adaptation",
+        "readiness_run_btn": "Run 100% Read-Only 4-Gate Check on Phone",
+        "readiness_matrix_btn": "Show Full 32-Bit Device Matrix",
+        "readiness_copy_btn": "Copy Report & AI Prompt",
+        "readiness_git_btn": "Open GitHub Repo (with AI Skill)",
+        "readiness_search_lbl": "Filter model/codename:",
+        "copied_msg": "Copied to clipboard! Paste directly into Claude Code / Cursor / Codex / Gemini CLI / Antigravity.",
     },
 }
 
@@ -344,9 +361,15 @@ class PassportVolteApp:
 
         self.btn_upgrade = tk.Button(
             row1, command=self.on_upgrade_apk, relief=tk.SOLID, bd=1, bg=PALETTE["canvas"], fg=PALETTE["text"],
-            padx=14, pady=8, cursor="hand2", font=(font_family, 9)
+            padx=12, pady=8, cursor="hand2", font=(font_family, 9)
         )
         self.btn_upgrade.pack(side=tk.LEFT, padx=(0, 8))
+
+        self.btn_readiness = tk.Button(
+            row1, command=self.on_open_readiness_panel, relief=tk.FLAT, bg=PALETTE["accent_soft"], fg=PALETTE["accent"],
+            padx=12, pady=8, cursor="hand2", font=(font_family, 9, "bold")
+        )
+        self.btn_readiness.pack(side=tk.LEFT, padx=(0, 4))
 
         row2 = tk.Frame(act_card, bg=PALETTE["surface"])
         row2.pack(fill=tk.X)
@@ -412,6 +435,7 @@ class PassportVolteApp:
         self.btn_status.configure(text=self._t("btn_status"))
         self.btn_deploy.configure(text=self._t("btn_deploy"))
         self.btn_upgrade.configure(text=self._t("btn_upgrade"))
+        self.btn_readiness.configure(text=self._t("btn_readiness"))
         self.btn_manager.configure(text=self._t("btn_manager"))
         self.btn_rollback.configure(text=self._t("btn_rollback"))
         self.btn_export.configure(text=self._t("btn_export"))
@@ -440,7 +464,7 @@ class PassportVolteApp:
     def _set_busy(self, flag: bool) -> None:
         self.busy = flag
         state = tk.DISABLED if flag else tk.NORMAL
-        for btn in (self.btn_status, self.btn_deploy, self.btn_upgrade, self.btn_manager, self.btn_rollback):
+        for btn in (self.btn_status, self.btn_deploy, self.btn_upgrade, self.btn_readiness, self.btn_manager, self.btn_rollback):
             btn.configure(state=state)
         if flag:
             self.lbl_status_banner.configure(text=self._t("busy_msg"), bg="#fff3cf", fg=PALETTE["warn"])
@@ -520,6 +544,129 @@ class PassportVolteApp:
         mgr = volte_ctl.resolve_artifact(None, "Qcom32VolteManager.apk")
         self._run_bg(lambda adb, prog: volte_ctl.run_install_manager_flow(adb, mgr, on_progress=prog))
 
+    def on_open_readiness_panel(self) -> None:
+        font_family = "Microsoft YaHei UI" if os.name == "nt" else "Sans"
+        mono_family = "Consolas" if os.name == "nt" else "Monospace"
+
+        win = tk.Toplevel(self.root)
+        win.title(self._t("readiness_win_title"))
+        win.geometry("900x640")
+        win.configure(bg=PALETTE["canvas"])
+
+        top_bar = tk.Frame(win, bg=PALETTE["canvas"], padx=14, pady=10)
+        top_bar.pack(fill=tk.X)
+
+        txt = scrolledtext.ScrolledText(
+            win, wrap=tk.WORD, font=(mono_family, 9), bg=PALETTE["paper"], fg=PALETTE["text"], relief=tk.SOLID, bd=1
+        )
+
+        def set_panel_text(content: str) -> None:
+            txt.configure(state=tk.NORMAL)
+            txt.delete("1.0", tk.END)
+            txt.insert("1.0", content)
+            txt.configure(state=tk.DISABLED)
+
+        def show_matrix(query: str | None = None) -> None:
+            if query and query.strip():
+                hits = device_readiness.list_catalog_entries(query.strip())
+                lines = [
+                    f"Filter: {query.strip()} ({len(hits)} matched families) — GitHub: {GITHUB_URL}\n"
+                ]
+                for fam in hits:
+                    nm = fam["name_en"] if self.lang == "en" else fam["name_zh"]
+                    st = fam["status_en"] if self.lang == "en" else fam["status_zh"]
+                    lines.append(f"* {nm} [{fam['family_id']}]")
+                    lines.append(f"  SoC: {fam['soc']} | Codenames: {', '.join(fam['codenames'])}")
+                    lines.append(f"  Models: {', '.join(fam['models'])}")
+                    lines.append(f"  Status: {st}\n")
+                set_panel_text("\n".join(lines))
+            else:
+                set_panel_text(device_readiness.format_catalog_overview(self.lang))
+
+        def run_live_readonly_check() -> None:
+            selected_serial = self._selected_serial()
+            btn_probe.configure(state=tk.DISABLED)
+            set_panel_text(
+                "Running 100% read-only 4-Gate readiness inspection over ADB (zero EFS writes)...\n"
+                if self.lang == "en"
+                else "正在通过 ADB 执行 100% 只读四门禁适配体检（不开启写操作、零基带写入）……\n"
+            )
+
+            def _probe_worker() -> None:
+                try:
+                    adb = volte_ctl.AdbClient(volte_ctl.resolve_adb(None), selected_serial)
+                    audit = device_readiness.run_readonly_readiness_audit(adb)
+                    rendered = str(audit["formatted_en"] if self.lang == "en" else audit["formatted_zh"])
+                    win.after(
+                        0,
+                        lambda: (
+                            btn_probe.configure(state=tk.NORMAL),
+                            set_panel_text(rendered),
+                            self._append_log(rendered),
+                        ),
+                    )
+                except Exception as exc:
+                    err_msg = volte_ctl.sanitize_text(str(exc))
+                    fallback = (
+                        f"[ADB Read-Only Check Error]: {err_msg}\n\n"
+                        + device_readiness.format_catalog_overview(self.lang)
+                    )
+                    win.after(0, lambda: (btn_probe.configure(state=tk.NORMAL), set_panel_text(fallback)))
+
+            threading.Thread(target=_probe_worker, daemon=True).start()
+
+        def copy_current_text() -> None:
+            raw = volte_ctl.sanitize_text(txt.get("1.0", tk.END).strip())
+            if not raw:
+                return
+            self.root.clipboard_clear()
+            self.root.clipboard_append(raw)
+            self.root.update_idletasks()
+            if not self.headless:
+                messagebox.showinfo("Qcom32 VoLTE", self._t("copied_msg"), parent=win)
+
+        btn_probe = tk.Button(
+            top_bar, text=self._t("readiness_run_btn"), command=run_live_readonly_check,
+            relief=tk.FLAT, bg=PALETTE["accent"], fg=PALETTE["on_accent"],
+            padx=12, pady=6, cursor="hand2", font=(font_family, 9, "bold")
+        )
+        btn_probe.pack(side=tk.LEFT, padx=(0, 8))
+
+        btn_matrix = tk.Button(
+            top_bar, text=self._t("readiness_matrix_btn"), command=lambda: show_matrix(search_var.get()),
+            relief=tk.SOLID, bd=1, bg=PALETTE["surface"], fg=PALETTE["text"],
+            padx=10, pady=6, cursor="hand2", font=(font_family, 9)
+        )
+        btn_matrix.pack(side=tk.LEFT, padx=(0, 8))
+
+        btn_copy = tk.Button(
+            top_bar, text=self._t("readiness_copy_btn"), command=copy_current_text,
+            relief=tk.FLAT, bg=PALETTE["accent_soft"], fg=PALETTE["accent"],
+            padx=10, pady=6, cursor="hand2", font=(font_family, 9, "bold")
+        )
+        btn_copy.pack(side=tk.LEFT, padx=(0, 8))
+
+        btn_git = tk.Button(
+            top_bar, text=self._t("readiness_git_btn"), command=lambda: webbrowser.open(GITHUB_URL),
+            relief=tk.SOLID, bd=1, bg=PALETTE["surface"], fg=PALETTE["text"],
+            padx=10, pady=6, cursor="hand2", font=(font_family, 9)
+        )
+        btn_git.pack(side=tk.LEFT)
+
+        filter_bar = tk.Frame(win, bg=PALETTE["canvas"], padx=14, pady=2)
+        filter_bar.pack(fill=tk.X)
+        tk.Label(
+            filter_bar, text=self._t("readiness_search_lbl"), bg=PALETTE["canvas"], fg=PALETTE["muted"],
+            font=(font_family, 9)
+        ).pack(side=tk.LEFT)
+        search_var = tk.StringVar(value="")
+        ent_search = tk.Entry(filter_bar, textvariable=search_var, width=36, font=(mono_family, 9))
+        ent_search.pack(side=tk.LEFT, padx=8)
+        ent_search.bind("<KeyRelease>", lambda _e: show_matrix(search_var.get()))
+
+        txt.pack(fill=tk.BOTH, expand=True, padx=14, pady=(6, 14))
+        show_matrix()
+
     def on_rollback(self) -> None:
         if not messagebox.askyesno(self._t("confirm_rollback_title"), self._t("confirm_rollback_msg")):
             return
@@ -544,14 +691,17 @@ class PassportVolteApp:
             f"Website: {WEBSITE_URL}\n"
             f"GitHub:  {GITHUB_URL}\n"
             f"Sister Project (BB10 OS 10.3.3): {SISTER_URL}\n\n"
-            "Quick Steps (No Magisk Needed — Verified Profile: BlackBerry Passport wolverine):\n"
+            "Quick Steps (No Magisk Needed — Unlocked Across All BlackBerry Passport Editions: wolverine / Silver Edition oslo / wichita / keian):\n"
             "  1. Insert a VoLTE-enabled SIM card into your LineageOS 18.1 (Android 11) device.\n"
             "  2. Open Settings -> System -> Developer options:\n"
             "       - Enable 'Android debugging' (USB debugging)\n"
             "       - Set 'Rooted debugging' ON\n"
             "  3. Connect via USB, accept the RSA prompt on the phone, and click:\n"
             "       [1. Check Status] -> [2. Backup & Activate VoLTE].\n"
-            "  4. After automatic reboot, verify native incoming & outgoing 4G calls.\n\n"
+            "  4. Other 32-Bit Qualcomm Phones (Galaxy S5 klte, Mi 4 cancro, OnePlus One bacon, Xperia Z2/Z3, LG G3):\n"
+            "       - Click [32-Bit Device Check & AI Porting] for a 100% read-only 4-Gate readiness report.\n"
+            f"       - Clone {GITHUB_URL} and open it in Claude Code / Cursor / Codex / Gemini CLI / Antigravity\n"
+            "         (uses the built-in `.agents/skills/qcom32-volte/` AI Skill to adapt your model safely).\n\n"
             "License / 使用许可声明:\n"
             "  - Personal & Non-Commercial Use: FREE under PolyForm Noncommercial License 1.0.0.\n"
             f"  - Commercial Use: Requires a prior paid commercial license from OctoLab ({COMMERCIAL_EMAIL}).\n"
@@ -589,6 +739,10 @@ def run_self_test(out_json: str) -> int:
     ctl_rc = volte_ctl.cmd_self_test()
     if ctl_rc != 0:
         raise RuntimeError(f"volte_ctl self-test returned {ctl_rc}")
+    zh_matrix = device_readiness.format_catalog_overview("zh")
+    en_matrix = device_readiness.format_catalog_overview("en")
+    if GITHUB_URL not in zh_matrix or "Silver Edition" not in en_matrix:
+        raise RuntimeError("device_readiness catalog overview missing expected GitHub/Silver Edition markers")
     root.destroy()
 
     report = {

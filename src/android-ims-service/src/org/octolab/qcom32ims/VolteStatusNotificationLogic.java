@@ -232,8 +232,24 @@ public final class VolteStatusNotificationLogic {
     public static final int NETWORK_MODE_LTE_CDMA_EVDO_GSM_WCDMA = 10;
     public static final int NETWORK_MODE_LTE_ONLY = 11;
 
+    /**
+     * Returns true for all BlackBerry Passport unified {@code lineage_wseries} hardware editions
+     * sharing the identical vendor {@code libril.so} + {@code NON-HLOS.bin} baseband:
+     * {@code wolverine} (SQW100-1/2/3), {@code oslo} (SQW100-4 Silver Edition),
+     * {@code wichita} (AT&T Rounded Edition), {@code keian} (Porsche Design), and {@code wseries}.
+     */
     public static boolean isWolverineDevice(String deviceCodename) {
-        return "wolverine".equalsIgnoreCase(safeStr(deviceCodename));
+        switch (safeStr(deviceCodename).toLowerCase(Locale.US)) {
+            case "wolverine":
+            case "oslo":
+            case "wichita":
+            case "keian":
+            case "wseries":
+            case "windermere":
+                return true;
+            default:
+                return false;
+        }
     }
 
     public static boolean isChinaTelecom(String simOperator) {
@@ -527,7 +543,7 @@ public final class VolteStatusNotificationLogic {
         } else if (!isLteNetwork(in.networkType)) {
             kind = Kind.AWAITING_4G_LTE;
             boolean cmccOnWolverine = isChinaMobile(in.simOperator)
-                    && ("wolverine".equalsIgnoreCase(in.deviceCodename) || in.deviceCodename.isEmpty());
+                    && (isWolverineDevice(in.deviceCodename) || in.deviceCodename.isEmpty());
             if (cmccOnWolverine) {
                 title = in.englishLocale
                         ? "Not on 4G LTE · VoLTE Standby (China Mobile)"

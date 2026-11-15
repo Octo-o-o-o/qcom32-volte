@@ -1,6 +1,6 @@
 # 安装部署、状态检查与回滚指南 (`INSTALL_AND_ROLLBACK.md`)
 
-本指南适用于刷入 **LineageOS 18.1 (Android 11, `wolverine`)** 的 **BlackBerry Passport** 设备。
+本指南适用于刷入 **LineageOS 18.1 (Android 11, `lineage_wseries`)** 的 **BlackBerry Passport 全系硬件版本**（含普通版 `wolverine` `SQW100-1/3`、**银色版 Silver Edition `oslo` `SQW100-4`**、AT&T 圆角版 `wichita` `SQW100-2` 与保时捷版 `keian`）。其他高通 32 位老旗舰用户也可直接运行软件内的**「多机型识别与只读体检」**面板获取 AI + GitHub 自助适配报告。
 
 > [!IMPORTANT]
 > - 整个激活过程**不刷写分区、不安装 Magisk、不关闭 SELinux (`Enforcing`)**。
@@ -10,7 +10,7 @@
 
 ## 1. 前置条件检查
 
-1. **手机系统**：BlackBerry Passport (`ro.product.device=wolverine`)，运行 LineageOS 18.1 (Android 11)。
+1. **手机系统**：BlackBerry Passport 全系（`ro.product.device` 为 `wolverine` / `oslo` 银色版 / `wichita` / `keian` / `wseries`），运行 LineageOS 18.1 (Android 11)。
 2. **SIM 卡**：已插入开通 VoLTE 业务且处于 Passport 硬件支持频段内的 4G USIM 卡（如中国联通 4G/5G USIM 卡），手机状态栏已正常驻留 `LTE`。
 3. **开启 ADB 调试与 Root 调试**：
    - 进入手机 **设置 -> 关于手机**，连续点击 **版本号** 开启开发者选项；
@@ -54,7 +54,7 @@ python3 cli/build_all.py
 
 ## 3. 一键激活部署 VoLTE
 
-将手机通过 USB 连接电脑，确认手机无正在进行的通话后执行（普通 Windows 用户也可直接运行单文件 `qcom32-volte-1.2.2-r1-windows-x64.exe`）：
+将手机通过 USB 连接电脑，确认手机无正在进行的通话后执行（普通 Windows 用户也可直接运行单文件 `qcom32-volte-1.2.3-r1-windows-x64.exe`）：
 
 ```bash
 # 先运行 CLI 本地自检
@@ -69,7 +69,7 @@ python3 cli/volte_ctl.py install-manager
 
 部署成功时终端会输出 JSON，其中关键指标如下：
 - `"volte_stack_healthy": true`
-- `"ims_service": { "present": true, "version": "2.6-qcom32-volte", "ril_connected": true, "voice_ims_ready": true, "published_framework_reg": 1 }`
+- `"ims_service": { "present": true, "version": "2.7-qcom32-volte", "ril_connected": true, "voice_ims_ready": true, "published_framework_reg": 1 }`
 - `"qmi_imsa": { "pdp_connected": 1, "reg_status": 2, "legacy_reg": 1, "voip": 2, "voip_rat": 1 }`
 - `"framework_ims_registered": ["true"]`
 

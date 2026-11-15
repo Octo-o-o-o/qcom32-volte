@@ -33,6 +33,7 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -73,6 +74,7 @@ public final class MainActivity extends Activity {
     private TextView logView;
     private TextView licenseNoteView;
     private Button refreshButton;
+    private Button readinessButton;
     private Button deployButton;
     private Button upgradeButton;
     private Button rollbackButton;
@@ -208,6 +210,10 @@ public final class MainActivity extends Activity {
         refreshButton.setOnClickListener(v -> runCheckStatus());
         root.addView(refreshButton);
 
+        readinessButton = createActionButton("", false, false);
+        readinessButton.setOnClickListener(v -> runReadOnlyPortingCheck());
+        root.addView(readinessButton);
+
         deployButton = createActionButton("", true, false);
         deployButton.setOnClickListener(v -> confirmAndRunDeploy());
         root.addView(deployButton);
@@ -248,23 +254,25 @@ public final class MainActivity extends Activity {
     private void refreshLabels() {
         if (englishMode) {
             titleView.setText("Qcom32 VoLTE & IMS Stack");
-            subtitleView.setText("OCTOLAB · 32-bit Qualcomm Android 11 VoLTE Stack v2.6");
+            subtitleView.setText("OCTOLAB · 32-bit Qualcomm Android 11 VoLTE Stack v2.7 · Passport All Editions");
             langButton.setText("中文");
             refreshButton.setText("Check Live VoLTE & SIM Status");
-            deployButton.setText("Backup EFS & Activate VoLTE (Requires Magisk Root)");
+            readinessButton.setText("32-Bit Device Identification & AI Porting Check (Read-Only)");
+            deployButton.setText("Backup EFS & Activate VoLTE (Passport All Editions · Root)");
             upgradeButton.setText("Update Qcom32VolteIms Bridge APK Only (Zero EFS Write)");
             rollbackButton.setText("Restore Factory Modem EFS & Uninstall");
-            copyButton.setText("Copy Redacted Diagnostic Report");
+            copyButton.setText("Copy Redacted Diagnostic / Porting Report");
             licenseNoteView.setText("License: Free for personal non-commercial use (PolyForm-Noncommercial-1.0.0). Paid license required for commercial flashing or pre-flashed phone sales: octoooo@octoooo.com");
         } else {
             titleView.setText("Qcom32 VoLTE 通话栈管理端");
-            subtitleView.setText("OCTOLAB · 高通 32 位平台 Android 11 原生 IMS 栈 v2.6");
+            subtitleView.setText("OCTOLAB · 高通 32 位平台 Android 11 原生 IMS 栈 v2.7 · Passport 全系放开");
             langButton.setText("English");
             refreshButton.setText("检查当前 SIM / 4G / VoLTE 状态");
-            deployButton.setText("备份原值并一键激活 VoLTE（需手机本地 Magisk Root）");
+            readinessButton.setText("多机型识别与只读适配体检（AI + GitHub 自助适配）");
+            deployButton.setText("备份原值并一键激活 VoLTE（Passport 普通/银色/全系 · 需 Magisk Root）");
             upgradeButton.setText("仅原位更新 Qcom32VolteIms 桥接 APK（零 EFS 写入）");
             rollbackButton.setText("一键恢复出厂基带配置并卸载桥接服务");
-            copyButton.setText("复制脱敏诊断摘要");
+            copyButton.setText("复制脱敏诊断 / 适配体检摘要");
             licenseNoteView.setText("许可声明：个人自用与纯公益非商用免费（PolyForm-Noncommercial-1.0.0）；有偿代刷、预刷售卖二手机等商业用途须联系 octoooo@octoooo.com 获取付费授权。");
         }
     }
@@ -272,9 +280,11 @@ public final class MainActivity extends Activity {
     private void setBusy(boolean isBusy) {
         busy = isBusy;
         refreshButton.setEnabled(!isBusy);
+        readinessButton.setEnabled(!isBusy);
         deployButton.setEnabled(!isBusy);
         upgradeButton.setEnabled(!isBusy);
         rollbackButton.setEnabled(!isBusy);
+        copyButton.setEnabled(!isBusy);
     }
 
     private void runCheckStatus() {
@@ -374,8 +384,14 @@ public final class MainActivity extends Activity {
 
             VolteManagerLogic.StatusSnapshot snap = VolteManagerLogic.parseStatusSummary(
                     model, device, sdk, suOk, svcDump, qmiOut, phoneDump, simNum, netType);
+            String boardPlatform = readSystemProp("ro.board.platform");
+            String cpuAbi = (Build.SUPPORTED_ABIS != null && Build.SUPPORTED_ABIS.length > 0)
+                    ? Build.SUPPORTED_ABIS[0] : Build.CPU_ABI;
+            VolteManagerLogic.DeviceCatalogMatch catMatch = VolteManagerLogic.identifyDeviceCatalog(
+                    Build.BRAND, model, device, boardPlatform, cpuAbi, sdk, Build.TAGS);
 
             String details = "Model / Device : " + model + " (" + device + ", SDK " + sdk + ")\n"
+                    + "Catalog Family : " + (englishMode ? catMatch.displayNameEn : catMatch.displayNameZh) + "\n"
                     + "Device Profile : " + snap.matchedProfileId + "\n"
                     + "SIM / Network  : " + snap.carrierSummary + "\n"
                     + "Local Root (su): " + (snap.suAvailable ? "YES (UID 0)" : "NO (Use PC ADB Root tool)") + "\n"
@@ -404,12 +420,72 @@ public final class MainActivity extends Activity {
         });
     }
 
+    private void runReadOnlyPortingCheck() {
+        if (busy) return;
+        setBusy(true);
+        statusBadgeView.setText(englishMode
+                ? "Running 100% read-only 4-Gate readiness check..."
+                : "正在执行 100% 只读四门禁适配体检（零基带写入）…");
+        worker.execute(() -> {
+            String brand = Build.BRAND;
+            String model = Build.MODEL;
+            String device = Build.DEVICE;
+            int sdk = Build.VERSION.SDK_INT;
+            String boardPlatform = readSystemProp("ro.board.platform");
+            String cpuAbi = (Build.SUPPORTED_ABIS != null && Build.SUPPORTED_ABIS.length > 0)
+                    ? Build.SUPPORTED_ABIS[0] : Build.CPU_ABI;
+            String selinux = readSelinuxMode();
+            boolean suOk = checkSuAvailable();
+            boolean rildPresent = new File("/dev/socket/qmux_radio/rild_ims0").exists()
+                    || (suOk && execRootQuiet("test -S /dev/socket/qmux_radio/rild_ims0 && echo YES || echo NO").contains("YES"));
+            boolean diagPresent = new File("/dev/diag").exists()
+                    || (suOk && execRootQuiet("test -c /dev/diag && echo YES || echo NO").contains("YES"));
+            boolean audioOk = readAudioMarkersPresent(suOk);
+            Boolean modemIms = null;
+            if (suOk) {
+                String hit = execRootQuiet(
+                        "grep -a -l 'qp_ims_reg_config' /firmware/image/modem* /vendor/firmware_mnt/image/modem* 2>/dev/null | head -n 1 || true");
+                modemIms = !hit.trim().isEmpty();
+            }
+
+            String report = VolteManagerLogic.buildReadOnlyPortingReport(
+                    brand, model, device, boardPlatform, cpuAbi, sdk, Build.TAGS,
+                    selinux, suOk, rildPresent, diagPresent, audioOk, modemIms, englishMode);
+            String cleanReport = VolteManagerLogic.redactSensitiveDigits(report);
+            VolteManagerLogic.DeviceCatalogMatch match = VolteManagerLogic.identifyDeviceCatalog(
+                    brand, model, device, boardPlatform, cpuAbi, sdk, Build.TAGS);
+
+            runOnUiThread(() -> {
+                statusBadgeView.setText((englishMode ? match.displayNameEn : match.displayNameZh) + " · " + match.route);
+                statusBadgeView.setTextColor("VERIFIED_PASSPORT_READY".equals(match.route) ? COLOR_ACCENT : COLOR_TEXT);
+                logView.setText(cleanReport);
+                lastSanitizedReport = cleanReport;
+                setBusy(false);
+
+                new AlertDialog.Builder(this)
+                        .setTitle(englishMode
+                                ? "Read-Only Readiness & AI Self-Adaptation"
+                                : "多机型只读体检与 AI + GitHub 自助适配")
+                        .setMessage(cleanReport)
+                        .setPositiveButton(englishMode ? "Copy Report & AI Prompt" : "复制报告与 AI 提示词",
+                                (d, w) -> copyReportToClipboard())
+                        .setNeutralButton(englishMode ? "Open GitHub Repo" : "打开 GitHub 仓库", (d, w) -> {
+                            try {
+                                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(VolteManagerLogic.GITHUB_REPO_URL)));
+                            } catch (Exception ignored) {}
+                        })
+                        .setNegativeButton(englishMode ? "Close" : "关闭", null)
+                        .show();
+            });
+        });
+    }
+
     private void confirmAndRunDeploy() {
         if (busy) return;
         String title = englishMode ? "Backup & Activate VoLTE" : "备份原值并激活 VoLTE";
         String msg = englishMode
-                ? "This will:\n1. Verify SHA-256 of bundled Stage 6A payloads;\n2. Save original EFS backups locally;\n3. Provision Stage 6A modem EFS + EFS_SYNC;\n4. Install Qcom32VolteIms v2.6 & apply persistent CarrierConfig.\n\nA normal phone reboot is required afterwards. Proceed?"
-                : "即将执行：\n1. 校验内置载荷 SHA-256；\n2. 备份本机基带原始 EFS 配置到本地安全目录；\n3. 写入 Stage 6A 基带配置并完成 EFS_SYNC；\n4. 安装 Qcom32VolteIms v2.6 并写入跨重启绑定。\n\n完成后需正常重启一次手机生效。确认继续？";
+                ? "Verified across all BlackBerry Passport editions (wolverine / oslo Silver Edition / wichita / keian).\n\nThis will:\n1. Verify SHA-256 of bundled Stage 6A payloads;\n2. Save original EFS backups locally;\n3. Provision Stage 6A modem EFS + EFS_SYNC;\n4. Install Qcom32VolteIms v2.7 & apply persistent CarrierConfig.\n\nA normal phone reboot is required afterwards. Proceed?"
+                : "已覆盖黑莓 Passport 全系版本（普通版 wolverine / 银色版 oslo / AT&T wichita / 保时捷 keian）。\n\n即将执行：\n1. 校验内置载荷 SHA-256；\n2. 备份本机基带原始 EFS 配置到本地安全目录；\n3. 写入 Stage 6A 基带配置并完成 EFS_SYNC；\n4. 安装 Qcom32VolteIms v2.7 并写入跨重启绑定。\n\n完成后需正常重启一次手机生效。确认继续？";
         new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(msg)
@@ -423,8 +499,8 @@ public final class MainActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle(englishMode ? "Update Qcom32VolteIms APK" : "更新桥接服务 APK")
                 .setMessage(englishMode
-                        ? "Updates Qcom32VolteIms.apk v2.6 in place without touching modem EFS."
-                        : "仅原位更新 Qcom32VolteIms.apk v2.6，不写入任何基带 EFS 项。")
+                        ? "Updates Qcom32VolteIms.apk v2.7 in place without touching modem EFS."
+                        : "仅原位更新 Qcom32VolteIms.apk v2.7，不写入任何基带 EFS 项。")
                 .setPositiveButton(englishMode ? "Update" : "确认更新", (d, w) -> executeRootOperation("upgrade"))
                 .setNegativeButton(englishMode ? "Cancel" : "取消", null)
                 .show();
@@ -449,7 +525,9 @@ public final class MainActivity extends Activity {
             try {
                 if ((!"upgrade".equals(mode))
                         && !VolteManagerLogic.verifyPassportIdentity(Build.MODEL, Build.DEVICE, Build.VERSION.SDK_INT)) {
-                    throw new IllegalStateException("Unverified modem EFS profile for " + Build.MODEL + " / " + Build.DEVICE);
+                    throw new IllegalStateException(englishMode
+                            ? "EFS write is locked for " + Build.MODEL + " (" + Build.DEVICE + ") to protect your mobile data/MMS PDP slots. Tap '32-Bit Device Identification & AI Porting Check' above and use AI + " + VolteManagerLogic.GITHUB_REPO_URL + " (.agents/skills/qcom32-volte/) to adapt your model safely."
+                            : "为保护移动数据与彩信槽位，当前机型 " + Build.MODEL + " (" + Build.DEVICE + ") 已锁定直接基带写入。请点击上方「多机型识别与只读适配体检」，复制报告配合 AI 编程助手与开源仓库 " + VolteManagerLogic.GITHUB_REPO_URL + " 内置技能自助适配。");
                 }
                 if (!checkSuAvailable()) {
                     throw new IllegalStateException(englishMode
@@ -626,6 +704,53 @@ public final class MainActivity extends Activity {
                 bos.write(buf, 0, n);
             }
             return bos.toByteArray();
+        }
+    }
+
+    private static String readSelinuxMode() {
+        try {
+            Process p = new ProcessBuilder("getenforce").redirectErrorStream(true).start();
+            String out = new String(readStream(p.getInputStream()), StandardCharsets.UTF_8).trim();
+            p.waitFor();
+            if (!out.isEmpty()) {
+                return out;
+            }
+        } catch (Exception ignored) {}
+        String prop = readSystemProp("ro.boot.selinux");
+        return prop.isEmpty() ? "Enforcing/Default" : prop;
+    }
+
+    private static boolean readAudioMarkersPresent(boolean suOk) {
+        String[] candidates = new String[]{
+                "/vendor/etc/mixer_paths.xml",
+                "/vendor/etc/mixer_paths_msm8974.xml",
+                "/system/etc/mixer_paths.xml"
+        };
+        for (String path : candidates) {
+            File f = new File(path);
+            if (f.isFile() && f.canRead() && f.length() < 4 * 1024 * 1024L) {
+                try (FileInputStream fis = new FileInputStream(f)) {
+                    String txt = new String(readStream(fis), StandardCharsets.UTF_8).toLowerCase(Locale.ROOT);
+                    if (txt.contains("voice-mmode1") || txt.contains("voice-ims")
+                            || txt.contains("compress-voip") || txt.contains("volte")) {
+                        return true;
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+        if (suOk) {
+            String hit = execRootQuiet(
+                    "grep -E -i -l 'Voice-MMode1|voice-ims|compress-voip|VoLTE' /vendor/etc/mixer_paths*.xml /system/etc/mixer_paths*.xml 2>/dev/null | head -n 1 || true");
+            return !hit.trim().isEmpty();
+        }
+        return false;
+    }
+
+    private static String execRootQuiet(String script) {
+        try {
+            return execRoot(script);
+        } catch (Exception e) {
+            return "";
         }
     }
 

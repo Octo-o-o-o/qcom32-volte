@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
  * ImsResolver dynamic-feature-query service instances never touch rild_ims0.
  */
 public final class Qcom32VolteImsService extends ImsService {
-    static final String SERVICE_VERSION = "2.6-qcom32-volte";
+    static final String SERVICE_VERSION = "2.7-qcom32-volte";
     private static final String TAG = "Qcom32VolteIms";
     private static final int KEY_VOLTE_PROVISIONING_STATUS = 10;
     private static final int KEY_VT_PROVISIONING_STATUS = 11;

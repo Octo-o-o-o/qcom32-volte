@@ -14,30 +14,32 @@
 
 高通对骁龙 800 / 801（`MSM8974` 等 32 位 `armeabi-v7a` 平台）的官方支持停留在 Android 6.0。随着全球 2G/3G 退网，刷入 LineageOS 18.1（Android 11）的一代经典机型能驻留 4G 数据却失去了语音通话能力。
 
-**`qcom32-volte`** 采用**“通用 32 位 Android 11 通话框架 + 按机型安全加锁的基带 EFS Profile”**双层解耦架构，从零实现手机本地独立运行的原生硬件 **4G VoLTE（AMR-WB 高清语音）** 通话栈——其中 **BlackBerry Passport (`blackberry-passport-wolverine`)** 已作为首个设备 Profile 完成全功能真机验收与全部 4 种交付方式实机闭环测试。
+`qcom32-volte` 采用**“通用 32 位 Android 11 通话框架 + 按机型安全加锁的基带 EFS Profile”**双层解耦架构，从零实现手机本地独立运行的原生硬件 **4G VoLTE（AMR-WB 高清语音）** 通话栈——其中 **BlackBerry Passport 全系硬件版本（普通版 `wolverine` / 银色版 Silver Edition `oslo` / AT&T 圆角版 `wichita` / 保时捷版 `keian`）** 已完整开放一键激活、升级与回滚，同时在桌面端与手机 App 中内置**其他高通 32 位机型自动识别 + 100% 只读四门禁体检面板 + AI 配合 GitHub 仓库内置 Skill 自助对应适配指南**。
 
 ---
 
 ## 核心特性
 
-- **通用 32 位 Android 11 `ImsService` 通话栈 (`Qcom32VolteIms.apk` v2.6)**：包名 `org.octolab.qcom32ims`，原生严守 **`SELinux Enforcing`**（全程零 `setenforce 0`、零自定义 sepolicy 补丁），运行于 `UID 1001 (radio)`、零 `<uses-permission>` 声明（零系统电话权限污染）与 `<protected-broadcast>` 显式广播白名单加固，完整对接高通 `/dev/socket/qmux_radio/rild_ims0` Protobuf 状态机，支持系统原生拨号器主被叫、DTMF、通话中 4G LTE 保持与 3GPP `CLIP→OIR` + `TOA=145` 来电号码正常显示。
-- **开机 / 换卡 / 待重启自动系统状态通知与电信 EPS-only 防掉网（v1.2.0+）**：每次开机、插拔更换三网 SIM 卡或刚完成配置写入/回滚时，Android 11 系统通知栏会自动弹出中英文状态提示（如 **`VoLTE 已激活就绪 · 中国联通 / 中国电信`**、**`检测到已换卡 — 请重启手机激活 VoLTE`**、**`未驻留 4G 网络 · VoLTE 待机中 (中国移动)`** 或 **`VoLTE 配置已就绪 — 请重启手机生效`**），点按通知可直接打开管理面板；同时针对 Passport (`wolverine`) 原厂 `libril.so` `fallback_thread` 在中国电信纯 4G (`EPS-only`) 卡下每 3 秒反复切网掉线的问题，自动对齐 `LTE_GSM_WCDMA (9)` 与 `persist.radio.fallbackmode=9`（换回联通/移动卡或回滚时自动还原原值）。
-- **按机型隔离的基带 `EFSmodem` 供给、多机多卡兼容与确定性回滚 (`devices/*/profile.json`)**：只对通过硬件指纹校验的已建档机型开放 `/dev/diag` 基带写入（杜绝跨机型盲写 PDP 槽位风险），兼容高通 `libqdp.so` 针对不同运营商数据 APN（`3gnet`/`cmnet`/`ctnet`/海外卡）或全新 `fsg` 恢复动态维护的 `/pdp_profiles/profile3` 与结构化 `profile1/2` 校验，强制先备份原值，支持一键 `--rollback-all` 100% 还原出厂基带基线。
+- **通用 32 位 Android 11 `ImsService` 通话栈 (`Qcom32VolteIms.apk` v2.7)**：包名 `org.octolab.qcom32ims`，原生严守 **`SELinux Enforcing`**（全程零 `setenforce 0`、零自定义 sepolicy 补丁），运行于 `UID 1001 (radio)`、零 `<uses-permission>` 声明（零系统电话权限污染）与 `<protected-broadcast>` 显式广播白名单加固，完整对接高通 `/dev/socket/qmux_radio/rild_ims0` Protobuf 状态机，支持系统原生拨号器主被叫、DTMF、通话中 4G LTE 保持与 3GPP `CLIP→OIR` + `TOA=145` 来电号码正常显示。
+- **黑莓 Passport 全系版本放开（含银色版 `oslo` / `SQW100-4`，v1.2.3+）**：完整覆盖 `wolverine`（普通版 `SQW100-1/2/3`）、**`oslo`（Passport Silver Edition 银色版 `SQW100-4`）**、`wichita`（AT&T 圆角版 `SQW100-2`）、`keian`（保时捷设计版）及统一 `wseries` 代号，共享同一套 `lineage_wseries` 与 `NON-HLOS.bin` 基带，支持一键备份激活、出厂回滚及中国电信 `46011` `fallbackmode=9` 防掉线保护。
+- **内置高通 32 位多机型识别 + 只读体检面板 + AI 自助适配引导（v1.2.3+）**：Windows 桌面工具与手机端 `Qcom32VolteManager.apk` 均内置 9+ 大高通 32 位经典机系（三星 S5 `klte*`、小米 4/Note `cancro`/`virgo`、一加 1/Find 7 `bacon`/`find7`、索尼 Xperia Z1/Z2/Z3、LG G3/G2、HTC One M8、Moto X 2014 / Nexus 6、三星 Note 3/4 骁龙版等）自动识别与硬件陷阱拦截（自动提示 3G 版 `MI 4W`、猎户座 `SM-G900H`、无 `qipcall` 基带的 `Nexus 5`），提供零基带写入的 **4-Gate 只读适配体检**，并一键生成提示词引导用户通过 AI 编程助手 + 本 GitHub 仓库内置 Skill 安全自助完成新机型对应。
+- **开机 / 换卡 / 待重启自动系统状态通知与电信 EPS-only 防掉网（v1.2.0+）**：每次开机、插拔更换三网 SIM 卡或刚完成配置写入/回滚时，Android 11 系统通知栏会自动弹出中英文状态提示（如 **`VoLTE 已激活就绪 · 中国联通 / 中国电信`**、**`检测到已换卡 — 请重启手机激活 VoLTE`**、**`未驻留 4G 网络 · VoLTE 待机中 (中国移动)`** 或 **`VoLTE 配置已就绪 — 请重启手机生效`**），点按通知可直接打开管理面板；同时针对 Passport 全系（`wolverine`/`oslo`/`wichita`/`keian`）原厂 `libril.so` `fallback_thread` 在中国电信纯 4G (`EPS-only`) 卡下每 3 秒反复切网掉线的问题，自动对齐 `LTE_GSM_WCDMA (9)` 与 `persist.radio.fallbackmode=9`（换回联通/移动卡或回滚时自动还原原值）。
+- **按机型隔离的基带 `EFSmodem` 供给、多机多卡兼容与确定性回滚 (`devices/*/profile.json`)**：只对通过硬件指纹校验的已建档机型开放 `/dev/diag` 基带写入（杜绝跨机型盲写 PDP 槽位破坏移动数据/彩信风险），兼容高通 `libqdp.so` 针对不同运营商数据 APN（`3gnet`/`cmnet`/`ctnet`/海外卡）或全新 `fsg` 恢复动态维护的 `/pdp_profiles/profile3` 与结构化 `profile1/2` 校验，强制先备份原值，支持一键 `--rollback-all` 100% 还原出厂基带基线。
 - **免刷 Magisk + 拔掉 USB 换三网 SIM 卡零电脑自愈**：首次通过 LineageOS 原生「开发者选项 → Root 调试」激活后即可关闭 Root 调试并拔线独立运行；`CarrierConfigBootstrapReceiver` 自动监听新卡广播并为新 `subId` 绑定持久化 VoLTE 配置。
-- **免 `su` 手机屏幕实时状态面板 (`Qcom32VolteManager.apk` v1.2.2)**：通过零隐私泄露的只读 `VolteStatusProvider` (`content://org.octolab.qcom32ims.status`)，无需安装 Magisk、无需连电脑即可在手机屏幕上实时查看三网/广电运营商、`rild_ims0`、`QMI_IMSA` 承载与框架注册状态；若装有 Magisk (`su`) 更可机内直接激活或回滚。
+- **免 `su` 手机屏幕实时状态与多机型体检面板 (`Qcom32VolteManager.apk` v1.2.3)**：通过零隐私泄露的只读 `VolteStatusProvider` (`content://org.octolab.qcom32ims.status`)，无需安装 Magisk、无需连电脑即可在手机屏幕上实时查看三网/广电运营商、`rild_ims0`、`QMI_IMSA` 承载、机型识别与只读适配体检报告；若装有 Magisk (`su`) 更可机内直接激活或回滚。
 
 ---
 
-## 四种使用方式与直接下载（`v1.2.2-r1`）
+## 四种使用方式与直接下载（`v1.2.3-r1`）
 
-默认提供 **Cloudflare R2 高速直连**（国内无需代理即可满速下载）与 **GitHub Releases** 双镜像，SHA-256 校验码完全一致（汇总见 [`SHA256SUMS.txt`](https://qcom32-downloads.octoooo.com/v1.2.2-r1/SHA256SUMS.txt)）：
+默认提供 **Cloudflare R2 高速直连**（国内无需代理即可满速下载）与 **GitHub Releases** 双镜像，SHA-256 校验码完全一致（汇总见 [`SHA256SUMS.txt`](https://qcom32-downloads.octoooo.com/v1.2.3-r1/SHA256SUMS.txt)）：
 
 | 方式 | 适用人群 | 下载入口（Cloudflare R2 直连 / GitHub） | 使用简述 |
 | --- | --- | --- | --- |
-| **1. Windows 桌面一键版（最推荐）** | 绝大多数用户（**无需安装 Magisk**、无需装 Python/ADB） | [R2 下载 EXE](https://qcom32-downloads.octoooo.com/v1.2.2-r1/qcom32-volte-1.2.2-r1-windows-x64.exe) · [GitHub](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.2-r1/qcom32-volte-1.2.2-r1-windows-x64.exe) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.2-r1/qcom32-volte-1.2.2-r1-windows-x64.exe.sha256) | 手机开启「USB 调试 + Root 调试」，双击 EXE 点击「备份并一键激活 VoLTE」即可 |
-| **2. 手机端状态与管理 App** | 拔线换卡实时看状态（**免 Magisk**）或已刷 **Magisk** 机内管理用户 | [R2 下载 APK](https://qcom32-downloads.octoooo.com/v1.2.2-r1/Qcom32VolteManager-1.2.2-r1.apk) · [GitHub](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.2-r1/Qcom32VolteManager-1.2.2-r1.apk) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.2-r1/Qcom32VolteManager-1.2.2-r1.apk.sha256) | 安装至手机桌面；免 `su` 实时查看三网/IMS/`QMI_IMSA` 状态，有 Magisk 可机内激活/回滚 |
-| **3. 跨平台便携包（CLI + GUI）** | macOS / Linux / 命令行用户 | [R2 下载便携 ZIP](https://qcom32-downloads.octoooo.com/v1.2.2-r1/qcom32-volte-1.2.2-r1-portable.zip) · [GitHub](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.2-r1/qcom32-volte-1.2.2-r1-portable.zip) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.2-r1/qcom32-volte-1.2.2-r1-portable.zip.sha256) | 内含签名 ARM32 工具、双 APK 与 `devices/`，运行 `python3 cli/volte_ctl.py deploy` 或 `cli/gui.py` |
-| **4. LineageOS 18.1 ROM 源码集成** | 自定义 ROM 维护者与同代 32 位高通移植开发者 | [`rom-integration/`](rom-integration/README.md) · [系统签名通话栈 APK](https://qcom32-downloads.octoooo.com/v1.2.2-r1/Qcom32VolteIms-2.6-r1-platform.apk) · [源码 ZIP](https://qcom32-downloads.octoooo.com/v1.2.2-r1/qcom32-volte-1.2.2-r1-source.zip) | 通过 `Android.bp` + `device-qcom32-volte.mk` 直接编译进 `/system_ext/priv-app/` |
+| **1. Windows 桌面一键版（最推荐）** | 绝大多数用户（**无需安装 Magisk**、无需装 Python/ADB） | [R2 下载 EXE](https://qcom32-downloads.octoooo.com/v1.2.3-r1/qcom32-volte-1.2.3-r1-windows-x64.exe) · [GitHub](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.3-r1/qcom32-volte-1.2.3-r1-windows-x64.exe) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.3-r1/qcom32-volte-1.2.3-r1-windows-x64.exe.sha256) | Passport 全系（含银色版）一键备份激活；其他高通 32 位机型可点「多机型识别与只读体检」获取 AI 自助适配报告 |
+| **2. 手机端状态与管理 App** | 拔线换卡实时看状态 / 多机型只读体检（**免 Magisk**）或 **Magisk** 机内管理 | [R2 下载 APK](https://qcom32-downloads.octoooo.com/v1.2.3-r1/Qcom32VolteManager-1.2.3-r1.apk) · [GitHub](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.3-r1/Qcom32VolteManager-1.2.3-r1.apk) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.3-r1/Qcom32VolteManager-1.2.3-r1.apk.sha256) | 免 `su` 查看三网/IMS 状态与多机型只读四门禁体检 + AI 适配提示词；有 Magisk 可机内激活/回滚 |
+| **3. 跨平台便携包（CLI + GUI）** | macOS / Linux / 命令行用户 | [R2 下载便携 ZIP](https://qcom32-downloads.octoooo.com/v1.2.3-r1/qcom32-volte-1.2.3-r1-portable.zip) · [GitHub](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.3-r1/qcom32-volte-1.2.3-r1-portable.zip) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.3-r1/qcom32-volte-1.2.3-r1-portable.zip.sha256) | 内含签名 ARM32 工具、双 APK 与 `devices/`，支持 `deploy` / `inspect-device` / `list-models` / `gui.py` |
+| **4. LineageOS 18.1 ROM 源码集成** | 自定义 ROM 维护者与同代 32 位高通移植开发者 | [`rom-integration/`](rom-integration/README.md) · [系统签名通话栈 APK](https://qcom32-downloads.octoooo.com/v1.2.3-r1/Qcom32VolteIms-2.7-r1-platform.apk) · [源码 ZIP](https://qcom32-downloads.octoooo.com/v1.2.3-r1/qcom32-volte-1.2.3-r1-source.zip) | 通过 `Android.bp` + `device-qcom32-volte.mk` 直接编译进 `/system_ext/priv-app/` |
 
 详细图文与命令行步骤请查阅 **[官网完整指南 (`qcom32-volte.octoooo.com/guide`)](https://qcom32-volte.octoooo.com/guide)** 或 **[`docs/guide/INSTALL_AND_ROLLBACK.md`](docs/guide/INSTALL_AND_ROLLBACK.md)**。
 
@@ -50,7 +52,7 @@
 1. **芯片架构与系统层断代**：参考项目面向黑莓 KEY2（64 位 `SDM660`，原厂 Android 8.1 已内置高通现代闭源 `ims.apk`）；32 位 `MSM8974` 高通官方支持止步于 Android 6.0，LineageOS 18.1（Android 11）**完全没有 `ImsService`**。
 2. **`/dev/diag` 内核驱动契约不兼容**：参考项目的 64 位预编译 `efs_Write` 在 32 位系统无法运行，且其指针式 `ioctl` 在 `MSM8974` 内核触发 `EINVAL (-22)`、`MEMORY_DEVICE_MODE` 会拦截 EFS 读写。本项目用 32 位纯 C 编写了 `pp_regconfig_provision_v6`（559 项单测断言），完整实现标量 `ioctl`、`sequence16+errno32` 响应头、CCITT CRC-16 与跨运营商动态 `profile3` 兼容校验。
 3. **单改 `IMS_enable=01` 实测无效**：我们在真机上实测仅写 `IMS_enable=01` 仍报 `CAUSE_CODE 54 (READ_FAILED)`、无法注册；经解压 11.7MB Q6ZIP 基带固件逆向定位，必须协同供给 **54 项 Stage 6A EFS/DS 配置**（含补建 405B `qp_ims_reg_config`、改写 789B `IPV4V6` `/pdp_profiles/profile4`，并保持 `ims_hybrid_enable` 为 `ENOENT` 以走独立 DCM）。
-4. **从零实现通用 Android 11 通话栈、开机/换卡系统通知与来电显示修复**：参考项目无任何 Android 代码；本项目完整实现 `Qcom32VolteIms.apk` v2.6（`UID 1001`、严守 `SELinux Enforcing`、零权限声明、持久化 `CarrierConfig`、`rild_ims0` Protobuf 状态机、3GPP `CLIP→OIR` 与 `TOA=145` 来电显示修正、开机/换卡/待重启自动系统通知及只读 `VolteStatusProvider`）。
+4. **从零实现通用 Android 11 通话栈、开机/换卡系统通知与来电显示修复**：参考项目无任何 Android 代码；本项目完整实现 `Qcom32VolteIms.apk` v2.7（`UID 1001`、严守 `SELinux Enforcing`、零权限声明、持久化 `CarrierConfig`、`rild_ims0` Protobuf 状态机、3GPP `CLIP→OIR` 与 `TOA=145` 来电显示修正、开机/换卡/待重启自动系统通知及只读 `VolteStatusProvider`）。
 5. **免装 Magisk 与确定性回滚**：参考项目依赖 Magisk 且无备份/无回滚脚本；本项目支持免 Magisk 的原生 `adb root` 调试（另附免 `su` 状态面板/Magisk 伴侣 App），强制先备份原值并提供跨重启验证的 `--rollback-all`。
 
 ---
@@ -59,11 +61,11 @@
 
 | 机型 / 运营商范围 | 状态 | 说明 |
 | --- | --- | --- |
-| **BlackBerry Passport (`wolverine`)** | **首个完整验证 Profile** | 内置 [`devices/blackberry-passport-wolverine/profile.json`](devices/blackberry-passport-wolverine/profile.json)；注意 `SQW100-1` 硬件射频支持 **FDD-LTE B1/B2/B3/B4/B5/B7/B8/B13/B17/B20**（不支持 TDD B38-41 与 CDMA 1x） |
+| **BlackBerry Passport 全系 (`wolverine` / 银色版 `oslo` / `wichita` / `keian`)** | **已完整放开一键激活** | 内置 [`devices/blackberry-passport-wolverine/profile.json`](devices/blackberry-passport-wolverine/profile.json)，覆盖普通版 `SQW100-1/3`、银色版 Silver Edition `SQW100-4` (`oslo`)、AT&T 圆角版 `SQW100-2` (`wichita`) 与保时捷版 `keian`；射频支持 **FDD-LTE B1/B2/B3/B4/B5/B7/B8/B13/B17/B20**（`SQW100-4` 另增 B28；不支持 TDD B38-41 与 CDMA 1x） |
 | └─ **中国联通 (`46001`)** | **真机完整验收** | FDD B1/B3/B8 全覆盖，呼入呼出、双向 AMR-WB 语音、来电显示、LTE 保持、重启自愈与全部 4 种交付方式已实测通过 |
-| └─ **中国电信 (`46003`/`46011`)** | **真机驻网与注册已验** | FDD B1/B3/B5/B8 覆盖下直接走动态 PCO VoLTE，v1.2.0 已自动对齐 `wolverine` `libril.so` `fallbackmode=9` 彻底消除 EPS-only 反复无信号震荡（注：无 4G 覆盖时无 CDMA 1x 回落） |
+| └─ **中国电信 (`46003`/`46011`)** | **真机驻网与注册已验** | FDD B1/B3/B5/B8 覆盖下直接走动态 PCO VoLTE，已对 Passport 全系自动对齐 `libril.so` `fallbackmode=9` 彻底消除 EPS-only 反复无信号震荡（注：无 4G 覆盖时无 CDMA 1x 回落） |
 | └─ **中国移动 (`46000`/`46002`/`46007`)** | **FDD B3/B8 区域可测** | 覆盖移动 FDD B3/B8 区域可测 VoLTE；纯 TDD B38-41 区域自动回落 2G GSM 语音 |
-| **同代高通 32 位 (`MSM8974`) 旗舰** | **通用栈就绪 · 支持建档** | 一加 1 (`bacon`)、小米 4/Note (`cancro`)、索尼 Xperia Z1/Z2/Z3、三星 S5 (`klte`)、LG G2/G3、HTC One M8 等可直接复用 `Qcom32VolteIms.apk`，新增机型 Profile 指南见 **[`devices/README.md`](devices/README.md)** 与 **[`docs/guide/MSM8974_PORTING_GUIDE.md`](docs/guide/MSM8974_PORTING_GUIDE.md)** |
+| **其他高通 32 位 (`MSM8974`/`APQ8084`) 旗舰** | **内置识别 + 只读体检 + AI 自助适配** | 三星 S5 (`klte*`)、小米 4/Note (`cancro`/`virgo`)、一加 1 (`bacon`)、索尼 Xperia Z1/Z2/Z3、LG G3/G2、HTC One M8、Moto X 2014 / Nexus 6 等在桌面端与手机 App 中均内置 **100% 只读四门禁体检面板**，可一键复制报告配合 AI 助手 + 本仓库内置 Skill 自助完成适配（详见 **[`devices/README.md`](devices/README.md)** 与 **[`docs/guide/MSM8974_PORTING_GUIDE.md`](docs/guide/MSM8974_PORTING_GUIDE.md)**） |
 
 ---
 
@@ -84,13 +86,14 @@
 ├── devices/                         # 【设备 Profile 注册表】按机型隔离基带 EFS 槽位与安全门禁
 │   └── blackberry-passport-wolverine/profile.json
 ├── src/                             # 【正式生产源码】100% 从源码编译验证，零预编译黑盒
-│   ├── android-ims-service/         # Qcom32VolteIms.apk (通用 32 位 Android 11 ImsService + 状态通知, v2.6)
-│   ├── android-volte-manager/       # Qcom32VolteManager.apk (免 su 实时状态面板 & Magisk 伴侣 App, v1.2.2)
+│   ├── android-ims-service/         # Qcom32VolteIms.apk (通用 32 位 Android 11 ImsService + 状态通知, v2.7)
+│   ├── android-volte-manager/       # Qcom32VolteManager.apk (免 su 实时状态/多机型只读体检 & Magisk 管理 App, v1.2.3)
 │   ├── modem-efs-provisioner/       # pp_regconfig_provision_v6 (ARM32 DIAG/EFS2 供给与回滚器)
 │   └── qmi-imsa-probe/              # libimsa_probe.so (ARM32 QMI_IMSA/IMSS 只读状态自检探针)
 ├── cli/                             # 【桌面端、跨平台 CLI 与打包工具】
-│   ├── volte_ctl.py                 # 零依赖 CLI：status / deploy / upgrade-apk / install-manager / rollback
-│   ├── gui.py                       # OctoLab 双语桌面图形界面（支持源码运行、--cli 与 Windows EXE）
+│   ├── device_readiness.py          # 高通 32 位多机型目录、100% 只读四门禁体检与 AI+GitHub 适配提示词引擎
+│   ├── volte_ctl.py                 # 零依赖 CLI：status / inspect-device / list-models / deploy / upgrade-apk / rollback
+│   ├── gui.py                       # OctoLab 双语桌面图形界面（含多机型只读体检面板、--cli 与 Windows EXE）
 │   ├── build_all.py                 # 宿主机全套 C/Java 单元测试与交叉编译签名
 │   ├── build_windows_exe.py         # PyInstaller 单文件 Windows x64 EXE 打包与离线自检
 │   └── export_opensource_bundle.py  # 导出纯净公开仓库与全套 Release 发行包 + SHA256SUMS

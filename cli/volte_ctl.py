@@ -7,8 +7,10 @@ Works identically in the research monorepo, standalone open-source export, porta
 and PyInstaller single-file Windows EXE (`zero` third-party Python dependencies).
 
 Commands:
-  python3 cli/volte_ctl.py self-test        # Run offline parser, profile-guard & PII-redaction unit tests
+  python3 cli/volte_ctl.py self-test        # Run offline parser, profile-guard, catalog & PII-redaction unit tests
   python3 cli/volte_ctl.py status           # Read-only live VoLTE / QMI_IMSA / ImsResolver health check
+  python3 cli/volte_ctl.py inspect-device   # 100% read-only 4-Gate readiness check + AI & GitHub self-porting guide
+  python3 cli/volte_ctl.py list-models      # List unlocked Passport editions & candidate 32-bit Qualcomm families
   python3 cli/volte_ctl.py deploy           # Guarded modem EFS provisioning + APK install + reboot verification
   python3 cli/volte_ctl.py upgrade-apk      # Zero-EFS-write in-place APK upgrade + optional reboot verification
   python3 cli/volte_ctl.py install-manager  # Install optional on-device companion app (Qcom32VolteManager.apk)
@@ -28,6 +30,12 @@ import subprocess
 import sys
 import time
 from typing import Callable
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+import device_readiness  # noqa: E402
 
 FROZEN_ROOT: Path | None = (
     Path(getattr(sys, "_MEIPASS"))
@@ -49,7 +57,7 @@ LEGACY_ADMIN_RECEIVER = f"{LEGACY_IMS_PKG}/.VolteAdminReceiver"
 LEGACY_ADMIN_ACTION = "org.passport.volteims.ACTION_ADMIN"
 
 REMOTE_TMP_PROVISIONER = "/data/local/tmp/pp_regconfig_provision_v6"
-EXPECTED_VERSION = "2.6-qcom32-volte"
+EXPECTED_VERSION = "2.7-qcom32-volte"
 
 PII_REDACT_RE = re.compile(r"\b\d{11,20}\b")
 
@@ -98,17 +106,31 @@ def load_device_profiles() -> list[dict[str, object]]:
 
 
 def match_verified_profile(device: str, model: str, sdk_int: int) -> dict[str, object] | None:
+    dev_norm = device.strip().lower()
+    mod_norm = model.strip().lower()
     for prof in load_device_profiles():
         if prof.get("status") != "verified":
             continue
         m = prof.get("match", {})
         if not isinstance(m, dict):
             continue
-        if (
-            str(m.get("ro_product_device", "")).lower() == device.strip().lower()
-            and str(m.get("ro_product_model_contains", "")).lower() in model.strip().lower()
-            and int(m.get("android_sdk", 30)) == sdk_int
-        ):
+        if int(m.get("android_sdk", 30)) != sdk_int:
+            continue
+        raw_devs = m.get("ro_product_device_aliases")
+        dev_aliases = (
+            [str(x).strip().lower() for x in raw_devs if str(x).strip()]
+            if isinstance(raw_devs, list) and raw_devs
+            else [str(m.get("ro_product_device", "")).strip().lower()]
+        )
+        raw_mods = m.get("ro_product_model_aliases")
+        mod_aliases = (
+            [str(x).strip().lower() for x in raw_mods if str(x).strip()]
+            if isinstance(raw_mods, list) and raw_mods
+            else [str(m.get("ro_product_model_contains", "")).strip().lower()]
+        )
+        dev_ok = dev_norm in dev_aliases
+        mod_ok = any(tok and tok in mod_norm for tok in mod_aliases)
+        if dev_ok and mod_ok:
             return prof
     return None
 
@@ -300,8 +322,12 @@ def validate_selinux_mode(selinux: str) -> str | None:
 
 
 def verify_device_identity(adb: AdbClient, require_verified_efs_profile: bool = True) -> dict[str, object]:
+    brand = adb.shell("getprop ro.product.brand", check=False).strip()
     device = adb.shell("getprop ro.product.device").strip()
     model = adb.shell("getprop ro.product.model").strip()
+    platform = adb.shell("getprop ro.board.platform", check=False).strip()
+    cpu_abi = adb.shell("getprop ro.product.cpu.abi", check=False).strip()
+    build_tags = adb.shell("getprop ro.build.tags", check=False).strip()
     sdk_str = adb.shell("getprop ro.build.version.sdk").strip()
     sdk_int = int(sdk_str) if sdk_str.isdigit() else 0
     selinux = adb.shell("getenforce").strip()
@@ -310,17 +336,35 @@ def verify_device_identity(adb: AdbClient, require_verified_efs_profile: bool = 
     operator = adb.shell("getprop gsm.sim.operator.numeric").strip()
     net_type = adb.shell("getprop gsm.network.type").strip()
 
+    cat_match = device_readiness.identify_device_props(
+        {
+            "ro.product.brand": brand,
+            "ro.product.model": model,
+            "ro.product.device": device,
+            "ro.board.platform": platform,
+            "ro.product.cpu.abi": cpu_abi,
+            "ro.build.version.sdk": str(sdk_int),
+            "ro.build.tags": build_tags,
+        }
+    )
     matched_prof = match_verified_profile(device, model, sdk_int)
     if require_verified_efs_profile and matched_prof is None:
         raise RuntimeError(
-            f"Refusing modem EFS write: connected device is {model!r} ({device!r}, SDK {sdk_int}), "
-            "which does not match any verified profile under `devices/*/profile.json`."
+            f"Refusing direct modem EFS write on {model!r} ({device!r}, SDK {sdk_int}, "
+            f"catalog={cat_match['family_id']!r} / {cat_match['route']}). "
+            "Non-Passport models lock direct EFS writes to protect your mobile data/MMS PDP slots. "
+            "Click '32-Bit Device Check & AI Porting' (or run `inspect-device`), then clone "
+            f"{device_readiness.GITHUB_REPO_URL} and use AI with `{device_readiness.SKILL_PATH_AGENTS}` to adapt your model safely."
         )
     selinux_warn = validate_selinux_mode(selinux)
 
     res: dict[str, object] = {
+        "brand": brand,
         "device": device,
         "model": model,
+        "board_platform": platform,
+        "cpu_abi": cpu_abi,
+        "build_tags": build_tags,
         "sdk": sdk_int,
         "selinux": selinux,
         "boot_id": boot_id,
@@ -329,6 +373,7 @@ def verify_device_identity(adb: AdbClient, require_verified_efs_profile: bool = 
         "network_type": net_type,
         "matched_profile": matched_prof["profile_id"] if matched_prof else "generic-qcom32-readonly",
         "verified_efs_profile": matched_prof is not None,
+        "catalog_match": cat_match,
     }
     if selinux_warn is not None:
         res["selinux_warning"] = selinux_warn
@@ -422,7 +467,19 @@ def cmd_self_test(out_json: str | None = None) -> int:
     assert qmi_kv == qmi
     prof = match_verified_profile("wolverine", "Passport", 30)
     assert prof is not None and prof["profile_id"] == "blackberry-passport-wolverine"
+    prof_oslo = match_verified_profile("oslo", "Passport Silver Edition", 30)
+    assert prof_oslo is not None and prof_oslo["profile_id"] == "blackberry-passport-wolverine"
+    prof_sqw4 = match_verified_profile("oslo", "SQW100-4", 30)
+    assert prof_sqw4 is not None and prof_sqw4["profile_id"] == "blackberry-passport-wolverine"
+    prof_wichita = match_verified_profile("wichita", "Passport", 30)
+    assert prof_wichita is not None and prof_wichita["profile_id"] == "blackberry-passport-wolverine"
+    prof_keian = match_verified_profile("keian", "Passport Porsche Design", 30)
+    assert prof_keian is not None and prof_keian["profile_id"] == "blackberry-passport-wolverine"
+    prof_wseries = match_verified_profile("wseries", "BlackBerry Passport", 30)
+    assert prof_wseries is not None and prof_wseries["profile_id"] == "blackberry-passport-wolverine"
+    assert match_verified_profile("oslo", "Passport Silver Edition", 29) is None
     assert match_verified_profile("bacon", "A0001", 30) is None
+    assert match_verified_profile("klte", "SM-G900F", 30) is None
     assert parse_package_stopped("User 0: installed=true stopped=false") is False
     assert parse_package_stopped("User 0: installed=true stopped=true") is True
     fake_msisdn = "1" * 11
@@ -438,7 +495,8 @@ def cmd_self_test(out_json: str | None = None) -> int:
     except RuntimeError:
         rejected_selinux = True
     assert rejected_selinux is True
-    emit_json({"self_test": "PASS", "assertions": 15}, out_json)
+    readiness_assertions = device_readiness.run_unit_tests()
+    emit_json({"self_test": "PASS", "assertions": 22 + readiness_assertions}, out_json)
     return 0
 
 
@@ -478,7 +536,7 @@ def run_deploy_flow(
     finally:
         adb.shell(f"rm -f {REMOTE_TMP_PROVISIONER}", check=False)
 
-    step("Installing Qcom32VolteIms.apk v2.6 & applying persistent CarrierConfig...")
+    step("Installing Qcom32VolteIms.apk v2.7 & applying persistent CarrierConfig...")
     adb.run(["install", "-r", str(apk_path)], timeout=60)
     adb.shell(
         f"am broadcast -n {IMS_ADMIN_RECEIVER} -a {IMS_ADMIN_ACTION} "
@@ -647,8 +705,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out-json", default=None, help="Optional file path to write JSON output")
     sub = ap.add_subparsers(dest="subcmd", required=True)
 
-    sub.add_parser("self-test", help="Run offline unit tests for parsers, profile guards, and PII redaction")
+    sub.add_parser("self-test", help="Run offline unit tests for parsers, profile guards, catalog & PII redaction")
     sub.add_parser("status", help="Read-only live VoLTE, ImsResolver & QMI_IMSA status check")
+    sub.add_parser(
+        "inspect-device",
+        help="100% read-only 4-Gate readiness check for any connected 32-bit Qualcomm phone + AI/GitHub porting guide",
+    )
+    p_models = sub.add_parser(
+        "list-models",
+        help="List unlocked BlackBerry Passport editions & candidate 32-bit Qualcomm families",
+    )
+    p_models.add_argument("--query", default=None, help="Optional model/codename filter (e.g. oslo, klte, cancro)")
 
     p_deploy = sub.add_parser("deploy", help="Guarded Stage 6A modem EFS provisioning + APK install + reboot verification")
     p_deploy.add_argument("--apk", default=None, help="Path to signed Qcom32VolteIms.apk")
@@ -672,10 +739,25 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     if args.subcmd == "self-test":
         return cmd_self_test(args.out_json)
+    if args.subcmd == "list-models":
+        entries = device_readiness.list_catalog_entries(args.query)
+        emit_json(
+            {
+                "github_repo": device_readiness.GITHUB_REPO_URL,
+                "builtin_ai_skills": [device_readiness.SKILL_PATH_AGENTS, device_readiness.SKILL_PATH_CLAUDE],
+                "count": len(entries),
+                "families": entries,
+            },
+            args.out_json,
+        )
+        return 0
 
     adb = AdbClient(resolve_adb(args.adb), args.serial)
     if args.subcmd == "status":
         emit_json(query_live_volte_status(adb), args.out_json)
+        return 0
+    if args.subcmd == "inspect-device":
+        emit_json(device_readiness.run_readonly_readiness_audit(adb), args.out_json)
         return 0
     if args.subcmd == "deploy":
         apk = resolve_artifact(args.apk, "Qcom32VolteIms.apk")

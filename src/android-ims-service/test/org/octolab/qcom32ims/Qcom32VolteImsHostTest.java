@@ -1117,9 +1117,23 @@ public final class Qcom32VolteImsHostTest {
                         && !VolteStatusNotificationLogic.isChinaTelecom("46000"),
                 "isChinaTelecom identifies 46003/46011 only");
         check("9".equals(VolteStatusNotificationLogic.targetWolverineFallbackModeProp("wolverine", "46011"))
+                        && "9".equals(VolteStatusNotificationLogic.targetWolverineFallbackModeProp("oslo", "46011"))
+                        && "9".equals(VolteStatusNotificationLogic.targetWolverineFallbackModeProp("wichita", "46003"))
+                        && "9".equals(VolteStatusNotificationLogic.targetWolverineFallbackModeProp("keian", "46011"))
+                        && "9".equals(VolteStatusNotificationLogic.targetWolverineFallbackModeProp("wseries", "46011"))
+                        && "".equals(VolteStatusNotificationLogic.targetWolverineFallbackModeProp("oslo", "46001"))
                         && "".equals(VolteStatusNotificationLogic.targetWolverineFallbackModeProp("wolverine", "46001"))
+                        && "".equals(VolteStatusNotificationLogic.targetWolverineFallbackModeProp("klte", "46011"))
                         && "".equals(VolteStatusNotificationLogic.targetWolverineFallbackModeProp("shamu", "46011")),
-                "targetWolverineFallbackModeProp sets 9 only for wolverine + China Telecom");
+                "targetWolverineFallbackModeProp sets 9 for all Passport wseries variants + China Telecom only");
+        VolteStatusNotificationLogic.Decision dOsloCmccEdge = VolteStatusNotificationLogic.evaluate(
+                new VolteStatusNotificationLogic.SessionState(),
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-oslo", false, false, true, "46000", "EDGE", "oslo", false, true, 0, false, 30_000L));
+        check(dOsloCmccEdge.action == VolteStatusNotificationLogic.Action.POST
+                        && dOsloCmccEdge.kind == VolteStatusNotificationLogic.Kind.AWAITING_4G_LTE
+                        && dOsloCmccEdge.body.contains("FDD B3/B8"),
+                "Passport Silver Edition (oslo) on China Mobile EDGE also explains FDD B3/B8 requirement");
         long globalBitmask = 32768L | 4L | 4096L | 64L | 8L | 16L | 32L; // GSM|UMTS|LTE|1xRTT|CDMA|EVDO
         check(VolteStatusNotificationLogic.needsChinaTelecomWolverineAlignment(
                         "wolverine", "46011", 10, globalBitmask, ""),

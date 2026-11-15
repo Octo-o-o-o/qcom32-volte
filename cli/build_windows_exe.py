@@ -206,6 +206,8 @@ def main() -> int:
         str(REPO_ROOT / "cli"),
         "--hidden-import",
         "volte_ctl",
+        "--hidden-import",
+        "device_readiness",
         "--add-data",
         f"{staged_payloads}{os.pathsep}payloads",
         "--add-data",

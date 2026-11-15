@@ -58,9 +58,11 @@ test('pages use canonical qcom32-volte.octoooo.com domain and cross-link bb10-vo
     assert.match(html, /https:\/\/qcom32-volte\.octoooo\.com\//);
     assert.match(html, /https:\/\/bb10-volte\.octoooo\.com\//);
     assert.match(html, /https:\/\/github\.com\/Octo-o-o-o\/bb10-volte/);
-    assert.ok(html.includes(`${MIRROR_BASE}/${RELEASE_TAG}/qcom32-volte-1.2.2-r1-windows-x64.exe`));
-    assert.ok(html.includes(`${REPOSITORY_URL}/releases/download/${RELEASE_TAG}/qcom32-volte-1.2.2-r1-windows-x64.exe`));
-    assert.ok(html.includes(`${MIRROR_BASE}/${RELEASE_TAG}/Qcom32VolteIms-2.6-r1-platform.apk`));
+    assert.ok(html.includes(`${MIRROR_BASE}/${RELEASE_TAG}/qcom32-volte-1.2.3-r1-windows-x64.exe`));
+    assert.ok(html.includes(`${REPOSITORY_URL}/releases/download/${RELEASE_TAG}/qcom32-volte-1.2.3-r1-windows-x64.exe`));
+    assert.ok(html.includes(`${MIRROR_BASE}/${RELEASE_TAG}/Qcom32VolteIms-2.7-r1-platform.apk`));
+    assert.ok(html.includes('oslo'));
+    assert.ok(html.includes('.agents/skills/qcom32-volte'));
   }
 });
 
@@ -89,7 +91,7 @@ test('worker 301-redirects legacy passport-volte.octoooo.com to qcom32-volte.oct
   assert.equal(await canonicalRes.text(), 'ok:/guide');
 });
 
-test('selectRelease validates full v1.2.2-r1 asset set', () => {
+test('selectRelease validates full v1.2.3-r1 asset set', () => {
   const names = buildReleaseAssetNames(RELEASE_TAG);
   const mockReleases = [
     {
@@ -104,10 +106,10 @@ test('selectRelease validates full v1.2.2-r1 asset set', () => {
   assert.equal(selected.tag, RELEASE_TAG);
   assert.equal(
     selected.urls.windows,
-    `${REPOSITORY_URL}/releases/download/${RELEASE_TAG}/qcom32-volte-1.2.2-r1-windows-x64.exe`
+    `${REPOSITORY_URL}/releases/download/${RELEASE_TAG}/qcom32-volte-1.2.3-r1-windows-x64.exe`
   );
   assert.equal(
     selected.urls['rom-apk'],
-    `${REPOSITORY_URL}/releases/download/${RELEASE_TAG}/Qcom32VolteIms-2.6-r1-platform.apk`
+    `${REPOSITORY_URL}/releases/download/${RELEASE_TAG}/Qcom32VolteIms-2.7-r1-platform.apk`
   );
 });

@@ -1,11 +1,27 @@
 {
   "profile_id": "blackberry-passport-wolverine",
-  "display_name": "BlackBerry Passport (LineageOS 18.1 / Android 11)",
+  "display_name": "BlackBerry Passport All Editions — Standard / Silver / AT&T / Porsche (LineageOS 18.1 / Android 11)",
   "status": "verified",
   "soc": "Qualcomm Snapdragon 801 (MSM8974AC, 32-bit ARMv7-A)",
   "match": {
     "ro_product_device": "wolverine",
+    "ro_product_device_aliases": [
+      "wolverine",
+      "oslo",
+      "wichita",
+      "keian",
+      "wseries",
+      "windermere"
+    ],
     "ro_product_model_contains": "Passport",
+    "ro_product_model_aliases": [
+      "Passport",
+      "SQW100",
+      "Oslo",
+      "Wichita",
+      "Keian",
+      "Windermere"
+    ],
     "android_sdk": 30,
     "selinux": "Enforcing"
   },
@@ -24,15 +40,22 @@
     "package": "org.octolab.qcom32ims",
     "service_component": "org.octolab.qcom32ims/.Qcom32VolteImsService",
     "ril_socket": "/dev/socket/qmux_radio/rild_ims0",
-    "audio_hal_notes": "Native voice-ims / compress_voip path works out of the box on LineageOS 18.1-wseries"
+    "audio_hal_notes": "Native voice-ims / compress_voip path works out of the box across all LineageOS 18.1-wseries Passport editions (wolverine / oslo / wichita / keian)"
   },
   "rf_capabilities": {
+    "editions_covered": [
+      "SQW100-1 (Global Standard — wolverine)",
+      "SQW100-2 (AT&T Rounded Wichita — wichita / wolverine)",
+      "SQW100-3 (North America / Amazon — wolverine)",
+      "SQW100-4 (Passport Silver Edition — oslo)",
+      "Passport Porsche Design / Keian (keian)"
+    ],
     "fdd_lte_bands": [1, 2, 3, 4, 5, 7, 8, 13, 17, 20],
     "tdd_lte_bands": [],
     "cdma_1x_voice": false,
     "cn_carriers": {
       "china_unicom_46001_06_09": "Verified working (FDD B1/B3/B8 + AMR-WB VoLTE)",
-      "china_telecom_46003_05_11": "Supported on FDD B1/B3/B5 LTE (VoLTE required for voice since CDMA 1x is retired)",
+      "china_telecom_46003_05_11": "Verified working on FDD B1/B3/B5 LTE with automatic fallbackmode=9 EPS-only anti-drop protection",
       "china_mobile_46000_02_04_07_08": "Supported where FDD B3/B8 LTE is broadcast; falls back to 2G GSM in TDD-only B38-41 zones"
     }
   }

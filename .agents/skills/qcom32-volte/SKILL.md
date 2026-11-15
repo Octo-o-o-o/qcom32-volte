@@ -2,11 +2,12 @@
 name: qcom32-volte
 description: >-
   Identifies connected or user-named phones, checks compatibility, deploys or rolls back native
-  4G VoLTE on verified 32-bit Qualcomm Android 11 devices (BlackBerry Passport `wolverine`), and
-  guides safe 4-gate VoLTE porting and LineageOS 18.1 preparation for candidate MSM8974/APQ8084
-  devices (Samsung Galaxy S5 `klte`, Xiaomi Mi 4 `cancro`, LG G3 `d855`, OnePlus One `bacon`,
-  Sony Xperia Z1/Z2/Z3, HTC One M8, Moto X 2014, Nexus 6). Use whenever the user asks to check
-  device support, flash/enable/debug/upgrade/rollback VoLTE, or adapt a new 32-bit Qualcomm phone
+  4G VoLTE on verified 32-bit Qualcomm Android 11 devices (BlackBerry Passport all editions:
+  `wolverine`, Silver Edition `oslo`, AT&T `wichita`, Porsche `keian`, `wseries`), and guides safe
+  4-gate VoLTE porting and LineageOS 18.1 preparation for candidate MSM8974/APQ8084 devices
+  (Samsung Galaxy S5 `klte`, Xiaomi Mi 4 `cancro`, LG G3 `d855`, OnePlus One `bacon`, Sony Xperia
+  Z1/Z2/Z3, HTC One M8, Moto X 2014, Nexus 6). Use whenever the user asks to check device support,
+  flash/enable/debug/upgrade/rollback VoLTE, or adapt a new 32-bit Qualcomm phone
   （识别手机型号、刷机与激活高通32位老旗舰安卓11 VoLTE、移植新机型或回滚基带配置）.
 ---
 
@@ -54,7 +55,7 @@ The phone matches a verified profile (e.g., `blackberry-passport-wolverine`) and
 - To install the on-device status app (works without `su`/Magisk): `python3 cli/volte_ctl.py install-manager`
 
 ### Route B — `VERIFIED_PROFILE_READY` (or `NEEDS_SIM_OR_LTE` / `NEEDS_ROOTED_DEBUGGING`)
-The phone matches a `"status": "verified"` profile in `devices/*/profile.json` (currently BlackBerry Passport `wolverine` on LineageOS 18.1):
+The phone matches a `"status": "verified"` profile in `devices/*/profile.json` (currently all BlackBerry Passport hardware editions: Standard `wolverine` `SQW100-1/2/3`, Silver Edition `oslo` `SQW100-4`, AT&T `wichita` `SQW100-2`, Porsche Design `keian`, and unified `wseries` on LineageOS 18.1):
 1. Ensure an active 4G USIM is inserted (`gsm.sim.state=LOADED`, camped on `LTE`) and the phone has **Settings -> System -> Developer options -> USB debugging + Rooted debugging** enabled.
 2. Run offline self-tests, then execute guarded backup + Stage 6A EFS provisioning + APK install + reboot verification:
    ```bash

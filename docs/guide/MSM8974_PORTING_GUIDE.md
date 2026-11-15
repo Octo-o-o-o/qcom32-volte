@@ -2,7 +2,12 @@
 
 随着全球 2G/3G 退网（尤其是中国联通 3G 退网与电信 CDMA 退网），一加 1 (`bacon`)、小米 4 LTE (`cancro`)、索尼 Xperia Z1/Z2/Z3 (`honami`/`sirius`/`leo`)、三星 Galaxy S5 (`klte`)、LG G2/G3 等搭载 **高通骁龙 800 / 801 (`MSM8974`)** 的一代经典旗舰虽然支持 4G LTE 数据上网，但在刷入 LineageOS 17.1 / 18.1（Android 10 / 11）后普遍缺失 VoLTE 语音能力。
 
-本项目的两大核心模块可以作为上述同代高通老旗舰打通原生 VoLTE 的参考蓝图。**注意：切勿在其他机型上直接盲跑 Passport 专用的 `pp_regconfig_provision_v6` 写入命令**，移植前请严格按以下 4 步核验：
+本项目的两大核心模块可以作为上述同代高通老旗舰打通原生 VoLTE 的参考蓝图。**注意：切勿在其他机型上直接盲跑 Passport 专用的 `pp_regconfig_provision_v6` 写入命令**。
+
+> [!TIP]
+> **AI + GitHub 一键自助适配（推荐）**：自 `v1.2.3-r1` 起，Windows 桌面版、CLI（`python3 cli/volte_ctl.py inspect-device`）与手机端 `Qcom32VolteManager.apk` 均已内置 **100% 只读四门禁适配体检面板**。您可以先点按体检按钮一键复制报告与提示词，再用 **Claude Code、Cursor、Codex、Gemini CLI 或 Antigravity** 打开本开源仓库 `https://github.com/Octo-o-o-o/qcom32-volte`（会自动加载内置 [`.agents/skills/qcom32-volte/`](../../.agents/skills/qcom32-volte/SKILL.md) 技能），让 AI 助手带您按以下 4 步安全完成只读解码与建档！
+
+移植前请严格按以下 4 步核验：
 
 ---
 

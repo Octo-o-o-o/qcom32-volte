@@ -44,17 +44,35 @@ DEVICE_FAMILIES: tuple[dict[str, Any], ...] = (
     {
         "family_id": "blackberry-passport",
         "brand": "BlackBerry",
-        "marketing_names": ["BlackBerry Passport", "Passport Silver Edition", "SQW100-1", "SQW100-2", "SQW100-3", "SQW100-4"],
-        "codenames": ["wolverine", "wseries", " Oslo"],
-        "soc": "Snapdragon 801 (MSM8974AC, 32-bit ARMv7-A)",
+        "marketing_names": [
+            "BlackBerry Passport",
+            "Passport Silver Edition",
+            "Passport AT&T",
+            "Passport Porsche Design",
+            "SQW100-1",
+            "SQW100-2",
+            "SQW100-3",
+            "SQW100-4",
+            "Oslo",
+            "Wichita",
+            "Keian",
+        ],
+        "codenames": ["wolverine", "oslo", "wichita", "keian", "wseries", "windermere"],
+        "soc": "Snapdragon 801 (MSM8974AA/AC, 32-bit ARMv7-A)",
         "support_tier": "verified",
         "verified_profile_id": "blackberry-passport-wolverine",
         "flash_protocol": "BlackBerry autoloader / emmc + LineageOS 18.1-wseries recovery",
-        "recommended_variants": ["SQW100-1", "SQW100-2", "SQW100-3", "SQW100-4 (running LineageOS 18.1 Android 11)"],
+        "recommended_variants": [
+            "SQW100-1 (Standard Global/NA)",
+            "SQW100-2 (wichita AT&T Rounded Edition)",
+            "SQW100-3",
+            "SQW100-4 (oslo Passport Silver Edition)",
+            "Keian (Porsche Design Edition) — all running LineageOS 18.1 Android 11",
+        ],
         "blocked_or_risky_variants": [
             "Phones still running stock BlackBerry 10 OS (QNX 10.3.3): do NOT use qcom32-volte; use sister repo Octo-o-o-o/bb10-volte instead."
         ],
-        "notes": "First 100% live-verified profile. Supports hands-free deploy, APK upgrade, companion app, China Telecom 46011 fallbackmode=9 stabilization, and full 54-item EFS rollback.",
+        "notes": "All BlackBerry Passport hardware editions (wolverine / oslo Silver Edition / wichita / keian / wseries) share unified lineage_wseries + NON-HLOS.bin modem and are unlocked for guarded 1-click deploy, APK upgrade, companion app, China Telecom 46011 fallbackmode=9 stabilization, and full 54-item EFS rollback.",
     },
     {
         "family_id": "samsung-galaxy-s5-klte",
@@ -224,15 +242,27 @@ def load_repo_profiles(repo_root: Path) -> list[dict[str, Any]]:
 
 
 def match_repo_profile(profiles: list[dict[str, Any]], device: str, model: str, sdk_int: int) -> dict[str, Any] | None:
+    dev_norm = device.strip().lower()
+    mod_norm = model.strip().lower()
     for prof in profiles:
         m = prof.get("match", {})
         if not isinstance(m, dict):
             continue
-        if (
-            str(m.get("ro_product_device", "")).lower() == device.strip().lower()
-            and str(m.get("ro_product_model_contains", "")).lower() in model.strip().lower()
-            and int(m.get("android_sdk", 30)) == sdk_int
-        ):
+        if int(m.get("android_sdk", 30)) != sdk_int:
+            continue
+        raw_devs = m.get("ro_product_device_aliases")
+        dev_aliases = (
+            [str(x).strip().lower() for x in raw_devs if str(x).strip()]
+            if isinstance(raw_devs, list) and raw_devs
+            else [str(m.get("ro_product_device", "")).strip().lower()]
+        )
+        raw_mods = m.get("ro_product_model_aliases")
+        mod_aliases = (
+            [str(x).strip().lower() for x in raw_mods if str(x).strip()]
+            if isinstance(raw_mods, list) and raw_mods
+            else [str(m.get("ro_product_model_contains", "")).strip().lower()]
+        )
+        if dev_norm in dev_aliases and any(tok and tok in mod_norm for tok in mod_aliases):
             return prof
     return None
 
@@ -811,6 +841,44 @@ def cmd_self_test(repo_root: Path) -> int:
     assert d_pp_ready["matched_profile"] == "blackberry-passport-wolverine"
     assert d_pp_ready["rom_signature"]["prebuilt_apk_compatible"] is True
 
+    # 1B. Passport Silver Edition (oslo / SQW100-4) & AT&T Wichita also unlocked via profile aliases
+    d_oslo_ready = classify_device_props(
+        {
+            "ro.product.brand": "blackberry",
+            "ro.product.device": "oslo",
+            "ro.product.model": "Passport Silver Edition",
+            "ro.board.platform": "msm8974",
+            "ro.product.cpu.abi": "armeabi-v7a",
+            "ro.build.version.sdk": "30",
+            "ro.build.tags": "test-keys",
+            "selinux": "Enforcing",
+            "gsm.sim.state": "LOADED",
+            "gsm.network.type": "LTE",
+            "adb_uid": "0",
+        },
+        profiles,
+    )
+    assert d_oslo_ready["route"] == "VERIFIED_PROFILE_READY"
+    assert d_oslo_ready["matched_profile"] == "blackberry-passport-wolverine"
+
+    d_wichita_ready = classify_device_props(
+        {
+            "ro.product.brand": "blackberry",
+            "ro.product.device": "wichita",
+            "ro.product.model": "SQW100-2",
+            "ro.board.platform": "msm8974",
+            "ro.product.cpu.abi": "armeabi-v7a",
+            "ro.build.version.sdk": "30",
+            "ro.build.tags": "test-keys",
+            "selinux": "Enforcing",
+            "gsm.sim.state": "LOADED",
+            "gsm.network.type": "LTE",
+            "adb_uid": "0",
+        },
+        profiles,
+    )
+    assert d_wichita_ready["route"] == "VERIFIED_PROFILE_READY"
+
     # 2. Verified Passport already healthy
     d_pp_healthy = classify_device_props(
         {
@@ -914,11 +982,12 @@ def cmd_self_test(repo_root: Path) -> int:
     assert synth_digits not in sanitize_text(f"imei={synth_digits} ok")
 
     # 9. Catalog query check
+    assert len(search_catalog("oslo")) == 1
     assert len(search_catalog("klte")) == 1
     assert len(search_catalog("cancro")) == 1
     assert len(search_catalog("d855")) == 1
 
-    print(json.dumps({"self_test": "PASS", "assertions": 26, "catalog_families": len(DEVICE_FAMILIES)}, indent=2))
+    print(json.dumps({"self_test": "PASS", "assertions": 30, "catalog_families": len(DEVICE_FAMILIES)}, indent=2))
     return 0
 
 

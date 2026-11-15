@@ -1,6 +1,6 @@
 export const REPOSITORY_URL = 'https://github.com/Octo-o-o-o/qcom32-volte';
 export const SISTER_REPOSITORY_URL = 'https://github.com/Octo-o-o-o/bb10-volte';
-export const RELEASE_TAG = 'v1.2.2-r1';
+export const RELEASE_TAG = 'v1.2.3-r1';
 export const MIRROR_BASE = 'https://qcom32-downloads.octoooo.com';
 export const RELEASE_KEYS = [
   'windows',
@@ -26,8 +26,8 @@ export function buildReleaseAssetNames(tag) {
     'manager-sha': `Qcom32VolteManager-${ver}.apk.sha256`,
     portable: `qcom32-volte-${ver}-portable.zip`,
     'portable-sha': `qcom32-volte-${ver}-portable.zip.sha256`,
-    'rom-apk': `Qcom32VolteIms-2.6-r${rev}-platform.apk`,
-    'rom-apk-sha': `Qcom32VolteIms-2.6-r${rev}-platform.apk.sha256`,
+    'rom-apk': `Qcom32VolteIms-2.7-r${rev}-platform.apk`,
+    'rom-apk-sha': `Qcom32VolteIms-2.7-r${rev}-platform.apk.sha256`,
     source: `qcom32-volte-${ver}-source.zip`,
     'source-sha': `qcom32-volte-${ver}-source.zip.sha256`,
     checksums: 'SHA256SUMS.txt',

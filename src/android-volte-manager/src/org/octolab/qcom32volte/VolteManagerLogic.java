@@ -9,8 +9,9 @@ import java.util.regex.Pattern;
 
 /**
  * Pure, host-unit-testable core logic for the Qcom32 VoLTE Companion Manager App.
- * Separates generic 32-bit Qualcomm IMS/QMI telemetry from per-device EFS profile guards
- * (first verified profile: blackberry-passport-wolverine on MSM8974 / Android 11).
+ * Separates generic 32-bit Qualcomm IMS/QMI telemetry & 4-Gate read-only porting checks
+ * from per-device EFS profile guards (verified across all BlackBerry Passport wseries editions:
+ * wolverine / oslo Silver Edition / wichita AT&T / keian Porsche Edition on Android 11).
  */
 public final class VolteManagerLogic {
     public static final String PROFILE_WOLVERINE_ID = "blackberry-passport-wolverine";
@@ -21,6 +22,14 @@ public final class VolteManagerLogic {
     public static final String LEGACY_IMS_PKG = "org.passport.volteims";
     public static final String STATUS_AUTHORITY = "org.octolab.qcom32ims.status";
     public static final String STATUS_METHOD = "get_status";
+    public static final String GITHUB_REPO_URL = "https://github.com/Octo-o-o-o/qcom32-volte";
+
+    private static final String[] PASSPORT_WSERIES_DEVICES = new String[]{
+            "wolverine", "oslo", "wichita", "keian", "wseries", "windermere"
+    };
+    private static final String[] PASSPORT_MODEL_TOKENS = new String[]{
+            "passport", "sqw100", "oslo", "wichita", "keian", "windermere"
+    };
 
     private static final Pattern PII_DIGITS = Pattern.compile("\\b\\d{11,20}\\b");
 
@@ -71,8 +80,8 @@ public final class VolteManagerLogic {
                 this.headlineZh = "VoLTE 通话栈已激活并注册就绪（请用系统拨号器实测通话与 4G 保持）";
                 this.headlineEn = "VoLTE stack active & IMS registered (verify with native Dialer call + LTE)";
             } else if (!isVerifiedEfsProfile) {
-                this.headlineZh = "未匹配已验证基带写入配置（当前仅支持只读检测；Passport wolverine 已验证写入）";
-                this.headlineEn = "Unverified EFS profile (read-only telemetry active; EFS write gated to verified profiles)";
+                this.headlineZh = "未建档机型（EFS 写入已保护锁定；请点下方「多机型只读适配体检」并用 AI + GitHub 自助适配）";
+                this.headlineEn = "Unverified EFS profile (EFS write locked; tap '32-Bit Readiness Check' & self-adapt via AI + GitHub)";
             } else if (imsServicePresent && telemetryAvailable) {
                 this.headlineZh = "IMS 桥接服务已运行，当前 SIM 尚未完成 4G/IMS 注册（请确认 4G 信号与卡侧 VoLTE）";
                 this.headlineEn = "IMS bridge active, awaiting 4G LTE + IMS registration for current SIM";
@@ -89,20 +98,314 @@ public final class VolteManagerLogic {
         }
     }
 
-    public static String matchVerifiedDeviceProfile(String model, String device, int sdkInt) {
-        if (sdkInt == EXPECTED_SDK) {
-            String dev = device == null ? "" : device.trim();
-            String mod = model == null ? "" : model.trim();
-            if (EXPECTED_DEVICE.equalsIgnoreCase(dev)
-                    && mod.toLowerCase(Locale.ROOT).contains(EXPECTED_MODEL.toLowerCase(Locale.ROOT))) {
-                return PROFILE_WOLVERINE_ID;
+    public static final class DeviceCatalogMatch {
+        public final String route;
+        public final String familyId;
+        public final String displayNameZh;
+        public final String displayNameEn;
+        public final String detailZh;
+        public final String detailEn;
+        public final boolean prebuiltApkCompatible;
+
+        public DeviceCatalogMatch(
+                String route,
+                String familyId,
+                String displayNameZh,
+                String displayNameEn,
+                String detailZh,
+                String detailEn,
+                boolean prebuiltApkCompatible) {
+            this.route = route;
+            this.familyId = familyId;
+            this.displayNameZh = displayNameZh;
+            this.displayNameEn = displayNameEn;
+            this.detailZh = detailZh;
+            this.detailEn = detailEn;
+            this.prebuiltApkCompatible = prebuiltApkCompatible;
+        }
+    }
+
+    public static boolean isPassportWseriesCodename(String device) {
+        String dev = device == null ? "" : device.trim().toLowerCase(Locale.ROOT);
+        for (String cand : PASSPORT_WSERIES_DEVICES) {
+            if (cand.equals(dev)) {
+                return true;
             }
+        }
+        return false;
+    }
+
+    private static boolean matchesPassportModelToken(String model) {
+        String mod = model == null ? "" : model.trim().toLowerCase(Locale.ROOT);
+        for (String tok : PASSPORT_MODEL_TOKENS) {
+            if (mod.contains(tok)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static String matchVerifiedDeviceProfile(String model, String device, int sdkInt) {
+        if (sdkInt == EXPECTED_SDK && isPassportWseriesCodename(device) && matchesPassportModelToken(model)) {
+            return PROFILE_WOLVERINE_ID;
         }
         return null;
     }
 
     public static boolean verifyPassportIdentity(String model, String device, int sdkInt) {
         return PROFILE_WOLVERINE_ID.equals(matchVerifiedDeviceProfile(model, device, sdkInt));
+    }
+
+    public static DeviceCatalogMatch identifyDeviceCatalog(
+            String brand,
+            String model,
+            String device,
+            String boardPlatform,
+            String cpuAbi,
+            int sdkInt,
+            String buildTags) {
+        String devL = device == null ? "" : device.trim().toLowerCase(Locale.ROOT);
+        String modU = model == null ? "" : model.trim().toUpperCase(Locale.ROOT);
+        String brandL = brand == null ? "" : brand.trim().toLowerCase(Locale.ROOT);
+        String platL = boardPlatform == null ? "" : boardPlatform.trim().toLowerCase(Locale.ROOT);
+        String abiL = cpuAbi == null ? "" : cpuAbi.trim().toLowerCase(Locale.ROOT);
+        String tagsL = buildTags == null ? "" : buildTags.trim().toLowerCase(Locale.ROOT);
+        boolean testKeys = tagsL.contains("test-keys");
+
+        if (abiL.startsWith("arm64")) {
+            return new DeviceCatalogMatch(
+                    "UNSUPPORTED_64BIT_PLATFORM",
+                    "unsupported-64bit",
+                    "64 位平台（非本项目目标架构）",
+                    "64-Bit Platform (Out of Scope)",
+                    "检测到 64 位 ABI (" + cpuAbi + ")；Qcom32 VoLTE 专为缺少现代 ImsService 的高通 32 位老旗舰（MSM8974/APQ8084/MSM8926）设计。",
+                    "Detected 64-bit ABI (" + cpuAbi + "); Qcom32 VoLTE targets legacy 32-bit Qualcomm platforms (MSM8974/APQ8084/MSM8926).",
+                    testKeys);
+        }
+        if (devL.equals("k3gxx") || devL.equals("k3g") || modU.contains("G900H")
+                || platL.contains("exynos") || platL.contains("universal5422")
+                || platL.contains("mt6") || platL.contains("mt8") || platL.contains("kirin") || platL.contains("hi36")) {
+            return new DeviceCatalogMatch(
+                    "UNSUPPORTED_NON_QUALCOMM",
+                    "unsupported-non-qualcomm",
+                    "非高通骁龙平台（硬件不支持）",
+                    "Non-Qualcomm Platform (Unsupported)",
+                    "当前设备平台 (" + boardPlatform + " / " + model + ") 并非高通骁龙基带，无法使用 QMI/EFS2 通话栈。",
+                    "Board platform (" + boardPlatform + " / " + model + ") is not Qualcomm Snapdragon.",
+                    testKeys);
+        }
+        if (devL.equals("pisces") || modU.equals("MI 4W") || modU.equals("MI 3W") || modU.equals("MI 4C")) {
+            return new DeviceCatalogMatch(
+                    "UNSUPPORTED_HARDWARE_VARIANT",
+                    "xiaomi-3g-only-variant",
+                    "小米 3G 硬件版本（无 4G LTE 基带）",
+                    "Xiaomi 3G-Only Variant (No LTE Baseband)",
+                    model + " (" + device + ") 为联通/电信 3G 硬件版，无 4G LTE 基带，硬件上无法支持 VoLTE。",
+                    model + " (" + device + ") is a 3G-only hardware edition without a 4G LTE modem.",
+                    testKeys);
+        }
+        if (modU.contains("G900A") || modU.contains("G900V")) {
+            return new DeviceCatalogMatch(
+                    "UNSUPPORTED_HARDWARE_VARIANT",
+                    "samsung-s5-locked-bl",
+                    "美版锁 Bootloader 变体（SM-G900A/V）",
+                    "Locked-Bootloader Carrier S5 Variant",
+                    "美版定制款 " + model + " 存在 Bootloader 签名锁限制，请注意刷机风险。",
+                    model + " has carrier bootloader restrictions; verify unlock status carefully.",
+                    testKeys);
+        }
+        if (devL.equals("hammerhead") || modU.equals("NEXUS 5") || modU.contains("LG-D820") || modU.contains("LG-D821")) {
+            return new DeviceCatalogMatch(
+                    "MODEM_LACKS_IMS_ENGINE",
+                    "google-nexus-5-hammerhead",
+                    "Google Nexus 5（原厂基带缺失 qipcall IMS 引擎）",
+                    "Google Nexus 5 (Modem Lacks qipcall IMS Engine)",
+                    "Nexus 5 (hammerhead) 原厂高通基带裁剪了 Hexagon qipcall VoLTE 引擎，需先核查基带符号。",
+                    "Stock Nexus 5 (hammerhead) baseband omits the Hexagon qipcall IMS engine.",
+                    testKeys);
+        }
+
+        if (verifyPassportIdentity(model, device, sdkInt)) {
+            return new DeviceCatalogMatch(
+                    "VERIFIED_PASSPORT_READY",
+                    PROFILE_WOLVERINE_ID,
+                    "黑莓 Passport 全系已验证机型（普通版 / 银色版 oslo / AT&T wichita / 保时捷 keian）",
+                    "BlackBerry Passport All Editions — Verified (wolverine / oslo / wichita / keian)",
+                    "已完整开放一键备份激活、回滚与电信 46011 防掉线保护（同源 lineage_wseries + NON-HLOS.bin 基带）。",
+                    "Fully unlocked for guarded 1-click EFS backup/activation, rollback, and China Telecom 46011 protection.",
+                    testKeys);
+        }
+        if (isPassportWseriesCodename(devL) || matchesPassportModelToken(modU)) {
+            return new DeviceCatalogMatch(
+                    "NEEDS_ANDROID11_ROM_FIRST",
+                    PROFILE_WOLVERINE_ID,
+                    "黑莓 Passport 系列（需先运行 Android 11 / API 30）",
+                    "BlackBerry Passport Family (Requires Android 11 / API 30)",
+                    "检测到 Passport 机型但系统为 SDK " + sdkInt + "；若为原厂 BB10 系统请访问 bb10-volte.octoooo.com，Android 请刷 LineageOS 18.1。",
+                    "Passport detected on SDK " + sdkInt + "; use bb10-volte.octoooo.com for BB10 OS or LineageOS 18.1 for Android 11.",
+                    testKeys);
+        }
+
+        String famId = "generic-qcom32-candidate";
+        String nameZh = "高通 32 位候选机型（" + (model == null || model.isEmpty() ? devL : model) + "）";
+        String nameEn = "32-Bit Qualcomm Candidate (" + (model == null || model.isEmpty() ? devL : model) + ")";
+        if (devL.startsWith("klte") || modU.contains("SM-G900") || modU.contains("SCL23") || modU.contains("SC-04F")) {
+            famId = "samsung-galaxy-s5-klte";
+            nameZh = "三星 Galaxy S5 系列 (klte / MSM8974AC)";
+            nameEn = "Samsung Galaxy S5 Family (klte / MSM8974AC)";
+        } else if (devL.equals("cancro") || devL.equals("virgo") || modU.contains("MI 4") || modU.contains("MI NOTE")) {
+            famId = "xiaomi-mi4-cancro";
+            nameZh = "小米 4 LTE / 小米 Note 系列 (cancro / virgo / MSM8974AC)";
+            nameEn = "Xiaomi Mi 4 LTE / Mi Note Family (cancro / virgo / MSM8974AC)";
+        } else if (devL.equals("bacon") || devL.startsWith("find7") || modU.contains("A0001") || modU.contains("ONEPLUS") || modU.contains("X900") || modU.contains("X907")) {
+            famId = "oneplus-one-bacon";
+            nameZh = "一加 1 / OPPO Find 7 系列 (bacon / find7 / MSM8974AC)";
+            nameEn = "OnePlus One / OPPO Find 7 Family (bacon / find7 / MSM8974AC)";
+        } else if (devL.equals("sirius") || devL.equals("leo") || devL.equals("z3") || devL.equals("aries")
+                || devL.equals("z3c") || devL.equals("honami") || devL.equals("amami") || devL.equals("castor")
+                || brandL.equals("sony") || modU.contains("XPERIA") || modU.startsWith("D65") || modU.startsWith("D66") || modU.startsWith("D58")) {
+            famId = "sony-xperia-z1-z2-z3";
+            nameZh = "索尼 Xperia Z1 / Z2 / Z3 系列 (Shinano / Rhine MSM8974)";
+            nameEn = "Sony Xperia Z1 / Z2 / Z3 Family (Shinano / Rhine MSM8974)";
+        } else if (devL.equals("d855") || devL.startsWith("d85") || devL.startsWith("f400") || devL.equals("ls990")
+                || devL.equals("vs985") || devL.startsWith("d80") || devL.equals("g3") || devL.equals("g2")
+                || modU.contains("LG-D85") || modU.contains("LG-D80") || modU.contains("LG-F400")) {
+            famId = "lg-g3-g2-msm8974";
+            nameZh = "LG G3 / G2 系列 (d855 / d802 / MSM8974)";
+            nameEn = "LG G3 / G2 Family (d855 / d802 / MSM8974)";
+        } else if (devL.startsWith("m8") || devL.equals("b2ul") || modU.contains("ONE M8") || modU.contains("HTC_M8")) {
+            famId = "htc-one-m8";
+            nameZh = "HTC One M8 系列 (m8 / MSM8974AB/AC)";
+            nameEn = "HTC One M8 Family (m8 / MSM8974AB/AC)";
+        } else if (devL.equals("victara") || devL.equals("shamu") || devL.equals("quark")
+                || modU.contains("NEXUS 6") || modU.contains("XT109") || modU.contains("XT1225") || modU.contains("XT1254")) {
+            famId = "motorola-victara-shamu";
+            nameZh = "Moto X 2014 / Droid Turbo / Nexus 6 系列 (victara / shamu)";
+            nameEn = "Moto X 2014 / Droid Turbo / Nexus 6 Family (victara / shamu)";
+        } else if (devL.startsWith("hlte") || devL.startsWith("trlte") || devL.startsWith("ks01lte")
+                || modU.contains("SM-N9005") || modU.contains("SM-N910") || modU.contains("GT-I9506")) {
+            famId = "samsung-note3-note4-s4ltea";
+            nameZh = "三星 Note 3 / Note 4 / S4 LTE-A 骁龙版 (hlte / trlte / ks01lte)";
+            nameEn = "Samsung Note 3 / Note 4 / S4 LTE-A Snapdragon (hlte / trlte / ks01lte)";
+        }
+
+        if (sdkInt != EXPECTED_SDK) {
+            return new DeviceCatalogMatch(
+                    "NEEDS_ANDROID11_ROM_FIRST",
+                    famId,
+                    nameZh,
+                    nameEn,
+                    "当前系统为 Android SDK " + sdkInt + "，需先刷入 LineageOS 18.1 (Android 11 / API 30) 再进行 4-Gate 适配。",
+                    "Running Android SDK " + sdkInt + "; flash LineageOS 18.1 (Android 11 / API 30) first before 4-Gate porting.",
+                    testKeys);
+        }
+
+        return new DeviceCatalogMatch(
+                "CANDIDATE_MSM8974_PORTING",
+                famId,
+                nameZh,
+                nameEn,
+                "通用 Android 11 通话栈 Qcom32VolteIms 可复用；基带 EFS 槽位需使用 AI + GitHub 仓库内置 Skill 按 4-Gate 只读审计后建档。",
+                "Generic Qcom32VolteIms stack is reusable; use AI + the GitHub repo built-in Skill to run 4-Gate read-only PDP slot discovery.",
+                testKeys);
+    }
+
+    public static String buildReadOnlyPortingReport(
+            String brand,
+            String model,
+            String device,
+            String boardPlatform,
+            String cpuAbi,
+            int sdkInt,
+            String buildTags,
+            String selinuxMode,
+            boolean suAvailable,
+            boolean rildSocketPresent,
+            boolean diagNodePresent,
+            boolean audioMarkersFound,
+            Boolean modemHasImsSymbols,
+            boolean english) {
+        DeviceCatalogMatch m = identifyDeviceCatalog(brand, model, device, boardPlatform, cpuAbi, sdkInt, buildTags);
+        String modemGate;
+        if (modemHasImsSymbols == null) {
+            modemGate = english
+                    ? "UNCHECKED (Requires Root / ADB Root to scan /firmware/image/modem*)"
+                    : "待用电脑开启 ADB Root 或本地 su 只读扫描 /firmware/image/modem*";
+        } else if (modemHasImsSymbols) {
+            modemGate = english ? "PASS (qp_ims_reg_config / qipcall found)" : "通过（检出 qp_ims_reg_config / qipcall 引擎符号）";
+        } else {
+            modemGate = english ? "FAIL (No qipcall IMS symbol in modem firmware)" : "未检出（当前基带镜像不含 qipcall IMS 引擎）";
+        }
+
+        String romGate = (sdkInt == EXPECTED_SDK)
+                ? (m.prebuiltApkCompatible
+                        ? (english ? "PASS (SDK 30 + test-keys; prebuilt APK installs directly)" : "通过（Android 11 SDK 30 + test-keys，可直接安装预编译 APK）")
+                        : (english ? "WARN (SDK 30 + release-keys; sign with ROM platform key or use rom-integration/)" : "注意（Android 11 SDK 30 + release-keys 官方签名，需用 ROM 平台密钥重签或放入 priv-app）"))
+                : (english ? ("FAIL (SDK " + sdkInt + ", requires Android 11 SDK 30)") : ("未满足（当前 SDK " + sdkInt + "，需 Android 11 / LineageOS 18.1）"));
+
+        String sockGate = rildSocketPresent
+                ? (english ? "PASS (/dev/socket/qmux_radio/rild_ims0 present)" : "已检出 (/dev/socket/qmux_radio/rild_ims0)")
+                : (suAvailable
+                        ? (english ? "WARN (rild_ims0 not found)" : "未发现 rild_ims0 套接字")
+                        : (english ? "INFO (Connect PC ADB Root or su to verify /dev/socket/qmux_radio/rild_ims0)" : "待核验（普通应用权限受 SELinux 限制，连电脑点「只读体检」可精确核验）"));
+
+        String diagGate = diagNodePresent
+                ? (english ? "PASS (/dev/diag character node present)" : "已检出 (/dev/diag 诊断节点)")
+                : (suAvailable
+                        ? (english ? "WARN (/dev/diag not found)" : "未发现 /dev/diag 节点")
+                        : (english ? "INFO (Verify via PC Read-Only Check)" : "待核验（连电脑桌面端一键只读体检可精确核验）"));
+
+        String audioGate = audioMarkersFound
+                ? (english ? "PASS (Voice-MMode1 / voice-ims found in mixer_paths)" : "通过（mixer_paths 检出 Voice-MMode1 / voice-ims 通话路由）")
+                : (english ? "WARN (Check /vendor/etc/mixer_paths.xml for Voice-MMode1)" : "待核查（建议检查 /vendor/etc/mixer_paths.xml 是否含 Voice-MMode1）");
+
+        if (english) {
+            return "=== Qcom32 VoLTE Read-Only Readiness & AI Porting Report ===\n"
+                    + "Device       : " + safeText(brand) + " " + safeText(model) + " (" + safeText(device) + ")\n"
+                    + "SoC / ABI    : " + safeText(boardPlatform) + " / " + safeText(cpuAbi) + " | SDK " + sdkInt + " | SELinux=" + safeText(selinuxMode) + "\n"
+                    + "Catalog Match: " + m.displayNameEn + " [" + m.familyId + "]\n"
+                    + "Route        : " + m.route + "\n"
+                    + "Summary      : " + m.detailEn + "\n\n"
+                    + "[4-Gate Read-Only Check (Zero EFS Writes)]\n"
+                    + "  Gate 1 (ROM & Key)   : " + romGate + "\n"
+                    + "  Gate 2 (RIL & Diag)  : " + sockGate + " | " + diagGate + "\n"
+                    + "  Gate 3 (Modem IMS)   : " + modemGate + "\n"
+                    + "  Gate 4 (Audio HAL)   : " + audioGate + "\n\n"
+                    + "[How to Adapt Your Phone Yourself with AI + GitHub]\n"
+                    + "  Why EFS write is locked: Passport's IMS APN is /pdp_profiles/profile4, whereas Samsung/Xiaomi/\n"
+                    + "  OnePlus/Sony may use profile4 for MMS or mobile data. Blindly writing it would break data/MMS.\n"
+                    + "  1. Clone the open-source repo: " + GITHUB_REPO_URL + "\n"
+                    + "  2. Open the repo folder in Claude Code, Cursor, Codex, Gemini CLI, or Antigravity\n"
+                    + "     (it includes the built-in `.agents/skills/qcom32-volte/` & `.claude/skills/qcom32-volte/` AI Skill!).\n"
+                    + "  3. Connect USB, paste this report, and tell your AI assistant:\n"
+                    + "     \"Run the qcom32-volte 4-Gate read-only inspection on my connected " + safeText(model) + " (" + safeText(device) + "),\n"
+                    + "      decode /pdp_profiles/ safely without overwriting data/MMS slots, and help me build its profile.json.\"\n";
+        }
+        return "=== Qcom32 VoLTE 多机型只读适配体检与 AI 自助适配报告 ===\n"
+                + "当前设备   : " + safeText(brand) + " " + safeText(model) + " (" + safeText(device) + ")\n"
+                + "平台与系统 : " + safeText(boardPlatform) + " / " + safeText(cpuAbi) + " | SDK " + sdkInt + " | SELinux=" + safeText(selinuxMode) + "\n"
+                + "识别机系   : " + m.displayNameZh + " [" + m.familyId + "]\n"
+                + "当前路由   : " + m.route + "\n"
+                + "评估结论   : " + m.detailZh + "\n\n"
+                + "【四门禁 100% 只读体检（零基带写入）】\n"
+                + "  Gate 1 (ROM 与签名) : " + romGate + "\n"
+                + "  Gate 2 (RIL 与诊断) : " + sockGate + " | " + diagGate + "\n"
+                + "  Gate 3 (基带引擎)   : " + modemGate + "\n"
+                + "  Gate 4 (音频通路)   : " + audioGate + "\n\n"
+                + "【如何使用 AI + GitHub 项目自行适配本机型？】\n"
+                + "  为什么默认锁定写基带：Passport 的 IMS 槽位是 /pdp_profiles/profile4，但三星 S5、小米 4、一加 1、\n"
+                + "  索尼 Z2/Z3、LG G3 等机型的 profile4 可能是彩信或上网槽位，盲写会破坏移动数据。\n"
+                + "  项目已在 GitHub 内置多智能体 AI Skill，您可以用 AI 助手安全自助对应：\n"
+                + "  1. 在电脑克隆开源仓库：" + GITHUB_REPO_URL + "\n"
+                + "  2. 用 Claude Code、Cursor、Codex、Gemini CLI 或 Antigravity 打开仓库目录\n"
+                + "     （会自动加载仓库内置的 `.agents/skills/qcom32-volte/` 与 `.claude/skills/qcom32-volte/` 适配技能）；\n"
+                + "  3. 手机连上电脑 USB，复制本报告发给 AI 并输入：\n"
+                + "     「请按仓库内置 qcom32-volte 技能对这台 " + safeText(model) + " (" + safeText(device) + ") 执行只读 4-Gate 体检，\n"
+                + "      只读解码 /pdp_profiles/ 找出安全的 IMS 槽位并生成专属 profile.json 完成适配。」\n";
+    }
+
+    private static String safeText(String s) {
+        return (s == null || s.trim().isEmpty()) ? "unknown" : redactSensitiveDigits(s.trim());
     }
 
     public static String sha256Hex(byte[] data) {
@@ -242,6 +545,14 @@ public final class VolteManagerLogic {
         return "'" + path + "'";
     }
 
+    private static String passportDeviceGuardLines() {
+        return "DEV=$(getprop ro.product.device)\n"
+                + "case \"$DEV\" in\n"
+                + "  wolverine|oslo|wichita|keian|wseries|windermere) ;;\n"
+                + "  *) echo \"ERR_UNVERIFIED_EFS_PROFILE:$DEV\"; exit 21 ;;\n"
+                + "esac\n";
+    }
+
     private static String legacyCleanupLines() {
         return "if pm path org.passport.volteims >/dev/null 2>&1; then\n"
                 + "  am broadcast -n org.passport.volteims/.VolteAdminReceiver "
@@ -254,8 +565,7 @@ public final class VolteManagerLogic {
         String stageQuoted = quoteSh(appStagedDir);
         String backupQuoted = quoteSh(backupDir);
         return "set -e\n"
-                + "DEV=$(getprop ro.product.device)\n"
-                + "if [ \"$DEV\" != \"wolverine\" ]; then echo \"ERR_UNVERIFIED_EFS_PROFILE:$DEV\"; exit 21; fi\n"
+                + passportDeviceGuardLines()
                 + "TMP_PROV='/data/local/tmp/pp_regconfig_provision_v6'\n"
                 + "TMP_APK='/data/local/tmp/Qcom32VolteIms.apk'\n"
                 + "trap 'rm -f /data/local/tmp/pp_regconfig_provision_v6 /data/local/tmp/Qcom32VolteIms.apk' EXIT\n"
@@ -291,8 +601,7 @@ public final class VolteManagerLogic {
     public static String buildRootRollbackScript(String appStagedDir) {
         String stageQuoted = quoteSh(appStagedDir);
         return "set -e\n"
-                + "DEV=$(getprop ro.product.device)\n"
-                + "if [ \"$DEV\" != \"wolverine\" ]; then echo \"ERR_UNVERIFIED_EFS_PROFILE:$DEV\"; exit 21; fi\n"
+                + passportDeviceGuardLines()
                 + "TMP_PROV='/data/local/tmp/pp_regconfig_provision_v6'\n"
                 + "trap 'rm -f /data/local/tmp/pp_regconfig_provision_v6' EXIT\n"
                 + legacyCleanupLines()
@@ -304,7 +613,7 @@ public final class VolteManagerLogic {
                 + "cp " + stageQuoted + "/pp_regconfig_provision_v6 \"$TMP_PROV\"\n"
                 + "chmod 0700 \"$TMP_PROV\"\n"
                 + "\"$TMP_PROV\" --rollback-all\n"
-                + "echo 'ROLLBACK_ALL_OK'\n";
+                + "echo 'ROLLBACK_OK'\n";
     }
 
     public static byte[] utf8Bytes(String s) {
