@@ -27,6 +27,7 @@ test('bilingual pages warn about unverified editions, EFS backup and old release
     assert.match(html, /149/);
     assert.match(html, /v1\.2\.4-r1/);
     assert.match(html, /v1\.2\.5-r1/);
+    assert.match(html, /v1\.2\.6-r1/);
     assert.match(html, /oslo/);
     assert.match(html, /wichita/);
     assert.match(html, /keian/);
@@ -41,7 +42,7 @@ test('bilingual pages warn about unverified editions, EFS backup and old release
     }
     if (rel.startsWith('en/')) {
       assert.match(html, /still permit one-click writes/i);
-      assert.match(html, /upgrade to v1\.2\.5-r1/i);
+      assert.match(html, /upgrade to v1\.2\.6-r1/i);
       assert.match(html, /not tests on a failing real device/i);
       assert.match(html, /not supported or certified/i);
       assert.match(html, /inspection log/i);
@@ -49,7 +50,7 @@ test('bilingual pages warn about unverified editions, EFS backup and old release
       assert.match(html, /SMS over IMS is not implemented/i);
     } else {
       assert.match(html, /仍允许对未经验证版本一键写入/);
-      assert.match(html, /升级至 v1\.2\.5-r1/);
+      assert.match(html, /升级至 v1\.2\.6-r1/);
       assert.match(html, /未在故障真机上验证/);
       assert.match(html, /紧急呼叫不支持/);
       assert.match(html, /检查日志/);
@@ -62,7 +63,7 @@ test('bilingual pages warn about unverified editions, EFS backup and old release
 test('guides explain combined preflight and fixed rollback limitations', async () => {
   for (const rel of ['guide.html', 'en/guide.html']) {
     const html = await readFile(path.join(dist, rel), 'utf8');
-    assert.match(html, /MPSS\.DI\.4\.0\.1/);
+    assert.match(html, /\.DI\.4\.0\.1-00158-M8974AAAAANAZM-1/);
     assert.match(html, /AAAAANAZM/);
     assert.match(html, /AAB982/);
     assert.match(html, /(?:离线\/模拟验证|offline or with mocks only)/);
@@ -118,8 +119,8 @@ test('pages use canonical qcom32-volte.octoooo.com domain and cross-link bb10-vo
     assert.match(html, /https:\/\/qcom32-volte\.octoooo\.com\//);
     assert.match(html, /https:\/\/bb10-volte\.octoooo\.com\//);
     assert.match(html, /https:\/\/github\.com\/Octo-o-o-o\/bb10-volte/);
-    assert.ok(html.includes(`${MIRROR_BASE}/${RELEASE_TAG}/qcom32-volte-1.2.5-r1-windows-x64.exe`));
-    assert.ok(html.includes(`${REPOSITORY_URL}/releases/download/${RELEASE_TAG}/qcom32-volte-1.2.5-r1-windows-x64.exe`));
+    assert.ok(html.includes(`${MIRROR_BASE}/${RELEASE_TAG}/qcom32-volte-1.2.6-r1-windows-x64.exe`));
+    assert.ok(html.includes(`${REPOSITORY_URL}/releases/download/${RELEASE_TAG}/qcom32-volte-1.2.6-r1-windows-x64.exe`));
     assert.ok(html.includes(`${MIRROR_BASE}/${RELEASE_TAG}/Qcom32VolteIms-2.8-r1-platform.apk`));
     assert.ok(html.includes('oslo'));
     assert.ok(html.includes('imsqmidaemon'));
@@ -152,20 +153,20 @@ test('worker 301-redirects legacy passport-volte.octoooo.com to qcom32-volte.oct
   assert.equal(await canonicalRes.text(), 'ok:/guide');
 });
 
-test('selectRelease validates full v1.2.5-r1 asset set with the unchanged IMS version', () => {
+test('selectRelease validates full v1.2.6-r1 asset set with the unchanged IMS version', () => {
   const names = buildReleaseAssetNames(RELEASE_TAG);
   assert.deepEqual(Object.values(names).sort(), [
-    'qcom32-volte-1.2.5-r1-windows-x64.exe', 'qcom32-volte-1.2.5-r1-windows-x64.exe.sha256',
-    'Qcom32VolteManager-1.2.5-r1.apk', 'Qcom32VolteManager-1.2.5-r1.apk.sha256',
+    'qcom32-volte-1.2.6-r1-windows-x64.exe', 'qcom32-volte-1.2.6-r1-windows-x64.exe.sha256',
+    'Qcom32VolteManager-1.2.6-r1.apk', 'Qcom32VolteManager-1.2.6-r1.apk.sha256',
     'Qcom32VolteIms-2.8-r1-platform.apk', 'Qcom32VolteIms-2.8-r1-platform.apk.sha256',
-    'qcom32-volte-1.2.5-r1-portable.zip', 'qcom32-volte-1.2.5-r1-portable.zip.sha256',
-    'qcom32-volte-1.2.5-r1-source.zip', 'qcom32-volte-1.2.5-r1-source.zip.sha256', 'SHA256SUMS.txt',
+    'qcom32-volte-1.2.6-r1-portable.zip', 'qcom32-volte-1.2.6-r1-portable.zip.sha256',
+    'qcom32-volte-1.2.6-r1-source.zip', 'qcom32-volte-1.2.6-r1-source.zip.sha256', 'SHA256SUMS.txt',
   ].sort());
   const mockReleases = [
     {
       tag_name: RELEASE_TAG,
       draft: false,
-      published_at: '2026-11-15T08:00:00Z',
+      published_at: '2026-11-15T12:00:00Z',
       assets: Object.values(names).map((name) => ({ name })),
     },
   ];
@@ -174,7 +175,7 @@ test('selectRelease validates full v1.2.5-r1 asset set with the unchanged IMS ve
   assert.equal(selected.tag, RELEASE_TAG);
   assert.equal(
     selected.urls.windows,
-    `${REPOSITORY_URL}/releases/download/${RELEASE_TAG}/qcom32-volte-1.2.5-r1-windows-x64.exe`
+    `${REPOSITORY_URL}/releases/download/${RELEASE_TAG}/qcom32-volte-1.2.6-r1-windows-x64.exe`
   );
   assert.equal(
     selected.urls['rom-apk'],

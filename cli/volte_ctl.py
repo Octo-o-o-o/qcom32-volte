@@ -478,7 +478,7 @@ def validate_passport_deploy_environment(adb: AdbClient, ident: dict[str, object
         raise RuntimeError(
             f"Refusing EFS write (ZERO EFS items modified): incompatible Passport baseband "
             f"(gsm.version.baseband={baseband!r}, firmware_build_id={fw_build_id!r}, reason={bb_check['reason']}). "
-            "BlackBerry Passport VoLTE requires the BlackBerry Android `AAB982` (`MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1`) "
+            "BlackBerry Passport VoLTE requires the BlackBerry Android `AAB982` (`.DI.4.0.1-00158-M8974AAAAANAZM-1`) "
             "`NON-HLOS.bin` baseband; older BB10 `DI.2.0.1` or `AAA*` engineering modems lose cellular signal when IMS_enable=01. / "
             f"已安全拦截（未改动任何基带 EFS 项）：当前基带版本 ({baseband or '未知'} / {fw_build_id or '无容器标识'}) 不兼容，"
             "请先刷入黑莓 Android `AAB982` 版 `NON-HLOS.bin` 基带镜像后再激活 VoLTE。"
@@ -783,7 +783,7 @@ def cmd_self_test(out_json: str | None = None) -> int:
         "ro.build.tags": "test-keys",
         "ro.build.version.sdk": "30",
         "ro.lineage.version": "18.1-20260129-UNOFFICIAL-wseries",
-        "gsm.version.baseband": "MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1",
+        "gsm.version.baseband": ".DI.4.0.1-00158-M8974AAAAANAZM-1",
         "gsm.sim.state": "LOADED",
         "gsm.sim.operator.numeric": "46001",
         "gsm.network.type": "LTE",
@@ -868,6 +868,23 @@ def cmd_self_test(out_json: str | None = None) -> int:
         assert any("stop imscmservice ims_rtp_daemon imsdatadaemon imsqmidaemon" in c for c in adb_wedged.commands)
         assert any("*override*.xml" in c for c in adb_wedged.commands)
         assert any("--rollback-all" in c for c in adb_wedged.commands)
+
+        class _DiagDeadPassportAdb(_SimPassportAdb):
+            def shell(self, cmd: str, timeout: int = 30, check: bool = True) -> str:
+                if "--rollback-all" in cmd:
+                    self.commands.append(f"shell:{cmd}")
+                    raise RuntimeError("DIAG timeout waiting for MPSS EFS2")
+                return super().shell(cmd, timeout=timeout, check=check)
+
+        adb_diag_dead = _DiagDeadPassportAdb({**base_pp_props, "gsm.sim.state": "", "gsm.version.baseband": ""})
+        diag_hint_ok = False
+        try:
+            run_rollback_flow(adb_diag_dead, fake_prov, post_reboot_sim_wait_sec=0, backup_root=td_path)
+        except RuntimeError as exc:
+            msg = str(exc)
+            diag_hint_ok = "DIAG timeout" in msg and "NON-HLOS.bin" in msg and "modemst1" in msg
+        assert diag_hint_ok is True
+        assert any(f"rm -f {REMOTE_TMP_PROVISIONER}" in c for c in adb_diag_dead.commands)
 
         # Cross both branches' guards, then exercise rollback on the same unverified edition.
         oslo_props = {**base_pp_props, "ro.product.device": "oslo"}
@@ -1215,7 +1232,19 @@ def run_rollback_flow(
         step("Running fixed EFS cleanup + EFS_SYNC (not original-value restoration)...")
         adb.run(["push", str(prov_path), REMOTE_TMP_PROVISIONER], timeout=30)
         adb.shell(f"chmod 0700 {REMOTE_TMP_PROVISIONER}")
-        rb_out = adb.shell(f"{REMOTE_TMP_PROVISIONER} --rollback-all", timeout=90)
+        try:
+            rb_out = adb.shell(f"{REMOTE_TMP_PROVISIONER} --rollback-all", timeout=90)
+        except Exception as exc:
+            raise RuntimeError(
+                f"Fixed EFS rollback over `/dev/diag` failed ({exc}). "
+                "If Hexagon MPSS cannot boot or `/dev/diag` is unreachable (e.g. BB10 RCFS radio or incompatible `modem` image "
+                "crashing while `IMS_enable=01`), restore your off-device `modemst1`/`modemst2`/`fsg` backup first, or flash "
+                "unmodified BlackBerry Android `AAB982` `NON-HLOS.bin` to the `modem` partition so MPSS + `/dev/diag` come online "
+                "before retrying `rollback`. / "
+                f"通过 `/dev/diag` 执行固定基带回滚失败（{exc}）。若当前 `modem` 分区仍为原厂 BB10 射频或旧基带导致基带 DSP 未能启动，"
+                "若有刷机前手机外的 `modemst1`/`modemst2`/`fsg` 独立备份请优先恢复；否则请先刷入原版黑莓 Android `AAB982` 的 `NON-HLOS.bin` "
+                "到 `modem` 分区使 `/dev/diag` 上线后再试回滚（固定回滚不保证恢复单机原值或信号）。"
+            ) from exc
         (backup_dir / "efs-rollback-all.txt").write_text(rb_out, encoding="utf-8")
     finally:
         adb.shell(f"rm -f {REMOTE_TMP_PROVISIONER}", check=False)

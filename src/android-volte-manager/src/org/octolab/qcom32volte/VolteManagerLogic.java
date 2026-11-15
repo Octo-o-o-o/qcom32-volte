@@ -360,10 +360,14 @@ public final class VolteManagerLogic {
                 testKeys);
     }
 
-    public static boolean isPassportBasebandCompatible(String basebandProp, String firmwareContents) {
+    public static boolean isPassportBasebandPropCompatible(String basebandProp) {
         String bb = basebandProp == null ? "" : basebandProp.trim().toUpperCase(Locale.ROOT);
-        if (!bb.contains("MPSS.DI.4.0.1") || !bb.contains("AAAAANAZM")
-                || bb.contains("DI.2.0.1") || bb.contains("AAAAANPZM")) {
+        return bb.contains("DI.4.0.1") && bb.contains("AAAAANAZM")
+                && !bb.contains("DI.2.0.1") && !bb.contains("AAAAANPZM");
+    }
+
+    public static boolean isPassportBasebandCompatible(String basebandProp, String firmwareContents) {
+        if (!isPassportBasebandPropCompatible(basebandProp)) {
             return false;
         }
         String fw = firmwareContents == null ? "" : firmwareContents.toUpperCase(Locale.ROOT);
@@ -450,15 +454,25 @@ public final class VolteManagerLogic {
         } else {
             modemGate = english ? "FAIL (No qipcall IMS symbol in modem firmware)" : "未检出（当前基带镜像不含 qipcall IMS 引擎）";
         }
-        if (isPassport && (!bbClean.isEmpty() || (firmwareContents != null && !firmwareContents.trim().isEmpty()))) {
-            if (isPassportBasebandCompatible(bbClean, firmwareContents)) {
-                modemGate += english
-                        ? (" | Baseband PASS (" + safeText(bbClean) + ")")
-                        : (" | 基带版本通过 (" + safeText(bbClean) + ")");
-            } else {
+        if (isPassport) {
+            if (!bbClean.isEmpty() && !isPassportBasebandPropCompatible(bbClean)) {
                 modemGate = english
                         ? ("FAIL (Incompatible Passport modem '" + safeText(bbClean) + "' — flash BlackBerry Android AAB982 NON-HLOS.bin first)")
                         : ("不兼容（当前基带 '" + safeText(bbClean) + "' 非 AAB982 DI.4.0.1-00158 正式版，请先刷入 AAB982 NON-HLOS.bin）");
+            } else if (suAvailable || (firmwareContents != null && !firmwareContents.trim().isEmpty())) {
+                if (isPassportBasebandCompatible(bbClean, firmwareContents)) {
+                    modemGate += english
+                            ? (" | Baseband PASS (" + safeText(bbClean) + " / AAB982)")
+                            : (" | 基带版本通过 (" + safeText(bbClean) + " / AAB982)");
+                } else {
+                    modemGate = english
+                            ? ("FAIL (Incompatible Passport modem '" + safeText(bbClean) + "' or missing build_id:AAB982 — flash BlackBerry Android AAB982 NON-HLOS.bin first)")
+                            : ("不兼容（当前基带 '" + safeText(bbClean) + "' 或缺少 build_id:AAB982 正式版容器，请先刷入 AAB982 NON-HLOS.bin）");
+                }
+            } else if (!bbClean.isEmpty()) {
+                modemGate += english
+                        ? (" | Baseband prop OK (" + safeText(bbClean) + "; connect PC ADB Root to verify AAB982)")
+                        : (" | 基带属性匹配 (" + safeText(bbClean) + "，连电脑 ADB Root 核验 AAB982 容器)");
             }
         }
 
@@ -751,8 +765,8 @@ public final class VolteManagerLogic {
                 + "BB_VER=$(getprop gsm.version.baseband)\n"
                 + "case \"$BB_VER\" in\n"
                 + "  *DI.2.0.1*|*AAAAANPZM*) echo \"ERR_INCOMPATIBLE_PASSPORT_BASEBAND:baseband=$BB_VER\"; exit 24 ;;\n"
-                + "  *MPSS.DI.4.0.1*AAAAANAZM*) ;;\n"
-                + "  *) echo \"ERR_INCOMPATIBLE_PASSPORT_BASEBAND:baseband=$BB_VER (Expected BlackBerry Android AAB982 MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1)\"; exit 24 ;;\n"
+                + "  *DI.4.0.1*AAAAANAZM*) ;;\n"
+                + "  *) echo \"ERR_INCOMPATIBLE_PASSPORT_BASEBAND:baseband=$BB_VER (Expected BlackBerry Android AAB982 .DI.4.0.1-00158-M8974AAAAANAZM-1)\"; exit 24 ;;\n"
                 + "esac\n"
                 + "FW_TXT=$(cat /firmware/IMAGE/CONTENTS.TXT /firmware/image/contents.txt /vendor/firmware_mnt/IMAGE/CONTENTS.TXT /vendor/firmware_mnt/image/contents.txt 2>/dev/null || true)\n"
                 + "case \"$FW_TXT\" in\n"

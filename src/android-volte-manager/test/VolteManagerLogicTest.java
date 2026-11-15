@@ -158,20 +158,23 @@ public final class VolteManagerLogicTest {
         check(!rollbackSh.contains("ERR_UNVERIFIED_FIRMWARE_BUILD_ID")
                 && !rollbackSh.contains("ERR_LEGACY_IMS_DAEMON_CONFLICT"), "Rollback bypasses deploy preflight gates");
         if (Files.isExecutable(Paths.get("/bin/sh"))) {
+            String liveBaseband = ".DI.4.0.1-00158-M8974AAAAANAZM-1";
             String goodBaseband = "MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1";
+            check(runShellGuard(deploySh, "wolverine", liveBaseband, "build_id:AAB982", "") == 0,
+                    "Deploy shell accepts live wolverine .DI.4.0.1 runtime baseband and AAB982");
             check(runShellGuard(deploySh, "wolverine", goodBaseband, "build_id:AAB982", "") == 0,
-                    "Deploy shell accepts matching device and actual firmware guard");
-            check(runShellGuard(deploySh, "wolverine", goodBaseband, "", "") == 25,
+                    "Deploy shell accepts MPSS.DI.4.0.1 baseband and AAB982");
+            check(runShellGuard(deploySh, "wolverine", liveBaseband, "", "") == 25,
                     "Deploy shell rejects unknown firmware");
-            check(runShellGuard(deploySh, "wolverine", goodBaseband, "build_id:AAB982", "running") == 23,
+            check(runShellGuard(deploySh, "wolverine", liveBaseband, "build_id:AAB982", "running") == 23,
                     "Deploy shell rejects running legacy daemon");
             check(runShellGuard(deploySh, "wolverine", "MPSS.DI.2.0.1-AAAAANPZM", "build_id:AAB982", "") == 24,
                     "Deploy shell rejects bad baseband");
-            check(runShellGuard(deploySh, "oslo", goodBaseband, "build_id:AAB982", "") == 21,
+            check(runShellGuard(deploySh, "oslo", liveBaseband, "build_id:AAB982", "") == 21,
                     "Manager shell rejects unverified edition");
             check(runShellGuard(rollbackSh, "oslo", "bad", "build_id:AAA596", "running") == 0,
                     "Rollback shell allows experimental edition even with bad firmware and daemon");
-            check(runShellGuard(rollbackSh, "bacon", goodBaseband, "build_id:AAB982", "") == 21,
+            check(runShellGuard(rollbackSh, "bacon", liveBaseband, "build_id:AAB982", "") == 21,
                     "Rollback shell rejects non-Passport");
         }
         check(rollbackSh.indexOf("imsqmidaemon") < rollbackSh.indexOf("--rollback-all"),
@@ -183,18 +186,23 @@ public final class VolteManagerLogicTest {
         check("'/data/local/tmp/probe'".equals(VolteManagerLogic.quoteSh("/data/local/tmp/probe")), "quoteSh public helper");
 
         // 7b. Baseband & legacy daemon compatibility helpers + post-reboot radio loss headline
+        check(VolteManagerLogic.isPassportBasebandPropCompatible(".DI.4.0.1-00158-M8974AAAAANAZM-1"),
+                "Live wolverine .DI.4.0.1 baseband prop accepted");
+        check(VolteManagerLogic.isPassportBasebandCompatible(
+                ".DI.4.0.1-00158-M8974AAAAANAZM-1", "build_id:AAB982\nMP_QC_Release:MPSS.DI.4.0.1-00158"),
+                "Live wolverine .DI.4.0.1 + AAB982 baseband accepted");
         check(VolteManagerLogic.isPassportBasebandCompatible(
                 "MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1", "build_id:AAB982\nMP_QC_Release:MPSS.DI.4.0.1-00158"),
-                "AAB982 DI.4.0.1-00158 baseband accepted");
-        check(!VolteManagerLogic.isPassportBasebandCompatible("MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1", ""),
+                "AAB982 MPSS.DI.4.0.1-00158 baseband accepted");
+        check(!VolteManagerLogic.isPassportBasebandCompatible(".DI.4.0.1-00158-M8974AAAAANAZM-1", ""),
                 "Missing CONTENTS.TXT is rejected");
-        check(!VolteManagerLogic.isPassportBasebandCompatible("MPSS.DI.4.0.1-AAAAANPZM", "build_id:AAB982"),
+        check(!VolteManagerLogic.isPassportBasebandCompatible(".DI.4.0.1-AAAAANPZM", "build_id:AAB982"),
                 "Partial or conflicting baseband tokens are rejected");
         check(!VolteManagerLogic.isPassportBasebandCompatible("MPSS.DI.2.0.1.c1.16-00029-M8974AAAAANPZM-1", ""),
                 "BB10 DI.2.0.1 ANPZM baseband rejected");
         check(!VolteManagerLogic.isPassportBasebandCompatible("", ""), "Empty baseband rejected");
         check(!VolteManagerLogic.isPassportBasebandCompatible(
-                "MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1", "build_id:AAA596\nMP_QC_Release:MPSS.DI.4.0.1-00158"),
+                ".DI.4.0.1-00158-M8974AAAAANAZM-1", "build_id:AAA596\nMP_QC_Release:MPSS.DI.4.0.1-00158"),
                 "Older engineering AAA596 modem rejected");
 
         check(VolteManagerLogic.hasConflictingLegacyImsDaemon("imsqmidaemon=running, imsdatadaemon=stopped"),
@@ -225,8 +233,29 @@ public final class VolteManagerLogicTest {
                 "blackberry", "Passport", "wolverine", "msm8974", "armeabi-v7a", 30, "test-keys",
                 "Permissive", true, true, true, true, Boolean.TRUE, false,
                 ".DI.4.0.1-00158-M8974AAAAANAZM-1", "build_id:AAA596", "imsqmidaemon=running");
-        check(ppConflictReport.contains("冲突拦截") && ppConflictReport.contains("AAB982"),
+        check(ppConflictReport.contains("冲突拦截") && ppConflictReport.contains("不兼容") && ppConflictReport.contains("AAB982"),
                 "Passport read-only report flags imsqmidaemon conflict and non-AAB982 modem");
+
+        String ppRootGoodReport = VolteManagerLogic.buildReadOnlyPortingReport(
+                "blackberry", "Passport", "wolverine", "msm8974", "armeabi-v7a", 30, "test-keys",
+                "Enforcing", true, true, true, true, Boolean.TRUE, false,
+                ".DI.4.0.1-00158-M8974AAAAANAZM-1", "build_id:AAB982", "imsqmidaemon=stopped");
+        check(ppRootGoodReport.contains("基带版本通过") && !ppRootGoodReport.contains("不兼容"),
+                "Healthy rooted wolverine with .DI.4.0.1 + AAB982 passes read-only report");
+
+        String ppUnrootGoodReport = VolteManagerLogic.buildReadOnlyPortingReport(
+                "blackberry", "Passport", "wolverine", "msm8974", "armeabi-v7a", 30, "test-keys",
+                "Enforcing", false, false, false, true, null, false,
+                ".DI.4.0.1-00158-M8974AAAAANAZM-1", "", "imsqmidaemon=stopped");
+        check(ppUnrootGoodReport.contains("基带属性匹配") && !ppUnrootGoodReport.contains("不兼容"),
+                "Healthy unrooted wolverine without su is not falsely marked incompatible");
+
+        String ppUnrootBadReport = VolteManagerLogic.buildReadOnlyPortingReport(
+                "blackberry", "Passport", "wolverine", "msm8974", "armeabi-v7a", 30, "test-keys",
+                "Enforcing", false, false, false, true, null, false,
+                "MPSS.DI.2.0.1-AAAAANPZM", "", "");
+        check(ppUnrootBadReport.contains("不兼容"),
+                "Unrooted wolverine with BB10 DI.2.0.1 baseband is still flagged incompatible");
 
         // 8. 32-Bit Qualcomm catalog identification & read-only AI/GitHub porting report
         VolteManagerLogic.DeviceCatalogMatch osloCat = VolteManagerLogic.identifyDeviceCatalog(

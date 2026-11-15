@@ -477,7 +477,12 @@ def assess_legacy_ims_daemon_conflict(
     }
 
 
-def assess_passport_baseband(baseband: str, fw_build_id: str = "") -> dict[str, Any]:
+def assess_passport_baseband(
+    baseband: str,
+    fw_build_id: str = "",
+    *,
+    require_firmware_id: bool = True,
+) -> dict[str, Any]:
     bb = (baseband or "").strip()
     bb_u = bb.upper()
     fw = (fw_build_id or "").strip()
@@ -512,7 +517,7 @@ def assess_passport_baseband(baseband: str, fw_build_id: str = "") -> dict[str, 
                 "fixed rollback may be attempted; original values and signal recovery are not guaranteed)"
             ),
         }
-    if "MPSS.DI.4.0.1" not in bb_u or "AAAAANAZM" not in bb_u or "DI.2.0.1" in bb_u or "AAAAANPZM" in bb_u:
+    if "DI.4.0.1" not in bb_u or "AAAAANAZM" not in bb_u or "DI.2.0.1" in bb_u or "AAAAANPZM" in bb_u:
         return {
             "compatible": False,
             "reason": "INCOMPATIBLE_BASEBAND",
@@ -525,6 +530,20 @@ def assess_passport_baseband(baseband: str, fw_build_id: str = "") -> dict[str, 
             "detail_en": (
                 f"FAIL (Baseband `{bb}` is not BlackBerry Android `DI.4.0.1 / M8974AAAAANAZM` — e.g. BB10 `DI.2.0.1` radio; "
                 "flash `AAB982` `NON-HLOS.bin` baseband before activating VoLTE)"
+            ),
+        }
+    if not fw_u and not require_firmware_id:
+        return {
+            "compatible": True,
+            "firmware_unverified_needs_root": True,
+            "reason": "BASEBAND_PROP_OK_NEEDS_ROOT_FIRMWARE_CHECK",
+            "baseband": bb,
+            "firmware_build_id": "",
+            "detail_zh": (
+                f"基带属性已匹配 `{bb}`；当前未开启 ADB Root，开启「Root 授权的调试」后将核验 `/firmware/image/contents.txt` 是否为 `AAB982`"
+            ),
+            "detail_en": (
+                f"Baseband property `{bb}` matched; enable Rooted debugging (UID 0) to verify `build_id:AAB982` in `/firmware/image/contents.txt`"
             ),
         }
     if fw_u != "AAB982":
@@ -629,7 +648,11 @@ def run_readonly_readiness_audit(adb: Any) -> dict[str, Any]:
     is_passport = is_passport_wseries(props.get("ro.product.device") or "", props.get("ro.product.model") or "")
     legacy_conflict = assess_legacy_ims_daemon_conflict(legacy_svc_states, sys_ims_props)
     passport_bb = (
-        assess_passport_baseband(props.get("gsm.version.baseband") or "", fw_build_id)
+        assess_passport_baseband(
+            props.get("gsm.version.baseband") or "",
+            fw_build_id,
+            require_firmware_id=is_root_shell,
+        )
         if is_passport
         else None
     )
@@ -679,6 +702,10 @@ def run_readonly_readiness_audit(adb: Any) -> dict[str, Any]:
     # Gate 3: Modem Hexagon IMS Engine & Passport Baseband Verification
     if passport_bb is not None and not passport_bb["compatible"]:
         g3_status = "FAIL_INCOMPATIBLE_BASEBAND"
+        g3_zh = passport_bb["detail_zh"]
+        g3_en = passport_bb["detail_en"]
+    elif passport_bb is not None and passport_bb.get("firmware_unverified_needs_root"):
+        g3_status = "NEEDS_ROOT_VISIBILITY"
         g3_zh = passport_bb["detail_zh"]
         g3_en = passport_bb["detail_en"]
     elif modem_hits:
@@ -1085,6 +1112,13 @@ def run_unit_tests() -> int:
 
     # 5. Legacy vendor IMS daemon & Passport baseband pre-flight helpers
     check(extract_firmware_build_id("flavor:none\nbuild_id:AAB982\n") == "AAB982", "extract AAB982")
+    check(
+        extract_firmware_build_id(
+            "build_id:AAB982\nMP_QC_Release:MPSS.DI.4.0.1-00158\nRadioVariant:qc8974-4.0build_id:AAB982\n"
+        )
+        == "AAB982",
+        "extract AAB982 from vfat dual-path cat",
+    )
     check(extract_firmware_build_id("build_id:AAA596") == "AAA596", "extract AAA596")
     check(extract_firmware_build_id("") == "", "extract empty")
 
@@ -1095,20 +1129,32 @@ def run_unit_tests() -> int:
     prop_conflict = assess_legacy_ims_daemon_conflict({}, {"sys.ims.QMI_DAEMON_STATUS": "1"})
     check(prop_conflict["conflicting"] is True, "sys.ims.QMI_DAEMON_STATUS=1 flagged")
 
+    bb_live_ok = assess_passport_baseband(".DI.4.0.1-00158-M8974AAAAANAZM-1", "AAB982")
+    check(bb_live_ok["compatible"] is True and bb_live_ok["reason"] == "OK", "Live wolverine .DI.4.0.1 compatible")
     bb_ok = assess_passport_baseband("MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1", "AAB982")
-    check(bb_ok["compatible"] is True, "AAB982 DI.4.0.1 compatible")
-    bb_aaa = assess_passport_baseband("MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1", "AAA596")
+    check(bb_ok["compatible"] is True, "AAB982 MPSS.DI.4.0.1 compatible")
+    bb_unroot = assess_passport_baseband(".DI.4.0.1-00158-M8974AAAAANAZM-1", "", require_firmware_id=False)
+    check(
+        bb_unroot["compatible"] is True and bb_unroot.get("firmware_unverified_needs_root") is True,
+        "Unrooted read-only check accepts .DI.4.0.1 prop pending root AAB982 check",
+    )
+    bb_aaa = assess_passport_baseband(".DI.4.0.1-00158-M8974AAAAANAZM-1", "AAA596")
     check(bb_aaa["compatible"] is False and bb_aaa["reason"] == "LEGACY_AAA_FIRMWARE", "AAA596 blocked")
-    bb_bb10 = assess_passport_baseband("MPSS.DI.2.0.1.c1.16-00018-M8974AAAAANPZM-1", "")
-    check(bb_bb10["compatible"] is False and bb_bb10["reason"] == "INCOMPATIBLE_BASEBAND", "BB10 DI.2.0.1 blocked")
-    bb_empty = assess_passport_baseband("", "")
-    check(bb_empty["compatible"] is False and bb_empty["reason"] == "EMPTY_BASEBAND_PROP", "Empty baseband blocked")
-    bb_missing_fw = assess_passport_baseband("MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1", "")
-    check(bb_missing_fw["compatible"] is False, "Missing firmware build_id blocked")
-    bb_partial = assess_passport_baseband("MPSS.DI.4.0.1-AAAAANPZM", "AAB982")
+    bb_bb10 = assess_passport_baseband("MPSS.DI.2.0.1.c1.16-00018-M8974AAAAANPZM-1", "", require_firmware_id=False)
+    check(bb_bb10["compatible"] is False and bb_bb10["reason"] == "INCOMPATIBLE_BASEBAND", "BB10 DI.2.0.1 blocked even unrooted")
+    bb_empty = assess_passport_baseband("", "", require_firmware_id=False)
+    check(bb_empty["compatible"] is False and bb_empty["reason"] == "EMPTY_BASEBAND_PROP", "Empty baseband blocked even unrooted")
+    bb_missing_fw = assess_passport_baseband(".DI.4.0.1-00158-M8974AAAAANAZM-1", "")
+    check(bb_missing_fw["compatible"] is False, "Missing firmware build_id blocked when root required")
+    bb_partial = assess_passport_baseband(".DI.4.0.1-AAAAANPZM", "AAB982")
     check(bb_partial["compatible"] is False, "Partial or conflicting baseband tokens blocked")
 
-    class _MockConflictedPassportAdb:
+    class _MockPassportAdb:
+        def __init__(self, *, uid: str = "0", fw: str = "build_id:AAB982", daemon: str = "") -> None:
+            self.uid = uid
+            self.fw = fw
+            self.daemon = daemon
+
         def shell(self, cmd: str, timeout: int = 15, check: bool = False) -> str:
             table = {
                 "getprop ro.product.brand": "blackberry",
@@ -1121,27 +1167,39 @@ def run_unit_tests() -> int:
                 "getprop ro.build.version.release": "11",
                 "getprop ro.build.display.id": "lineage_wseries-userdebug 11 RQ3A test-keys",
                 "getprop ro.build.tags": "test-keys",
-                "getprop gsm.version.baseband": "MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1",
+                "getprop gsm.version.baseband": ".DI.4.0.1-00158-M8974AAAAANAZM-1",
                 "getprop gsm.sim.state": "LOADED",
-                "getprop init.svc.imsqmidaemon": "running",
-                "id -u": "0",
-                "getenforce": "Permissive",
+                "getprop init.svc.imsqmidaemon": self.daemon,
+                "id -u": self.uid,
+                "getenforce": "Permissive" if self.daemon else "Enforcing",
             }
             if cmd in table:
                 return table[cmd]
             if "CONTENTS.TXT" in cmd:
-                return "build_id:AAA596"
+                return self.fw if self.uid == "0" else ""
             if "rild_ims0" in cmd:
-                return "srw-rw---- 1 radio radio 0 /dev/socket/qmux_radio/rild_ims0"
+                return "srw-rw---- 1 radio radio 0 /dev/socket/qmux_radio/rild_ims0" if self.uid == "0" else ""
             if "/dev/diag" in cmd:
-                return "crw-rw---- 1 system qcom_diag 249, 0 /dev/diag"
+                return "crw-rw---- 1 system qcom_diag 249, 0 /dev/diag" if self.uid == "0" else ""
             if "mixer_paths" in cmd:
                 return "/vendor/etc/mixer_paths.xml"
             if "qp_ims_reg_config" in cmd:
-                return "/firmware/image/modem.b18"
+                return "/firmware/image/modem.b18" if self.uid == "0" else ""
             return ""
 
-    bad_pp_audit = run_readonly_readiness_audit(_MockConflictedPassportAdb())
+    good_root_pp = run_readonly_readiness_audit(_MockPassportAdb(uid="0", fw="build_id:AAB982"))
+    check(good_root_pp["catalog_match"]["route"] == "VERIFIED_PASSPORT_READY", "Healthy rooted wolverine ready")
+    check(good_root_pp["gates"]["gate3_modem_ims"]["status"] == "PASS", "Healthy rooted wolverine Gate 3 PASS")
+
+    good_unroot_pp = run_readonly_readiness_audit(_MockPassportAdb(uid="2000", fw="build_id:AAB982"))
+    check(good_unroot_pp["catalog_match"]["route"] == "VERIFIED_PASSPORT_READY", "Healthy unrooted wolverine not falsely blocked")
+    check(good_unroot_pp["gates"]["gate3_modem_ims"]["status"] == "NEEDS_ROOT_VISIBILITY", "Unrooted wolverine Gate 3 requests root visibility")
+
+    missing_fw_root_pp = run_readonly_readiness_audit(_MockPassportAdb(uid="0", fw=""))
+    check(missing_fw_root_pp["catalog_match"]["route"] == "NEEDS_ROM_OR_BASEBAND_UPGRADE", "Rooted wolverine without AAB982 blocked")
+    check(missing_fw_root_pp["gates"]["gate3_modem_ims"]["status"] == "FAIL_INCOMPATIBLE_BASEBAND", "Rooted missing AAB982 Gate 3 fails")
+
+    bad_pp_audit = run_readonly_readiness_audit(_MockPassportAdb(uid="0", fw="build_id:AAA596", daemon="running"))
     check(bad_pp_audit["catalog_match"]["route"] == "NEEDS_ROM_OR_BASEBAND_UPGRADE", "Conflicted Passport route downgraded")
     check(bad_pp_audit["gates"]["gate2_ril_diag"]["status"] == "FAIL_LEGACY_IMS_DAEMON_CONFLICT", "Gate 2 catches imsqmidaemon")
     check(bad_pp_audit["gates"]["gate3_modem_ims"]["status"] == "FAIL_INCOMPATIBLE_BASEBAND", "Gate 3 catches AAA596")

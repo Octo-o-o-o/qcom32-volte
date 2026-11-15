@@ -78,7 +78,7 @@ DEVICE_FAMILIES: tuple[dict[str, Any], ...] = (
         "blocked_or_risky_variants": [
             "Phones still running stock BlackBerry 10 OS (QNX 10.3.3): do NOT use qcom32-volte; use sister repo Octo-o-o-o/bb10-volte instead.",
             "Older Permissive LineageOS 18.1 ROMs with active legacy vendor `imsqmidaemon` (`init.svc.imsqmidaemon=running`): enabling `IMS_enable=01` causes QMI_IMSS/IMSA contention with `rild` and loses cellular signal (`gsm.sim.state=''`). Upgrade to Enforcing `lineage-18.1-20260129-UNOFFICIAL-wseries` first.",
-            "Older BB10 `DI.2.0.1` radios or engineering `AAA*` (`AAA594`/`AAA596`/`AAA620`) `NON-HLOS.bin` basebands: flash BlackBerry Android `AAB982` (`MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1`) `NON-HLOS.bin` before activating VoLTE.",
+            "Older BB10 `DI.2.0.1` radios or engineering `AAA*` (`AAA594`/`AAA596`/`AAA620`) `NON-HLOS.bin` basebands: flash BlackBerry Android `AAB982` (`.DI.4.0.1-00158-M8974AAAAANAZM-1`) `NON-HLOS.bin` before activating VoLTE.",
         ],
         "notes": "One wolverine unit verified; other Passport editions unverified and read-only by default. Rollback remains available; inspection logs are not full backups.",
     },
@@ -522,7 +522,12 @@ def assess_legacy_ims_daemon_conflict(props: dict[str, str]) -> list[str]:
     return hits
 
 
-def assess_passport_baseband(baseband: str, fw_build_id: str = "") -> tuple[bool, str]:
+def assess_passport_baseband(
+    baseband: str,
+    fw_build_id: str = "",
+    *,
+    require_firmware_id: bool = True,
+) -> tuple[bool, str]:
     bb = (baseband or "").strip()
     bb_u = bb.upper()
     fw = (fw_build_id or "").strip()
@@ -536,11 +541,13 @@ def assess_passport_baseband(baseband: str, fw_build_id: str = "") -> tuple[bool
             False,
             "`gsm.version.baseband` is empty (radio/RIL uninitialized or wedged). If signal was lost after a prior deploy, run `python3 cli/volte_ctl.py rollback` first.",
         )
-    if "MPSS.DI.4.0.1" not in bb_u or "AAAAANAZM" not in bb_u or "DI.2.0.1" in bb_u or "AAAAANPZM" in bb_u:
+    if "DI.4.0.1" not in bb_u or "AAAAANAZM" not in bb_u or "DI.2.0.1" in bb_u or "AAAAANPZM" in bb_u:
         return (
             False,
             f"Baseband `{bb}` is not BlackBerry Android `DI.4.0.1 / M8974AAAAANAZM` (e.g. BB10 `DI.2.0.1` radio). Flash `AAB982` `NON-HLOS.bin` first.",
         )
+    if not fw and not require_firmware_id:
+        return True, "BASEBAND_PROP_OK_PENDING_ROOT_AAB982_CHECK"
     if fw.upper() != "AAB982":
         return False, f"Firmware build_id `{fw or 'unknown'}` is unverified; AAB982 is required."
     return True, "OK"
@@ -624,8 +631,13 @@ def classify_device_props(
         legacy_hits = assess_legacy_ims_daemon_conflict(props)
         if legacy_hits:
             warnings.append("Deployment preflight blocks conflicting legacy IMS daemons: " + ", ".join(legacy_hits))
+        unrooted_without_fw = bool(adb_uid and adb_uid != "0" and "firmware_build_id" not in props)
         if "gsm.version.baseband" in props or "firmware_build_id" in props:
-            bb_ok, bb_msg = assess_passport_baseband(props.get("gsm.version.baseband", ""), props.get("firmware_build_id", ""))
+            bb_ok, bb_msg = assess_passport_baseband(
+                props.get("gsm.version.baseband", ""),
+                props.get("firmware_build_id", ""),
+                require_firmware_id=not unrooted_without_fw,
+            )
             if not bb_ok:
                 warnings.append("Deployment preflight blocks baseband: " + bb_msg)
         return {
@@ -687,12 +699,14 @@ def classify_device_props(
                     "python3 cli/volte_ctl.py status",
                 ],
             }
+        unrooted_without_fw = bool(adb_uid and adb_uid != "0" and "firmware_build_id" not in props)
         if matched_prof["profile_id"] == "blackberry-passport-wolverine" and (
             "gsm.version.baseband" in props or "firmware_build_id" in props
         ):
             bb_ok, bb_msg = assess_passport_baseband(
                 props.get("gsm.version.baseband", ""),
                 props.get("firmware_build_id", ""),
+                require_firmware_id=not unrooted_without_fw,
             )
             if not bb_ok:
                 return {
@@ -706,6 +720,10 @@ def classify_device_props(
                         "python3 cli/volte_ctl.py status",
                     ],
                 }
+            if bb_msg == "BASEBAND_PROP_OK_PENDING_ROOT_AAB982_CHECK":
+                warnings.append(
+                    "ADB shell is currently unrooted (UID != 0); `deploy` will enable ADB Root and verify `build_id:AAB982` in `/firmware/image/contents.txt` before touching EFS."
+                )
         if "LOADED" not in sim_state:
             return {
                 "route": "NEEDS_SIM_OR_LTE",
@@ -927,8 +945,7 @@ def run_live_inspect(repo_root: Path, adb_explicit: str | None, serial: str | No
             )
         )
         fw_id = extract_firmware_build_id(fw_txt)
-        if fw_id:
-            props["firmware_build_id"] = fw_id
+        props["firmware_build_id"] = fw_id
     ims_pm = sh("pm path org.octolab.qcom32ims 2>/dev/null || true")
 
     rild_sock_out = sh("ls -lZ /dev/socket/qmux_radio/rild_ims0 2>/dev/null || true")
@@ -1210,7 +1227,7 @@ def cmd_self_test(repo_root: Path) -> int:
             "ro.build.tags": "test-keys",
             "selinux": "Enforcing",
             "gsm.sim.state": "LOADED",
-            "gsm.version.baseband": "MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1",
+            "gsm.version.baseband": ".DI.4.0.1-00158-M8974AAAAANAZM-1",
             "firmware_build_id": "AAA596",
         },
         profiles,
@@ -1235,10 +1252,51 @@ def cmd_self_test(repo_root: Path) -> int:
     assert d_pp_bb10["route"] == "NEEDS_COMPATIBLE_BASEBAND"
     assert extract_firmware_build_id("build_id:AAB982\n") == "AAB982"
 
+    live_bb = ".DI.4.0.1-00158-M8974AAAAANAZM-1"
     good_bb = "MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1"
+    assert assess_passport_baseband(live_bb, "AAB982")[0]
     assert assess_passport_baseband(good_bb, "AAB982")[0]
-    assert not assess_passport_baseband(good_bb, "")[0]
-    assert not assess_passport_baseband("MPSS.DI.4.0.1-AAAAANPZM", "AAB982")[0]
+    assert assess_passport_baseband(live_bb, "", require_firmware_id=False)[0]
+    assert not assess_passport_baseband(live_bb, "")[0]
+    assert not assess_passport_baseband(".DI.4.0.1-AAAAANPZM", "AAB982")[0]
+
+    d_pp_unrooted = classify_device_props(
+        {
+            "ro.product.brand": "blackberry",
+            "ro.product.device": "wolverine",
+            "ro.product.model": "Passport",
+            "ro.board.platform": "msm8974",
+            "ro.product.cpu.abi": "armeabi-v7a",
+            "ro.build.version.sdk": "30",
+            "ro.build.tags": "test-keys",
+            "selinux": "Enforcing",
+            "gsm.sim.state": "LOADED",
+            "gsm.version.baseband": live_bb,
+            "adb_uid": "2000",
+        },
+        profiles,
+    )
+    assert d_pp_unrooted["route"] == "VERIFIED_PROFILE_READY"
+    assert any("build_id:AAB982" in w for w in d_pp_unrooted["warnings"])
+
+    d_pp_root_missing_fw = classify_device_props(
+        {
+            "ro.product.brand": "blackberry",
+            "ro.product.device": "wolverine",
+            "ro.product.model": "Passport",
+            "ro.board.platform": "msm8974",
+            "ro.product.cpu.abi": "armeabi-v7a",
+            "ro.build.version.sdk": "30",
+            "ro.build.tags": "test-keys",
+            "selinux": "Enforcing",
+            "gsm.sim.state": "LOADED",
+            "gsm.version.baseband": live_bb,
+            "adb_uid": "0",
+            "firmware_build_id": "",
+        },
+        profiles,
+    )
+    assert d_pp_root_missing_fw["route"] == "NEEDS_COMPATIBLE_BASEBAND"
     experimental_base = {"ro.product.device": "oslo", "ro.product.model": "Passport", "ro.build.version.sdk": "30"}
     experimental_loss = classify_device_props({**experimental_base, "gsm.sim.state": "", "airplane_mode": "0"},
                                               profiles, gates={"ims_package_installed": True})
@@ -1248,7 +1306,7 @@ def cmd_self_test(repo_root: Path) -> int:
     experimental_conflict = classify_device_props({**experimental_base, "gsm.sim.state": "LOADED", "init.svc.imsqmidaemon": "running"}, profiles)
     assert experimental_conflict["route"] == "EXPERIMENTAL_UNVERIFIED_EDITION"
     assert any("preflight blocks" in warning for warning in experimental_conflict["warnings"])
-    print(json.dumps({"self_test": "PASS", "assertions": 44, "catalog_families": len(DEVICE_FAMILIES)}, indent=2))
+    print(json.dumps({"self_test": "PASS", "assertions": 49, "catalog_families": len(DEVICE_FAMILIES)}, indent=2))
     return 0
 
 
