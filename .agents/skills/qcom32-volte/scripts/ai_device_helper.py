@@ -59,7 +59,7 @@ DEVICE_FAMILIES: tuple[dict[str, Any], ...] = (
         ],
         "codenames": ["wolverine", "oslo", "wichita", "keian", "wseries", "windermere"],
         "soc": "Snapdragon 801 (MSM8974AA/AC, 32-bit ARMv7-A)",
-        "support_tier": "verified",
+        "support_tier": "mixed_verified_and_experimental",
         "verified_profile_id": "blackberry-passport-wolverine",
         "flash_protocol": "BlackBerry autoloader / emmc + LineageOS 18.1-wseries recovery",
         "recommended_variants": [
@@ -72,7 +72,7 @@ DEVICE_FAMILIES: tuple[dict[str, Any], ...] = (
         "blocked_or_risky_variants": [
             "Phones still running stock BlackBerry 10 OS (QNX 10.3.3): do NOT use qcom32-volte; use sister repo Octo-o-o-o/bb10-volte instead."
         ],
-        "notes": "All BlackBerry Passport hardware editions (wolverine / oslo Silver Edition / wichita / keian / wseries) share unified lineage_wseries + NON-HLOS.bin modem and are unlocked for guarded 1-click deploy, APK upgrade, companion app, China Telecom 46011 fallbackmode=9 stabilization, and full 54-item EFS rollback.",
+        "notes": "One wolverine unit verified; other Passport editions unverified and read-only by default. Rollback remains available; inspection logs are not full backups.",
     },
     {
         "family_id": "samsung-galaxy-s5-klte",
@@ -241,7 +241,7 @@ def load_repo_profiles(repo_root: Path) -> list[dict[str, Any]]:
     return out
 
 
-def match_repo_profile(profiles: list[dict[str, Any]], device: str, model: str, sdk_int: int) -> dict[str, Any] | None:
+def match_repo_profile(profiles: list[dict[str, Any]], device: str, model: str, sdk_int: int, *, experimental: bool = False) -> dict[str, Any] | None:
     dev_norm = device.strip().lower()
     mod_norm = model.strip().lower()
     for prof in profiles:
@@ -250,11 +250,11 @@ def match_repo_profile(profiles: list[dict[str, Any]], device: str, model: str, 
             continue
         if int(m.get("android_sdk", 30)) != sdk_int:
             continue
-        raw_devs = m.get("ro_product_device_aliases")
+        raw_devs = m.get("experimental_unverified_device_props" if experimental else "ro_product_device_aliases")
         dev_aliases = (
             [str(x).strip().lower() for x in raw_devs if str(x).strip()]
             if isinstance(raw_devs, list) and raw_devs
-            else [str(m.get("ro_product_device", "")).strip().lower()]
+            else ([] if experimental else [str(m.get("ro_product_device", "")).strip().lower()])
         )
         raw_mods = m.get("ro_product_model_aliases")
         mod_aliases = (
@@ -506,6 +506,7 @@ def classify_device_props(
     blocker_code, blocker_reason = detect_specific_variant_blocker(device, model, platform, abi)
     fam = match_catalog_family(device, model, brand)
     matched_prof = match_repo_profile(profiles, device, model, sdk_int)
+    experimental_prof = match_repo_profile(profiles, device, model, sdk_int, experimental=True)
     rom_sig = assess_rom_signature(build_tags, build_display)
 
     warnings: list[str] = []
@@ -540,6 +541,17 @@ def classify_device_props(
             "recommended_commands": [
                 "python3 .agents/skills/qcom32-volte/scripts/ai_device_helper.py catalog"
             ],
+        }
+
+    if experimental_prof is not None:
+        return {
+            "route": "EXPERIMENTAL_UNVERIFIED_EDITION",
+            "reason": "EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE / 实验性，未经真机验证. Read-only by default; rollback remains available.",
+            "matched_profile": experimental_prof["profile_id"],
+            "catalog_family": fam["family_id"] if fam else None,
+            "rom_signature": rom_sig,
+            "warnings": warnings,
+            "recommended_commands": ["python3 cli/volte_ctl.py status", "python3 cli/volte_ctl.py inspect-device"],
         }
 
     if matched_prof is not None and matched_prof.get("status") == "verified":
@@ -583,7 +595,7 @@ def classify_device_props(
             }
         return {
             "route": "VERIFIED_PROFILE_READY",
-            "reason": f"Verified profile `{matched_prof['profile_id']}` matched on Android 11 with SIM LOADED. Ready for guarded one-command backup + Stage 6A provisioning + APK deployment.",
+            "reason": f"Verified profile `{matched_prof['profile_id']}` matched on Android 11 with SIM LOADED. Stage 6A provisioning is available after an independent off-device EFS backup; inspection logs cannot restore original bytes.",
             "matched_profile": matched_prof["profile_id"],
             "catalog_family": fam["family_id"] if fam else None,
             "rom_signature": rom_sig,
@@ -841,7 +853,7 @@ def cmd_self_test(repo_root: Path) -> int:
     assert d_pp_ready["matched_profile"] == "blackberry-passport-wolverine"
     assert d_pp_ready["rom_signature"]["prebuilt_apk_compatible"] is True
 
-    # 1B. Passport Silver Edition (oslo / SQW100-4) & AT&T Wichita also unlocked via profile aliases
+    # 1B. Other Passport codenames stay experimental, including when healthy.
     d_oslo_ready = classify_device_props(
         {
             "ro.product.brand": "blackberry",
@@ -858,7 +870,7 @@ def cmd_self_test(repo_root: Path) -> int:
         },
         profiles,
     )
-    assert d_oslo_ready["route"] == "VERIFIED_PROFILE_READY"
+    assert d_oslo_ready["route"] == "EXPERIMENTAL_UNVERIFIED_EDITION"
     assert d_oslo_ready["matched_profile"] == "blackberry-passport-wolverine"
 
     d_wichita_ready = classify_device_props(
@@ -877,7 +889,11 @@ def cmd_self_test(repo_root: Path) -> int:
         },
         profiles,
     )
-    assert d_wichita_ready["route"] == "VERIFIED_PROFILE_READY"
+    assert d_wichita_ready["route"] == "EXPERIMENTAL_UNVERIFIED_EDITION"
+    for dev in ("oslo", "wichita", "keian", "wseries", "windermere"):
+        route = classify_device_props({"ro.product.device": dev, "ro.product.model": "Passport",
+                                       "ro.build.version.sdk": "30"}, profiles, volte_healthy=True)
+        assert route["route"] == "EXPERIMENTAL_UNVERIFIED_EDITION"
 
     # 2. Verified Passport already healthy
     d_pp_healthy = classify_device_props(

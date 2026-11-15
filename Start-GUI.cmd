@@ -6,10 +6,6 @@ if %errorlevel% equ 0 (
     python cli\gui.py %*
     exit /b %errorlevel%
 )
-if exist "C:\py311\python.exe" (
-    "C:\py311\python.exe" cli\gui.py %*
-    exit /b %errorlevel%
-)
 echo Python 3 (with tkinter) was not found in PATH. Download the standalone Windows EXE instead.
 pause
 exit /b 1

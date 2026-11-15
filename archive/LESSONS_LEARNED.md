@@ -1,5 +1,7 @@
 # BlackBerry Passport Android 11 VoLTE 历史踩坑与失败路线复盘 (`LESSONS_LEARNED`)
 
+> **勘误 / Correction (2026-11-15)：** 本文真机结论限一台联通 46001 wolverine，不能推及其他版本、运营商或所有重启；IMS 短信未实现，紧急呼叫不支持且未获认证。EFS 检查日志不是完整原值备份，固定回滚不保证恢复每机原值。
+
 在打通 BlackBerry Passport (`wolverine` / `msm8974` / 基带 `.DI.4.0.1-00158-M8974AAAAANAZM-1`) 原生 VoLTE 的过程中，项目经历了从无 Root 探索到 Root 后基带 Hexagon Q6ZIP 逆向、EFS2 供给、QMI/RIL 协议桥接与 Android 11 `ImsService` 适配的完整闭环。以下归档所有**已证实走不通或踩过深坑的方案**，供后续开发者与同类高通老平台（MSM8974 / MSM8992 / MSM8994 / SDM660）移植者避坑。
 
 ---

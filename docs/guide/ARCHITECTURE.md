@@ -75,11 +75,11 @@ flowchart TD
      - `qp_ims_reg_config` 采用 **`mode=0`（3GPP 标准动态发现模式）**：不含任何写死的运营商 IP，由基带自动从当前插入的 USIM 卡推导归属 IMS 域名并向 LTE 基站请求 PCO P-CSCF 地址；
      - 修正 `/pdp_profiles/profile4`（789 字节）：启用 `IPV4V6` 双栈、设置 `APN="ims"`、`im_cn_flag=1`、`request_pcscf_address_flag=1`、`apn_disabled_flag=0`；
      - 设置 `ims_operation_mode=02`、`voice_domain_pref=03` (`IMS_PS_VOICE_PREFERRED_CS_SECONDARY`，即优先 VoLTE、无 VoLTE 时自动回退 CSFB)、`IMS_enable=01`，并执行 `EFS2_DIAG_SYNC` 落盘；
-  3. 支持 `--rollback-all`：先回写 `IMS_enable=00` 与 `voice_domain_pref=00`，再逐一 `UNLINK` 删除全部新建条目并 `SYNC`，100% 还原出厂基带基线。
+  3. 支持 `--rollback-all`：先回写 `IMS_enable=00` 与 `voice_domain_pref=00`，再逐一 `UNLINK` 删除全部新建条目并 `SYNC`，这是固定清理流程，不从原值备份恢复，不保证还原任意设备基线。
 
 ### 3.2 `src/android-ims-service` (`Qcom32VolteIms.apk` v2.6)
 - **运行身份**：包名 `org.octolab.qcom32ims`，声明 `android:sharedUserId="android.uid.phone"`，使用 LineageOS 平台签名安装于 `/data/app/`（或集成至 `/system_ext/priv-app/`），运行在独立 `:qcom32ims` 进程（`UID 1001` / SELinux `u:r:radio:s0`），**零 `<uses-permission>` 声明**（不触碰 `com.android.phone` 原有系统电话权限），全程严守 `SELinux Enforcing`。
-- **开机自启、三网换卡自愈与跨重启持久化**：
+- **开机自启、换卡事件与跨重启配置**：
   - `CarrierConfigBootstrapReceiver` 入口内置 7 项系统 `<protected-broadcast>` 白名单校验（阻断非特权显式 Intent 伪造），监听 `LOCKED_BOOT_COMPLETED`、`BOOT_COMPLETED`、`SIM_STATE_CHANGED` 与 `ACTION_CARRIER_CONFIG_CHANGED`；
   - 对当前活跃 SIM `subId` 调用 `@SystemApi` 三参版 `CarrierConfigManager.overrideConfig(subId, bundle, /*persistent=*/true)` 开启 VoLTE 能力并指定 `config_ims_mmtel_package_override_string = "org.octolab.qcom32ims"`，使 `ImsResolver` 在开机或更换新 SIM 卡后无需电脑干预自动拉起并绑定 `Qcom32VolteImsService`。
 - **免 `su` 只读状态导出 (`VolteStatusProvider`)**：
@@ -92,3 +92,6 @@ flowchart TD
 ### 3.3 `src/qmi-imsa-probe` (`libimsa_probe.so`)
 - 随独立 APK 打包于 `lib/armeabi-v7a/libimsa_probe.so`（ROM 源码集成模式下安装于 `/system_ext/bin/libimsa_probe.so`，由 `Qcom32VolteImsService` 自动解析路径）的轻量 ARM32 只读诊断探针。
 - 当管理员执行 `dumpsys activity service org.octolab.qcom32ims/.Qcom32VolteImsService --qmi-probe`（或由 `VolteStatusProvider` 调用）时，通过 `libqmi_client_qmux.so` 只读读取 `QMI_IMSA` 的实时 `pdp_connected`、`reg_status`、`voip` 与 `voip_rat` 状态，用于秒级故障定位。
+
+
+验证边界：仅一台联通 46001 wolverine 完成通话验证；电信仅 LTE 驻留和 IMS 注册（通话未测），移动未测。IMS 短信未实现；紧急呼叫不支持、未认证。其他机型与非中国运营商未测试。

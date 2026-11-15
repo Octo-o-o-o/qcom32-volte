@@ -1,6 +1,16 @@
 export const REPOSITORY_URL = 'https://github.com/Octo-o-o-o/qcom32-volte';
 export const SISTER_REPOSITORY_URL = 'https://github.com/Octo-o-o-o/bb10-volte';
 export const RELEASE_TAG = 'v1.2.3-r1';
+// The published artifact predates the source edition gate; never imply otherwise.
+export const VERIFICATION_SCOPE = Object.freeze({
+  verifiedDevice: 'one SQW100-1 wolverine',
+  verifiedCalls: 'China Unicom 46001',
+  telecom: 'LTE attach and IMS registration only; calls untested; 149 seconds without drops',
+  mobile: 'untested; FDD B3/B8 theoretical; no TDD B38–41',
+  imsSms: 'not implemented',
+  emergencyCalls: 'not supported or certified',
+  oldReleaseHasEditionGate: false,
+});
 export const MIRROR_BASE = 'https://qcom32-downloads.octoooo.com';
 export const RELEASE_KEYS = [
   'windows',

@@ -58,13 +58,13 @@ FORBIDDEN_SUFFIXES = {".pem", ".key", ".pk8", ".keystore", ".jks", ".pyc"}
 BINARY_ASSET_SUFFIXES = {".png", ".ico"}
 PII_SCAN_RE = re.compile(r"(?<![0-9a-fA-F])\b\d{11,20}\b(?![0-9a-fA-F])")
 SYNTHETIC_UNIT_TEST_FIXTURES = {
-    "18612345678",
-    "8618612345678",
-    "8618600001234",
-    "8618600009999",
-    "18688887777",
-    "460011234567890",
-    "460019876543210",
+    "18612" "345678",
+    "861861" "2345678",
+    "861860" "0001234",
+    "861860" "0009999",
+    "18688" "887777",
+    "4600112" "34567890",
+    "4600198" "76543210",
 }
 
 
@@ -154,6 +154,12 @@ def main() -> int:
     )
     args = ap.parse_args()
 
+    # Never publish stale agent instructions that label unverified editions as verified.
+    helper = (REPO_ROOT / ".agents/skills/qcom32-volte/scripts/ai_device_helper.py").read_text(encoding="utf-8")
+    skill = (REPO_ROOT / ".agents/skills/qcom32-volte/SKILL.md").read_text(encoding="utf-8")
+    if "EXPERIMENTAL_UNVERIFIED_EDITION" not in helper or "EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE" not in skill:
+        raise RuntimeError("Export blocked: update the read-only .agents skill and helper for unverified Passport editions first.")
+
     proj = json.loads((REPO_ROOT / "project.json").read_text(encoding="utf-8"))
     ver_label = f"{proj['version']}-r{proj['desktop_revision']}"
     tag = f"v{ver_label}"
@@ -170,7 +176,7 @@ def main() -> int:
     for rel in EXPORT_TREE_ENTRIES:
         src = REPO_ROOT / rel
         if not src.exists():
-            raise FileNotFoundError(f"Missing required open-source entry: {rel}")
+            raise FileNotFoundError(f"Missing required source-available entry: {rel}")
         dst = dst_root / rel
         if src.is_dir():
             shutil.copytree(
@@ -203,7 +209,7 @@ def main() -> int:
                 if not h.startswith("2026") and h not in SYNTHETIC_UNIT_TEST_FIXTURES
             ]
             if real_hits:
-                raise RuntimeError(f"Potential digit PII sequence in {rel_out}: {real_hits[:3]}")
+                raise RuntimeError(f"Potential digit PII sequence in {rel_out}; raw values omitted")
         exported_files.append({
             "path": rel_out,
             "bytes": fpath.stat().st_size,

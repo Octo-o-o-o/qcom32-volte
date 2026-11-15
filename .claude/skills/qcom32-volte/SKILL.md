@@ -2,8 +2,8 @@
 name: qcom32-volte
 description: >-
   Identifies connected or user-named phones, checks compatibility, deploys or rolls back native
-  4G VoLTE on verified 32-bit Qualcomm Android 11 devices (BlackBerry Passport all editions:
-  `wolverine`, Silver Edition `oslo`, AT&T `wichita`, Porsche `keian`, `wseries`), and guides safe
+  4G VoLTE on a verified BlackBerry Passport `wolverine` and guides read-only inspection of
+  unverified Passport editions (`oslo`, `wichita`, `keian`, `wseries`, `windermere`) and safe
   4-gate VoLTE porting and LineageOS 18.1 preparation for candidate MSM8974/APQ8084 devices
   (Samsung Galaxy S5 `klte`, Xiaomi Mi 4 `cancro`, LG G3 `d855`, OnePlus One `bacon`, Sony Xperia
   Z1/Z2/Z3, HTC One M8, Moto X 2014, Nexus 6). Use whenever the user asks to check device support,
@@ -12,6 +12,12 @@ description: >-
 ---
 
 # Qcom32 VoLTE — Claude Code Skill Entrypoint
+
+Only one SQW100-1 `wolverine` on China Unicom 46001 has complete call verification. China Telecom 46003/46011 has LTE attach and IMS registration only; calls are untested (EPS-only fix: 149 s without a drop). China Mobile is untested; FDD B3/B8 is theoretical and Passport lacks TDD B38–41. IMS SMS is not implemented. Emergency calls are not supported or certified; keep another phone. VoWiFi, video, supplementary services and non-Chinese carriers are unsupported or untested.
+
+EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE / 实验性，未经真机验证: `oslo`, `wichita`, `keian`, `wseries`, `windermere` default to read-only; CLI EFS writes require `--experimental-unverified-edition` plus typed confirmation or `--i-understand-unverified-baseband-write`. GUI/on-device activation is blocked; rollback remains available for Passport. Non-Passport baseband writes are blocked. Published v1.2.3-r1 artifacts lack this new gate.
+
+Back up EFS independently and keep the backup off-device before writing. The automatic inspection log is not a restorable full backup, and fixed rollback does not guarantee the original bytes. This project is source-available (PolyForm Noncommercial 1.0.0; commercial license available).
 
 This repository ships a unified multi-agent skill under `.agents/skills/qcom32-volte/`.
 

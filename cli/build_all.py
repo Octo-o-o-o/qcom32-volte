@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Standalone open-source builder & host unit-test runner for the Qcom32 VoLTE & IMS Stack.
+"""Standalone source-available builder & host unit-test runner for the Qcom32 VoLTE & IMS Stack.
 
 Builds and verifies all four production components directly from `src/`:
   1. `src/modem-efs-provisioner/` -> `build/release/pp_regconfig_provision_v6` (ARM32 PIE + 559 host C assertions)
@@ -108,7 +108,7 @@ def main() -> int:
         "ZIG_EXE",
         [
             REPO_ROOT / f"private/toolchain/zig/zig{EXE_SUFFIX}",
-            Path(r"C:\LifeSpace\bbq10\tools\volte_session\toolchain\ziglang-0.13.0\ziglang\zig.exe"),
+
         ],
         "zig",
     )

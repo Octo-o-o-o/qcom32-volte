@@ -3,11 +3,42 @@ import assert from 'node:assert/strict';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildReleaseAssetNames, selectRelease, RELEASE_TAG, MIRROR_BASE, REPOSITORY_URL } from '../src/site.js';
+import { buildReleaseAssetNames, selectRelease, RELEASE_TAG, MIRROR_BASE, REPOSITORY_URL, VERIFICATION_SCOPE } from '../src/site.js';
 import worker from '../worker.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const dist = path.join(root, 'dist');
+
+test('verification scope distinguishes calls, registration and unimplemented features', () => {
+  assert.match(VERIFICATION_SCOPE.verifiedCalls, /46001/);
+  assert.match(VERIFICATION_SCOPE.telecom, /calls untested/);
+  assert.match(VERIFICATION_SCOPE.mobile, /untested/);
+  assert.match(VERIFICATION_SCOPE.imsSms, /not implemented/);
+  assert.match(VERIFICATION_SCOPE.emergencyCalls, /not supported/);
+  assert.equal(VERIFICATION_SCOPE.oldReleaseHasEditionGate, false);
+});
+
+test('bilingual pages warn about unverified editions, EFS backup and old release gate', async () => {
+  for (const rel of ['index.html', 'guide.html', 'en/index.html', 'en/guide.html']) {
+    const html = await readFile(path.join(dist, rel), 'utf8');
+    assert.match(html, /oslo/);
+    assert.match(html, /46001/);
+    assert.match(html, /46003/);
+    assert.match(html, /149/);
+    assert.match(html, /v1\.2\.3-r1/);
+    if (rel.startsWith('en/')) {
+      assert.match(html, /not supported or certified/i);
+      assert.match(html, /inspection log/i);
+      assert.match(html, /calls untested/i);
+      assert.match(html, /SMS over IMS is not implemented/i);
+    } else {
+      assert.match(html, /紧急呼叫不支持/);
+      assert.match(html, /检查日志/);
+      assert.match(html, /通话未测/);
+      assert.match(html, /IMS 短信未实现/);
+    }
+  }
+});
 
 function collectIds(html) {
   return new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]));

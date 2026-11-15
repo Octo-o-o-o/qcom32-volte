@@ -13,19 +13,22 @@ public final class VolteManagerLogicTest {
     }
 
     public static void main(String[] args) {
-        // 1. Verified device profile matching (All BlackBerry Passport wseries hardware editions)
+        // 1. Only wolverine is enabled for on-device deploy; all Passport editions retain rollback.
         check(VolteManagerLogic.verifyPassportIdentity("Passport", "wolverine", 30), "Passport wolverine API 30 verified");
         check(VolteManagerLogic.verifyPassportIdentity("BlackBerry Passport", "wolverine", 30), "BlackBerry Passport variant verified");
-        check(VolteManagerLogic.verifyPassportIdentity("Passport Silver Edition", "oslo", 30), "Passport Silver Edition oslo API 30 verified");
-        check(VolteManagerLogic.verifyPassportIdentity("SQW100-4", "oslo", 30), "Passport SQW100-4 oslo verified");
-        check(VolteManagerLogic.verifyPassportIdentity("Passport", "wichita", 30), "Passport AT&T wichita verified");
-        check(VolteManagerLogic.verifyPassportIdentity("Passport Porsche Design", "keian", 30), "Passport Porsche Design keian verified");
-        check(VolteManagerLogic.verifyPassportIdentity("Passport", "wseries", 30), "Unified lineage_wseries fallback verified");
+        check(VolteManagerLogic.isRootOperationAllowed("deploy", "Passport", "wolverine", 30), "wolverine deploy allowed");
+        for (String dev : new String[]{"oslo", "wichita", "keian", "wseries", "windermere"}) {
+            check(!VolteManagerLogic.verifyPassportIdentity("Passport", dev, 30), dev + " unverified");
+            check(!VolteManagerLogic.isRootOperationAllowed("deploy", "Passport", dev, 30), dev + " deploy blocked");
+            check(!VolteManagerLogic.isRootOperationAllowed("upgrade", "Passport", dev, 30), dev + " upgrade blocked");
+            check(VolteManagerLogic.isRootOperationAllowed("rollback", "Passport", dev, 30), dev + " rollback allowed");
+        }
+        check(VolteManagerLogic.isRootOperationAllowed("rollback", "Passport", "wolverine", 30), "wolverine rollback allowed");
         check("blackberry-passport-wolverine".equals(
                 VolteManagerLogic.matchVerifiedDeviceProfile("Passport", "wolverine", 30)), "Profile ID exact");
-        check("blackberry-passport-wolverine".equals(
-                VolteManagerLogic.matchVerifiedDeviceProfile("Passport Silver Edition", "oslo", 30)), "Silver Edition oslo maps to wolverine profile");
+        check(VolteManagerLogic.matchVerifiedDeviceProfile("Passport Silver Edition", "oslo", 30) == null, "Silver Edition not verified");
         check(!VolteManagerLogic.verifyPassportIdentity("OnePlus One", "bacon", 30), "Unverified profile gated from EFS write");
+        check(!VolteManagerLogic.isRootOperationAllowed("rollback", "OnePlus One", "bacon", 30), "non-Passport rollback blocked");
         check(!VolteManagerLogic.verifyPassportIdentity("Passport", "wolverine", 29), "Non-Android-11 rejected");
         check(!VolteManagerLogic.verifyPassportIdentity("Passport Silver Edition", "oslo", 29), "Silver Edition non-Android-11 rejected");
 
@@ -34,10 +37,10 @@ public final class VolteManagerLogicTest {
         check("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad".equals(abcHash), "SHA-256 NIST vector");
 
         // 3. PII redaction
-        String sample = "IMSI=460011234567890 num=18612345678 short=46001";
+        String sample = "IMSI=4600112" + "34567890 num=18612" + "345678 short=46001";
         String redacted = VolteManagerLogic.redactSensitiveDigits(sample);
-        check(!redacted.contains("460011234567890"), "IMSI redacted");
-        check(!redacted.contains("18612345678"), "11-digit phone number redacted");
+        check(!redacted.contains("4600112" + "34567890"), "IMSI redacted");
+        check(!redacted.contains("18612" + "345678"), "11-digit phone number redacted");
         check(redacted.contains("short=46001"), "PLMN 46001 preserved");
 
         // 4. Healthy China Unicom status snapshot (JSON QMI + no local su via VolteStatusProvider)
@@ -99,7 +102,7 @@ public final class VolteManagerLogicTest {
         check(deploySh.contains("org.octolab.qcom32ims/.VolteAdminReceiver"), "Deploy invokes new admin receiver");
         check(deploySh.contains("--ez reboot_required true"), "Deploy marks reboot_required notification");
         check(deploySh.contains("pm uninstall org.passport.volteims"), "Deploy migrates legacy package cleanly");
-        check(deploySh.contains("wolverine|oslo|wichita|keian|wseries|windermere)"), "Deploy enforces Passport wseries EFS guard");
+        check(deploySh.contains("  wolverine) ;;") && !deploySh.contains("wolverine|oslo"), "Deploy shell enforces wolverine guard");
 
         String rollbackSh = VolteManagerLogic.buildRootRollbackScript("/data/user/0/org.octolab.qcom32volte/files/staged");
         check(rollbackSh.contains("wolverine|oslo|wichita|keian|wseries|windermere)"), "Rollback enforces Passport wseries EFS guard");
@@ -111,8 +114,8 @@ public final class VolteManagerLogicTest {
         // 8. 32-Bit Qualcomm catalog identification & read-only AI/GitHub porting report
         VolteManagerLogic.DeviceCatalogMatch osloCat = VolteManagerLogic.identifyDeviceCatalog(
                 "blackberry", "Passport Silver Edition", "oslo", "msm8974", "armeabi-v7a", 30, "test-keys");
-        check("VERIFIED_PASSPORT_READY".equals(osloCat.route) && osloCat.prebuiltApkCompatible,
-                "Silver Edition oslo catalog route VERIFIED_PASSPORT_READY");
+        check("EXPERIMENTAL_UNVERIFIED_EDITION".equals(osloCat.route) && osloCat.prebuiltApkCompatible,
+                "Silver Edition oslo catalog route experimental");
 
         VolteManagerLogic.DeviceCatalogMatch s5Cat = VolteManagerLogic.identifyDeviceCatalog(
                 "samsung", "SM-G900F", "klte", "msm8974", "armeabi-v7a", 30, "release-keys");

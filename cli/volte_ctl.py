@@ -3,18 +3,18 @@
 for the Qcom32 VoLTE & IMS Stack (32-bit Qualcomm Legacy Platforms on Android 11; first verified
 device profile: BlackBerry Passport `wolverine` / `MSM8974` on LineageOS 18.1).
 
-Works identically in the research monorepo, standalone open-source export, portable ZIP,
+Works identically in the research monorepo, standalone source-available export, portable ZIP,
 and PyInstaller single-file Windows EXE (`zero` third-party Python dependencies).
 
 Commands:
   python3 cli/volte_ctl.py self-test        # Run offline parser, profile-guard, catalog & PII-redaction unit tests
   python3 cli/volte_ctl.py status           # Read-only live VoLTE / QMI_IMSA / ImsResolver health check
   python3 cli/volte_ctl.py inspect-device   # 100% read-only 4-Gate readiness check + AI & GitHub self-porting guide
-  python3 cli/volte_ctl.py list-models      # List unlocked Passport editions & candidate 32-bit Qualcomm families
+  python3 cli/volte_ctl.py list-models      # List Passport editions and candidate 32-bit Qualcomm families
   python3 cli/volte_ctl.py deploy           # Guarded modem EFS provisioning + APK install + reboot verification
   python3 cli/volte_ctl.py upgrade-apk      # Zero-EFS-write in-place APK upgrade + optional reboot verification
   python3 cli/volte_ctl.py install-manager  # Install optional on-device companion app (Qcom32VolteManager.apk)
-  python3 cli/volte_ctl.py rollback         # Full factory modem EFS restoration + APK uninstall + reboot verification
+  python3 cli/volte_ctl.py rollback         # Fixed EFS cleanup + APK uninstall + reboot (not original-byte restoration)
 """
 from __future__ import annotations
 
@@ -81,7 +81,7 @@ def emit_json(payload: dict[str, object], out_json: str | None = None) -> None:
 
 
 def persistent_backup_root() -> Path:
-    """Store backups in %LOCALAPPDATA% when running from a frozen EXE, never in %TEMP%."""
+    """Store inspection and operation logs in a persistent location for frozen EXEs."""
     if FROZEN_ROOT is not None:
         if os.name == "nt":
             base = Path(os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData/Local"))
@@ -105,7 +105,7 @@ def load_device_profiles() -> list[dict[str, object]]:
     return profiles
 
 
-def match_verified_profile(device: str, model: str, sdk_int: int) -> dict[str, object] | None:
+def match_device_profile(device: str, model: str, sdk_int: int, *, experimental: bool = False) -> dict[str, object] | None:
     dev_norm = device.strip().lower()
     mod_norm = model.strip().lower()
     for prof in load_device_profiles():
@@ -116,11 +116,11 @@ def match_verified_profile(device: str, model: str, sdk_int: int) -> dict[str, o
             continue
         if int(m.get("android_sdk", 30)) != sdk_int:
             continue
-        raw_devs = m.get("ro_product_device_aliases")
+        raw_devs = m.get("experimental_unverified_device_props" if experimental else "ro_product_device_aliases")
         dev_aliases = (
             [str(x).strip().lower() for x in raw_devs if str(x).strip()]
             if isinstance(raw_devs, list) and raw_devs
-            else [str(m.get("ro_product_device", "")).strip().lower()]
+            else ([] if experimental else [str(m.get("ro_product_device", "")).strip().lower()])
         )
         raw_mods = m.get("ro_product_model_aliases")
         mod_aliases = (
@@ -133,6 +133,46 @@ def match_verified_profile(device: str, model: str, sdk_int: int) -> dict[str, o
         if dev_ok and mod_ok:
             return prof
     return None
+
+
+def match_verified_profile(device: str, model: str, sdk_int: int) -> dict[str, object] | None:
+    return match_device_profile(device, model, sdk_int)
+
+
+EXPERIMENTAL_BANNER = "EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE / 实验性，未经真机验证"
+EXPERIMENTAL_CONFIRMATION = "I UNDERSTAND UNVERIFIED BASEBAND WRITE"
+
+
+def authorize_device_operation(identity: dict[str, object], operation: str, *,
+                               experimental: bool = False, acknowledged: bool = False) -> None:
+    verified = identity.get("verified_efs_profile") is True
+    unverified = identity.get("experimental_unverified_edition") is True
+    if operation == "rollback":
+        if verified or unverified:
+            return
+        raise RuntimeError("Rollback refused: device is not a recognized Passport edition on Android 11.")
+    if operation == "deploy":
+        if verified or (unverified and experimental and acknowledged):
+            return
+        if unverified:
+            raise RuntimeError(EXPERIMENTAL_BANNER + "\nBaseband write refused: both --experimental-unverified-edition and typed confirmation (or --i-understand-unverified-baseband-write) are required.")
+        raise RuntimeError("Baseband write refused: no verified Passport profile matches this device.")
+    if unverified:
+        raise RuntimeError(EXPERIMENTAL_BANNER + "\nThis edition is read-only; use status or inspect-device. Rollback remains available.")
+
+
+def confirm_experimental_write(explicit: bool, acknowledged: bool, *,
+                               is_tty: bool, read_confirmation: Callable[[str], str] = input) -> bool:
+    if not explicit:
+        return False
+    if acknowledged:
+        return True
+    if not is_tty:
+        raise RuntimeError("Non-interactive experimental write requires --i-understand-unverified-baseband-write.")
+    try:
+        return read_confirmation(f"Type {EXPERIMENTAL_CONFIRMATION} to continue: ").strip() == EXPERIMENTAL_CONFIRMATION
+    except EOFError:
+        return False
 
 
 def parse_service_dump(raw: str) -> dict[str, object]:
@@ -283,10 +323,6 @@ def resolve_adb(explicit: str | None = None) -> str:
     hit = shutil.which("adb")
     if hit:
         return hit
-    if os.name == "nt":
-        sibling_adb = Path(r"C:\LifeSpace\bbq10\tools\volte_session\android-tools\platform-tools\adb.exe")
-        if sibling_adb.is_file():
-            return str(sibling_adb)
     raise FileNotFoundError("Could not find `adb`. Install Android platform-tools, use the Windows EXE, or pass --adb.")
 
 
@@ -348,14 +384,7 @@ def verify_device_identity(adb: AdbClient, require_verified_efs_profile: bool = 
         }
     )
     matched_prof = match_verified_profile(device, model, sdk_int)
-    if require_verified_efs_profile and matched_prof is None:
-        raise RuntimeError(
-            f"Refusing direct modem EFS write on {model!r} ({device!r}, SDK {sdk_int}, "
-            f"catalog={cat_match['family_id']!r} / {cat_match['route']}). "
-            "Non-Passport models lock direct EFS writes to protect your mobile data/MMS PDP slots. "
-            "Click '32-Bit Device Check & AI Porting' (or run `inspect-device`), then clone "
-            f"{device_readiness.GITHUB_REPO_URL} and use AI with `{device_readiness.SKILL_PATH_AGENTS}` to adapt your model safely."
-        )
+    experimental_prof = match_device_profile(device, model, sdk_int, experimental=True)
     selinux_warn = validate_selinux_mode(selinux)
 
     res: dict[str, object] = {
@@ -371,12 +400,15 @@ def verify_device_identity(adb: AdbClient, require_verified_efs_profile: bool = 
         "sim_state": sim_state,
         "sim_operator_numeric": operator,
         "network_type": net_type,
-        "matched_profile": matched_prof["profile_id"] if matched_prof else "generic-qcom32-readonly",
+        "matched_profile": (matched_prof or experimental_prof)["profile_id"] if (matched_prof or experimental_prof) else "generic-qcom32-readonly",
         "verified_efs_profile": matched_prof is not None,
+        "experimental_unverified_edition": experimental_prof is not None,
         "catalog_match": cat_match,
     }
     if selinux_warn is not None:
         res["selinux_warning"] = selinux_warn
+    if require_verified_efs_profile:
+        authorize_device_operation(res, "deploy")
     return res
 
 
@@ -447,6 +479,8 @@ def poll_until_volte_ready(adb: AdbClient, timeout_sec: int = 90) -> dict[str, o
 
 
 def cmd_self_test(out_json: str | None = None) -> int:
+    import contextlib
+    import io
     sample_dump = (
         "SERVICE org.octolab.qcom32ims/.Qcom32VolteImsService\n"
         "  QCOM32_VOLTE_IMS_V1\n"
@@ -467,16 +501,106 @@ def cmd_self_test(out_json: str | None = None) -> int:
     assert qmi_kv == qmi
     prof = match_verified_profile("wolverine", "Passport", 30)
     assert prof is not None and prof["profile_id"] == "blackberry-passport-wolverine"
-    prof_oslo = match_verified_profile("oslo", "Passport Silver Edition", 30)
-    assert prof_oslo is not None and prof_oslo["profile_id"] == "blackberry-passport-wolverine"
-    prof_sqw4 = match_verified_profile("oslo", "SQW100-4", 30)
-    assert prof_sqw4 is not None and prof_sqw4["profile_id"] == "blackberry-passport-wolverine"
-    prof_wichita = match_verified_profile("wichita", "Passport", 30)
-    assert prof_wichita is not None and prof_wichita["profile_id"] == "blackberry-passport-wolverine"
-    prof_keian = match_verified_profile("keian", "Passport Porsche Design", 30)
-    assert prof_keian is not None and prof_keian["profile_id"] == "blackberry-passport-wolverine"
-    prof_wseries = match_verified_profile("wseries", "BlackBerry Passport", 30)
-    assert prof_wseries is not None and prof_wseries["profile_id"] == "blackberry-passport-wolverine"
+    for device in ("oslo", "wichita", "keian", "wseries", "windermere"):
+        assert match_verified_profile(device, "Passport", 30) is None
+        assert match_device_profile(device, "Passport", 30, experimental=True) is not None
+        identity = {"verified_efs_profile": False, "experimental_unverified_edition": True}
+        for first, second in ((False, False), (True, False), (False, True)):
+            try:
+                authorize_device_operation(identity, "deploy", experimental=first, acknowledged=second)
+                raise AssertionError("experimental deploy unexpectedly allowed")
+            except RuntimeError:
+                pass
+        authorize_device_operation(identity, "deploy", experimental=True, acknowledged=True)
+        authorize_device_operation(identity, "rollback")
+        for op in ("upgrade", "install-manager"):
+            try:
+                authorize_device_operation(identity, op)
+                raise AssertionError("experimental edition unexpectedly writable")
+            except RuntimeError:
+                pass
+    verified = {"verified_efs_profile": True, "experimental_unverified_edition": False}
+    authorize_device_operation(verified, "deploy")
+    authorize_device_operation(verified, "rollback")
+    for op in ("deploy", "rollback"):
+        try:
+            authorize_device_operation({"verified_efs_profile": False, "experimental_unverified_edition": False}, op,
+                                       experimental=True, acknowledged=True)
+            raise AssertionError("non-Passport EFS write unexpectedly allowed")
+        except RuntimeError:
+            pass
+    assert not confirm_experimental_write(False, True, is_tty=True)
+    assert not confirm_experimental_write(True, False, is_tty=True, read_confirmation=lambda _: "yes")
+    assert confirm_experimental_write(True, False, is_tty=True, read_confirmation=lambda _: EXPERIMENTAL_CONFIRMATION)
+    assert confirm_experimental_write(True, True, is_tty=False)
+    try:
+        confirm_experimental_write(True, False, is_tty=False)
+        raise AssertionError("non-interactive write without acknowledgement unexpectedly allowed")
+    except RuntimeError:
+        pass
+
+    class FakeAdb:
+        def __init__(self, device: str, model: str = "Passport"):
+            self.device, self.model, self.root_requested = device, model, False
+
+        def shell(self, command: str, **_kwargs: object) -> str:
+            return {
+                "getprop ro.product.device": self.device,
+                "getprop ro.product.model": self.model,
+                "getprop ro.build.version.sdk": "30",
+                "getprop ro.product.cpu.abi": "armeabi-v7a",
+                "getenforce": "Enforcing",
+                "cat /proc/sys/kernel/random/boot_id": "fake-boot",
+                "getprop gsm.sim.state": "NOT_READY",
+            }.get(command, "")
+
+        def ensure_root(self) -> None:
+            self.root_requested = True
+
+    for dev in ("wolverine", "oslo", "wichita", "keian", "wseries", "windermere", "bacon"):
+        for first, second in ((False, False), (True, False), (False, True), (True, True)):
+            fake = FakeAdb(dev, "OnePlus" if dev == "bacon" else "Passport")
+            try:
+                with contextlib.redirect_stderr(io.StringIO()):
+                    run_deploy_flow(fake, Path("unused"), Path("unused"),
+                                    experimental_unverified_edition=first, acknowledged_unverified_write=second)
+                raise AssertionError("fake deployment should stop at SIM preflight")
+            except RuntimeError as exc:
+                allowed = dev == "wolverine" or (dev not in ("wolverine", "bacon") and first and second)
+                assert fake.root_requested is allowed
+                assert ("SIM must be LOADED" in str(exc)) is allowed
+        fake = FakeAdb(dev, "OnePlus" if dev == "bacon" else "Passport")
+        def stop_before_rollback() -> None:
+            fake.root_requested = True
+            raise RuntimeError("test stopped before rollback")
+        fake.ensure_root = stop_before_rollback  # type: ignore[method-assign]
+        try:
+            run_rollback_flow(fake, Path("unused"))
+            raise AssertionError("fake rollback must stop before device mutation")
+        except RuntimeError as exc:
+            assert fake.root_requested is (dev != "bacon")
+            assert ("test stopped before rollback" in str(exc)) is (dev != "bacon")
+
+    # Exercise the real CLI parser and confirmation plumbing without touching a device.
+    from unittest.mock import patch
+    this_module = sys.modules[__name__]
+    for flags, allowed in (([], False), (["--experimental-unverified-edition"], False),
+                           (["--i-understand-unverified-baseband-write"], False),
+                           (["--experimental-unverified-edition", "--i-understand-unverified-baseband-write"], True)):
+        fake = FakeAdb("oslo")
+        with patch.object(this_module, "resolve_adb", return_value="fake-adb"), \
+             patch.object(this_module, "AdbClient", return_value=fake), \
+             patch.object(this_module, "resolve_artifact", return_value=Path("unused")), \
+             patch.object(this_module, "run_deploy_flow", return_value={"test": "allowed"}) as deploy, \
+             patch.object(sys, "stdin", io.StringIO()), \
+             contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            try:
+                assert main(["deploy", *flags]) == 0
+                assert allowed and deploy.called
+                assert deploy.call_args.kwargs["experimental_unverified_edition"] is True
+                assert deploy.call_args.kwargs["acknowledged_unverified_write"] is True
+            except RuntimeError:
+                assert not allowed and not deploy.called
     assert match_verified_profile("oslo", "Passport Silver Edition", 29) is None
     assert match_verified_profile("bacon", "A0001", 30) is None
     assert match_verified_profile("klte", "SM-G900F", 30) is None
@@ -496,7 +620,8 @@ def cmd_self_test(out_json: str | None = None) -> int:
         rejected_selinux = True
     assert rejected_selinux is True
     readiness_assertions = device_readiness.run_unit_tests()
-    emit_json({"self_test": "PASS", "assertions": 22 + readiness_assertions}, out_json)
+    emit_json({"self_test": "PASS", "readiness_assertions": readiness_assertions,
+               "edition_gate_cases": 28}, out_json)
     return 0
 
 
@@ -505,14 +630,32 @@ def run_deploy_flow(
     apk_path: Path,
     prov_path: Path,
     on_progress: Callable[[str], None] | None = None,
+    experimental_unverified_edition: bool = False,
+    acknowledged_unverified_write: bool = False,
+    expected_identity: dict[str, object] | None = None,
 ) -> dict[str, object]:
     def step(msg: str) -> None:
         if on_progress:
             on_progress(msg)
 
-    step("Enabling ADB Root (UID 0) & verifying target device profile...")
+    ident = verify_device_identity(adb, require_verified_efs_profile=False)
+    if expected_identity is not None and any(ident[k] != expected_identity[k] for k in ("device", "model", "sdk", "boot_id")):
+        raise RuntimeError("Device identity changed after confirmation; deployment stopped.")
+    if ident["experimental_unverified_edition"]:
+        print("\n" + "=" * 72 + "\n" + EXPERIMENTAL_BANNER + "\n" + "=" * 72, file=sys.stderr)
+    authorize_device_operation(ident, "deploy", experimental=experimental_unverified_edition,
+                               acknowledged=acknowledged_unverified_write)
+    step("Modem EFS write risk: make an independent off-device backup. The inspection log is not a restorable backup.")
+    if on_progress is None:
+        print("Modem EFS write risk: make an independent off-device backup; the inspection log is not a restorable backup.", file=sys.stderr)
+    step("Enabling ADB Root (UID 0) & rechecking target device profile...")
     adb.ensure_root()
-    ident = verify_device_identity(adb, require_verified_efs_profile=True)
+    ident_after_root = verify_device_identity(adb, require_verified_efs_profile=False)
+    if any(ident_after_root[k] != ident[k] for k in ("device", "model", "sdk", "boot_id")):
+        raise RuntimeError("Device identity changed after authorization; deployment stopped.")
+    ident = ident_after_root
+    authorize_device_operation(ident, "deploy", experimental=experimental_unverified_edition,
+                               acknowledged=acknowledged_unverified_write)
     if "LOADED" not in str(ident["sim_state"]):
         raise RuntimeError(f"SIM must be LOADED before deployment (got {ident['sim_state']!r}).")
 
@@ -523,7 +666,7 @@ def run_deploy_flow(
     backup_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        step(f"Saving pre-deployment EFS baseline snapshot to {backup_dir}...")
+        step(f"Saving EFS inspection log (not a restorable backup) to {backup_dir}...")
         adb.run(["push", str(prov_path), REMOTE_TMP_PROVISIONER], timeout=30)
         adb.shell(f"chmod 0700 {REMOTE_TMP_PROVISIONER}")
 
@@ -552,6 +695,7 @@ def run_deploy_flow(
     ready_status = poll_until_volte_ready(adb, timeout_sec=90)
     ready_status["post_reboot_boot_id"] = new_boot
     ready_status["backup_directory"] = str(backup_dir)
+    ready_status["backup_limitation"] = "Inspection log and hashes only; not a restorable EFS backup."
     ready_status["apk_sha256"] = sha256_bytes(apk_path.read_bytes())
     ready_status["provisioner_sha256"] = sha256_bytes(prov_path.read_bytes())
     return ready_status
@@ -617,6 +761,7 @@ def run_upgrade_apk_flow(
     if on_progress:
         on_progress("Verifying device identity & upgrading Qcom32VolteIms.apk in-place (zero EFS writes)...")
     ident = verify_device_identity(adb, require_verified_efs_profile=False)
+    authorize_device_operation(ident, "upgrade")
     cleanup_legacy_packages(adb, include_manager=False)
     adb.run(["install", "-r", str(apk_path)], timeout=60)
     adb.shell(
@@ -643,6 +788,7 @@ def run_install_manager_flow(
     if on_progress:
         on_progress("Verifying device identity & installing Qcom32VolteManager.apk...")
     ident = verify_device_identity(adb, require_verified_efs_profile=False)
+    authorize_device_operation(ident, "install-manager")
     cleanup_legacy_packages(adb, include_manager=True)
     adb.run(["install", "-r", str(manager_apk_path)], timeout=60)
     return {
@@ -661,9 +807,15 @@ def run_rollback_flow(
         if on_progress:
             on_progress(msg)
 
+    ident = verify_device_identity(adb, require_verified_efs_profile=False)
+    authorize_device_operation(ident, "rollback")
     step("Enabling ADB Root & clearing persistent CarrierConfig overrides...")
     adb.ensure_root()
-    ident = verify_device_identity(adb, require_verified_efs_profile=True)
+    after_root = verify_device_identity(adb, require_verified_efs_profile=False)
+    if any(after_root[k] != ident[k] for k in ("device", "model", "sdk", "boot_id")):
+        raise RuntimeError("Device identity changed before rollback; operation stopped.")
+    ident = after_root
+    authorize_device_operation(ident, "rollback")
 
     cleanup_legacy_packages(adb, include_manager=True)
     adb.shell(
@@ -679,7 +831,7 @@ def run_rollback_flow(
     backup_dir = persistent_backup_root() / ("volte-ctl-rollback-" + dt.datetime.now().strftime("%Y%m%d-%H%M%S"))
     backup_dir.mkdir(parents=True, exist_ok=True)
     try:
-        step("Restoring all 54 modem EFS items to factory baseline + EFS_SYNC...")
+        step("Running fixed EFS cleanup + EFS_SYNC (not original-value restoration)...")
         adb.run(["push", str(prov_path), REMOTE_TMP_PROVISIONER], timeout=30)
         adb.shell(f"chmod 0700 {REMOTE_TMP_PROVISIONER}")
         rb_out = adb.shell(f"{REMOTE_TMP_PROVISIONER} --rollback-all", timeout=90)
@@ -687,9 +839,10 @@ def run_rollback_flow(
     finally:
         adb.shell(f"rm -f {REMOTE_TMP_PROVISIONER}", check=False)
 
-    step("Rebooting phone normally to finalize factory baseline...")
+    step("Rebooting phone normally after fixed EFS cleanup...")
     new_boot = adb.wait_after_reboot(str(ident["boot_id"]))
-    post_ident = verify_device_identity(adb, require_verified_efs_profile=True)
+    post_ident = verify_device_identity(adb, require_verified_efs_profile=False)
+    authorize_device_operation(post_ident, "rollback")
     return {
         "rollback": "COMPLETE",
         "post_reboot_boot_id": new_boot,
@@ -713,13 +866,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_models = sub.add_parser(
         "list-models",
-        help="List unlocked BlackBerry Passport editions & candidate 32-bit Qualcomm families",
+        help="List Passport editions and candidate 32-bit Qualcomm families",
     )
     p_models.add_argument("--query", default=None, help="Optional model/codename filter (e.g. oslo, klte, cancro)")
 
     p_deploy = sub.add_parser("deploy", help="Guarded Stage 6A modem EFS provisioning + APK install + reboot verification")
     p_deploy.add_argument("--apk", default=None, help="Path to signed Qcom32VolteIms.apk")
     p_deploy.add_argument("--provisioner", default=None, help="Path to ARM32 pp_regconfig_provision_v6")
+    p_deploy.add_argument("--experimental-unverified-edition", action="store_true", help="Opt in to an unverified Passport edition; separate confirmation also required")
+    p_deploy.add_argument("--i-understand-unverified-baseband-write", action="store_true", help="Second explicit acknowledgement for non-interactive experimental use")
 
     p_upg = sub.add_parser("upgrade-apk", help="In-place Qcom32VolteIms.apk upgrade (zero EFS writes)")
     p_upg.add_argument("--apk", default=None, help="Path to signed Qcom32VolteIms.apk")
@@ -733,7 +888,7 @@ def main(argv: list[str] | None = None) -> int:
     p_mgr = sub.add_parser("install-manager", help="Install optional on-device companion app Qcom32VolteManager.apk")
     p_mgr.add_argument("--manager-apk", default=None, help="Path to signed Qcom32VolteManager.apk")
 
-    p_rb = sub.add_parser("rollback", help="Restore factory modem EFS baseline, uninstall APK, and reboot")
+    p_rb = sub.add_parser("rollback", help="Run fixed EFS cleanup, uninstall APK, and reboot; does not restore original bytes")
     p_rb.add_argument("--provisioner", default=None, help="Path to ARM32 pp_regconfig_provision_v6")
 
     args = ap.parse_args(argv)
@@ -760,9 +915,17 @@ def main(argv: list[str] | None = None) -> int:
         emit_json(device_readiness.run_readonly_readiness_audit(adb), args.out_json)
         return 0
     if args.subcmd == "deploy":
+        ident = verify_device_identity(adb, require_verified_efs_profile=False)
+        acknowledged = False
+        if ident["experimental_unverified_edition"]:
+            print("\n" + "=" * 72 + "\n" + EXPERIMENTAL_BANNER + "\n" + "=" * 72, file=sys.stderr)
+            acknowledged = confirm_experimental_write(args.experimental_unverified_edition,
+                args.i_understand_unverified_baseband_write, is_tty=bool(sys.stdin and sys.stdin.isatty()))
+        authorize_device_operation(ident, "deploy", experimental=args.experimental_unverified_edition, acknowledged=acknowledged)
         apk = resolve_artifact(args.apk, "Qcom32VolteIms.apk")
         prov = resolve_artifact(args.provisioner, "pp_regconfig_provision_v6", "build/regconfig-provision-v6/*/pp_regconfig_provision_v6")
-        emit_json(run_deploy_flow(adb, apk, prov), args.out_json)
+        emit_json(run_deploy_flow(adb, apk, prov, experimental_unverified_edition=args.experimental_unverified_edition,
+                                  acknowledged_unverified_write=acknowledged, expected_identity=ident), args.out_json)
         return 0
     if args.subcmd == "upgrade-apk":
         apk = resolve_artifact(args.apk, "Qcom32VolteIms.apk")
