@@ -561,8 +561,8 @@ public final class VolteStatusNotificationLogic {
                         ? "Modem/SIM Not Ready (No Signal) — Rollback VoLTE"
                         : "基带或 SIM 未就绪（无信号）— 请执行 VoLTE 回滚恢复";
                 String rBody = in.englishLocale
-                        ? "Modem failed to initialize after boot (typically caused by legacy imsqmidaemon on older Permissive ROMs or non-AAB982 modem). Tap to open Manager or run PC rollback to restore signal."
-                        : "开机后基带未完成初始化（常见于旧版 Permissive ROM 残留 imsqmidaemon 或非 AAB982 底包）。点击打开管理端或连电脑运行回滚即可恢复信号。";
+                        ? "Modem failed to initialize after boot. Check legacy imsqmidaemon and AAB982 baseband. Open Manager or consider fixed PC rollback; original EFS values and signal recovery are not guaranteed."
+                        : "开机后基带未完成初始化。请检查旧版 imsqmidaemon 与 AAB982 基带；可打开管理端或在电脑上尝试固定回滚，不保证恢复 EFS 原值或信号。";
                 String rFp = sessionKey + "|kind=" + Kind.RADIO_UNAVAILABLE.name() + "|en=" + in.englishLocale;
                 if (rFp.equals(st.lastPostedFingerprint)) {
                     return Decision.noop("duplicate_diagnostic_" + Kind.RADIO_UNAVAILABLE.name(), st);

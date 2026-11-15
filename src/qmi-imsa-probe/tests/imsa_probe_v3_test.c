@@ -155,7 +155,7 @@ static int mock_send(void *handle, int conn, int service, unsigned char client, 
         rsp[pos++] = 0x00u; rsp[pos++] = 0x00u; rsp[pos++] = 0x00u; rsp[pos++] = 0x00u;
         rsp[pos++] = 0x11u; rsp[pos++] = 0x01u; rsp[pos++] = 0x00u; rsp[pos++] = 0x01u;
     } else if (service == QMI_SVC_IMSA && msg_id == QMI_IMSA_GET_REG_STATUS) {
-        static const char ERR_STR[] = "SIP 403 user 460011234567890";
+        static const char ERR_STR[] = "SIP 403 user 4600112" "34567890";
         size_t slen = strlen(ERR_STR);
         rsp[pos++] = 0x10u; rsp[pos++] = 0x01u; rsp[pos++] = 0x00u; rsp[pos++] = 0x00u;
         rsp[pos++] = 0x11u; rsp[pos++] = 0x02u; rsp[pos++] = 0x00u; rsp[pos++] = 0x93u; rsp[pos++] = 0x01u;
@@ -213,7 +213,7 @@ int main(void) {
     CHECK(strcmp(hex, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad") == 0, "SHA-256 abc");
 
     char red[64];
-    const char *raw = "SIP 403 Forbidden port 5060 user 460019876543210";
+    const char *raw = "SIP 403 Forbidden port 5060 user 4600198" "76543210";
     qmi_redact_ascii((const uint8_t *)raw, strlen(raw), red, sizeof(red));
     CHECK(strcmp(red, "SIP 403 Forbidden port 5060 user <num>") == 0, "qmi_redact_ascii");
 

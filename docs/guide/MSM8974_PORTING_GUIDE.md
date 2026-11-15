@@ -5,7 +5,7 @@
 本项目的两大核心模块可以作为上述同代高通老旗舰打通原生 VoLTE 的参考蓝图。**注意：切勿在其他机型上直接盲跑 Passport 专用的 `pp_regconfig_provision_v6` 写入命令**。
 
 > [!TIP]
-> **AI + GitHub 一键自助适配（推荐）**：自 `v1.2.3-r1` 起，Windows 桌面版、CLI（`python3 cli/volte_ctl.py inspect-device`）与手机端 `Qcom32VolteManager.apk` 均已内置 **100% 只读四门禁适配体检面板**。您可以先点按体检按钮一键复制报告与提示词，再用 **Claude Code、Cursor、Codex、Gemini CLI 或 Antigravity** 打开本开源仓库 `https://github.com/Octo-o-o-o/qcom32-volte`（会自动加载内置 [`.agents/skills/qcom32-volte/`](../../.agents/skills/qcom32-volte/SKILL.md) 技能），让 AI 助手带您按以下 4 步安全完成只读解码与建档！
+> **AI + GitHub 一键自助适配（推荐）**：自 `v1.2.3-r1` 起，Windows 桌面版、CLI（`python3 cli/volte_ctl.py inspect-device`）与手机端 `Qcom32VolteManager.apk` 均已内置 **100% 只读四门禁适配体检面板**。您可以先点按体检按钮一键复制报告与提示词，再用 **Claude Code、Cursor、Codex、Gemini CLI 或 Antigravity** 打开本源码可见仓库（PolyForm Noncommercial 1.0.0 + 商业授权） `https://github.com/Octo-o-o-o/qcom32-volte`（会自动加载内置 [`.agents/skills/qcom32-volte/`](../../.agents/skills/qcom32-volte/SKILL.md) 技能），让 AI 助手带您按以下 4 步安全完成只读解码与建档！
 
 移植前请严格按以下 4 步核验：
 

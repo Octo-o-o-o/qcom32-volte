@@ -39,7 +39,7 @@ def resolve_platform_tools(explicit: str | None) -> Path:
         candidates.append(Path(env_dir).expanduser().resolve())
     candidates.extend([
         REPO_ROOT / "private/toolchain/platform-tools",
-        Path(r"C:\LifeSpace\bbq10\tools\volte_session\android-tools\platform-tools"),
+
     ])
     for cand in candidates:
         if (cand / "adb.exe").is_file() and (cand / "AdbWinApi.dll").is_file() and (cand / "AdbWinUsbApi.dll").is_file():

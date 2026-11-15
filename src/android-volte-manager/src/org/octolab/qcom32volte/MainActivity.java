@@ -249,31 +249,32 @@ public final class MainActivity extends Activity {
 
         scroll.addView(root);
         setContentView(scroll);
+        setBusy(false);
     }
 
     private void refreshLabels() {
         if (englishMode) {
             titleView.setText("Qcom32 VoLTE & IMS Stack");
-            subtitleView.setText("OCTOLAB · 32-bit Qualcomm Android 11 VoLTE Stack v2.8 · Passport All Editions");
+            subtitleView.setText("OCTOLAB · Android 11 · IMS v2.8 · one wolverine unit verified");
             langButton.setText("中文");
             refreshButton.setText("Check Live VoLTE & SIM Status");
             readinessButton.setText("32-Bit Device Identification & AI Porting Check (Read-Only)");
-            deployButton.setText("Backup EFS & Activate VoLTE (Passport All Editions · Root)");
+            deployButton.setText("Activate VoLTE (wolverine · Root)");
             upgradeButton.setText("Update Qcom32VolteIms Bridge APK Only (Zero EFS Write)");
-            rollbackButton.setText("Restore Factory Modem EFS & Uninstall");
+            rollbackButton.setText("Run Fixed EFS Cleanup & Uninstall");
             copyButton.setText("Copy Redacted Diagnostic / Porting Report");
-            licenseNoteView.setText("License: Free for personal non-commercial use (PolyForm-Noncommercial-1.0.0). Paid license required for commercial flashing or pre-flashed phone sales: octoooo@octoooo.com");
+            licenseNoteView.setText("Source-available: PolyForm Noncommercial 1.0.0; commercial license available: octoooo@octoooo.com");
         } else {
             titleView.setText("Qcom32 VoLTE 通话栈管理端");
-            subtitleView.setText("OCTOLAB · 高通 32 位平台 Android 11 原生 IMS 栈 v2.8 · Passport 全系放开");
+            subtitleView.setText("OCTOLAB · Android 11 · IMS v2.8 · 仅一台 wolverine 已验证");
             langButton.setText("English");
             refreshButton.setText("检查当前 SIM / 4G / VoLTE 状态");
             readinessButton.setText("多机型识别与只读适配体检（AI + GitHub 自助适配）");
-            deployButton.setText("备份原值并一键激活 VoLTE（Passport 普通/银色/全系 · 需 Magisk Root）");
+            deployButton.setText("激活 VoLTE（wolverine · 需 Root）");
             upgradeButton.setText("仅原位更新 Qcom32VolteIms 桥接 APK（零 EFS 写入）");
-            rollbackButton.setText("一键恢复出厂基带配置并卸载桥接服务");
+            rollbackButton.setText("执行固定基带清理并卸载桥接服务");
             copyButton.setText("复制脱敏诊断 / 适配体检摘要");
-            licenseNoteView.setText("许可声明：个人自用与纯公益非商用免费（PolyForm-Noncommercial-1.0.0）；有偿代刷、预刷售卖二手机等商业用途须联系 octoooo@octoooo.com 获取付费授权。");
+            licenseNoteView.setText("源码可见：PolyForm Noncommercial 1.0.0 + 商业授权：octoooo@octoooo.com");
         }
     }
 
@@ -281,8 +282,8 @@ public final class MainActivity extends Activity {
         busy = isBusy;
         refreshButton.setEnabled(!isBusy);
         readinessButton.setEnabled(!isBusy);
-        deployButton.setEnabled(!isBusy);
-        upgradeButton.setEnabled(!isBusy);
+        deployButton.setEnabled(!isBusy && VolteManagerLogic.isRootOperationAllowed("deploy", Build.MODEL, Build.DEVICE, Build.VERSION.SDK_INT));
+        upgradeButton.setEnabled(!isBusy && VolteManagerLogic.isRootOperationAllowed("upgrade", Build.MODEL, Build.DEVICE, Build.VERSION.SDK_INT));
         rollbackButton.setEnabled(!isBusy);
         copyButton.setEnabled(!isBusy);
     }
@@ -427,8 +428,12 @@ public final class MainActivity extends Activity {
             String cleanLog = VolteManagerLogic.redactSensitiveDigits(rawLog);
 
             runOnUiThread(() -> {
-                statusBadgeView.setText(englishMode ? snap.headlineEn : snap.headlineZh);
-                statusBadgeView.setTextColor(snap.volteHealthy ? COLOR_ACCENT : (snap.radioUnavailable ? COLOR_DANGER : COLOR_TEXT));
+                statusBadgeView.setText(VolteManagerLogic.isExperimentalPassportEdition(model, device, sdk)
+                        ? "EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE / 实验性，未经真机验证 · Read-only / 只读"
+                            + (snap.radioUnavailable ? "\n" + (englishMode ? snap.headlineEn : snap.headlineZh) : "")
+                        : (englishMode ? snap.headlineEn : snap.headlineZh));
+                statusBadgeView.setTextColor(snap.radioUnavailable ? COLOR_DANGER
+                        : (snap.volteHealthy && !VolteManagerLogic.isExperimentalPassportEdition(model, device, sdk) ? COLOR_ACCENT : COLOR_TEXT));
                 statusDetailsView.setText(details);
                 logView.setText(cleanLog);
                 lastSanitizedReport = cleanLog;
@@ -519,10 +524,10 @@ public final class MainActivity extends Activity {
 
     private void confirmAndRunDeploy() {
         if (busy) return;
-        String title = englishMode ? "Backup & Activate VoLTE" : "备份原值并激活 VoLTE";
+        String title = englishMode ? "Activate VoLTE" : "激活 VoLTE";
         String msg = englishMode
-                ? "Verified across all BlackBerry Passport editions (wolverine / oslo Silver Edition / wichita / keian).\n\nThis will:\n1. Verify SHA-256 of bundled Stage 6A payloads & pre-flight check AAB982 modem + legacy imsqmidaemon;\n2. Save original EFS backups locally;\n3. Provision Stage 6A modem EFS + EFS_SYNC;\n4. Install Qcom32VolteIms v2.8 & apply persistent CarrierConfig.\n\nA normal phone reboot is required afterwards. Proceed?"
-                : "已覆盖黑莓 Passport 全系版本（普通版 wolverine / 银色版 oslo / AT&T wichita / 保时捷 keian）。\n\n即将执行：\n1. 校验内置载荷 SHA-256 并预检 AAB982 基带与旧版 imsqmidaemon 冲突；\n2. 备份本机基带原始 EFS 配置到本地安全目录；\n3. 写入 Stage 6A 基带配置并完成 EFS_SYNC；\n4. 安装 Qcom32VolteIms v2.8 并写入跨重启绑定。\n\n完成后需正常重启一次手机生效。确认继续？";
+                ? "Only one wolverine unit has been verified. This checks for legacy IMS daemons and AAB982 compatibility, then writes modem EFS. The saved inspection log is not a restorable backup; first make an independent off-device EFS backup. A reboot is required. Proceed at your own risk?"
+                : "仅一台 wolverine 已验证。本操作先检查旧 IMS 守护进程和 AAB982 基带，再写入 EFS；自动保存的检查日志并非可还原的完整备份。请先独立备份并保存在手机之外。完成后需重启，风险自负。继续？";
         new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(msg)
@@ -546,7 +551,7 @@ public final class MainActivity extends Activity {
     private void confirmAndRunRollback() {
         if (busy) return;
         new AlertDialog.Builder(this)
-                .setTitle(englishMode ? "Restore Factory Modem EFS" : "恢复出厂基带并卸载")
+                .setTitle(englishMode ? "Fixed EFS cleanup" : "固定基带清理并卸载")
                 .setMessage(englishMode
                         ? "Clears CarrierConfig overrides, uninstalls Qcom32VolteIms, deletes all 52 Stage 6A EFS files, and restores IMS_enable=00 & voice_domain_pref=00."
                         : "将清除 CarrierConfig 持久覆盖、卸载 Qcom32VolteIms，删除全部 52 项新建 EFS 文件，并将 IMS_enable 与 voice_domain_pref 恢复为 00。")
@@ -560,11 +565,10 @@ public final class MainActivity extends Activity {
         statusBadgeView.setText(englishMode ? "Running guarded root operation..." : "正在执行受控 Root 操作，请勿断开电源…");
         worker.execute(() -> {
             try {
-                if ((!"upgrade".equals(mode))
-                        && !VolteManagerLogic.verifyPassportIdentity(Build.MODEL, Build.DEVICE, Build.VERSION.SDK_INT)) {
+                if (!VolteManagerLogic.isRootOperationAllowed(mode, Build.MODEL, Build.DEVICE, Build.VERSION.SDK_INT)) {
                     throw new IllegalStateException(englishMode
                             ? "EFS write is locked for " + Build.MODEL + " (" + Build.DEVICE + ") to protect your mobile data/MMS PDP slots. Tap '32-Bit Device Identification & AI Porting Check' above and use AI + " + VolteManagerLogic.GITHUB_REPO_URL + " (.agents/skills/qcom32-volte/) to adapt your model safely."
-                            : "为保护移动数据与彩信槽位，当前机型 " + Build.MODEL + " (" + Build.DEVICE + ") 已锁定直接基带写入。请点击上方「多机型识别与只读适配体检」，复制报告配合 AI 编程助手与开源仓库 " + VolteManagerLogic.GITHUB_REPO_URL + " 内置技能自助适配。");
+                            : "EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE / 实验性，未经真机验证：当前机型仅允许只读检查和回滚。");
                 }
                 if (!checkSuAvailable()) {
                     throw new IllegalStateException(englishMode
@@ -629,8 +633,8 @@ public final class MainActivity extends Activity {
                     this, 0, tap, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
             String title = englishMode
-                    ? "Factory Modem EFS Restored — Reboot Required"
-                    : "已恢复出厂基带配置 — 请重启手机生效";
+                    ? "Fixed EFS Cleanup Completed — Reboot Required"
+                    : "已执行固定基带清理 — 请重启手机生效";
             String body = englishMode
                     ? "Stage 6A EFS items removed and IMS_enable restored to 00. Reboot your phone once to complete rollback."
                     : "已完成基带原值恢复并卸载桥接服务；请正常重启一次手机使其完全生效。";

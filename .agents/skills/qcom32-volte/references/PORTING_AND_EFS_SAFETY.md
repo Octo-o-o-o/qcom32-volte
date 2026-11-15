@@ -10,7 +10,7 @@ Use this reference whenever `ai_device_helper.py inspect` returns `route: "CANDI
 2. **Never copy foreign carrier P-CSCF IPs, IMSIs, ICCIDs, or another phone's `modemst1`/`modemst2`**. Always use `qp_ims_reg_config` **`mode=0`** (`PP_V6_QP_IMS_REG_CONFIG_MODE0`, 405 bytes, zero hardcoded IP) so the Hexagon baseband derives the home IMS domain dynamically from the inserted USIM and requests P-CSCF via LTE PCO.
 3. **Keep `/nv/item_files/ims/ims_hybrid_enable` absent (`ENOENT`)** so the `MSM8974` Hexagon modem uses **Standalone Modem DCM** (`*(uint8_t*)(dpl_ctx + 0xc19) = 0`) rather than waiting for missing Android 6.0 `imsdatadaemon` user-space sockets.
 4. **Keep `SELinux=Enforcing`**: `Qcom32VolteIms.apk` runs natively in `UID 1001` (`u:r:radio:s0`) with **zero `<uses-permission>`** declarations. Never run `setenforce 0`.
-5. **Every EFS change must be backed up first and verified with full `--rollback-all` restoration** before a new `devices/<id>/profile.json` can be promoted from `"experimental"` to `"verified"`.
+5. **Every EFS change must be backed up first and verified against an independent original-value backup and recovery plan; fixed `--rollback-all` is not original-value restoration** before a new `devices/<id>/profile.json` can be promoted from `"experimental"` to `"verified"`.
 
 ---
 

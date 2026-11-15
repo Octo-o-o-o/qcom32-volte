@@ -3,11 +3,59 @@ import assert from 'node:assert/strict';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildReleaseAssetNames, selectRelease, RELEASE_TAG, MIRROR_BASE, REPOSITORY_URL } from '../src/site.js';
+import { buildReleaseAssetNames, selectRelease, RELEASE_TAG, MIRROR_BASE, REPOSITORY_URL, VERIFICATION_SCOPE } from '../src/site.js';
 import worker from '../worker.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const dist = path.join(root, 'dist');
+
+test('verification scope distinguishes calls, registration and unimplemented features', () => {
+  assert.match(VERIFICATION_SCOPE.verifiedCalls, /46001/);
+  assert.match(VERIFICATION_SCOPE.telecom, /calls untested/);
+  assert.match(VERIFICATION_SCOPE.mobile, /untested/);
+  assert.match(VERIFICATION_SCOPE.imsSms, /not implemented/);
+  assert.match(VERIFICATION_SCOPE.emergencyCalls, /not supported/);
+  assert.equal(VERIFICATION_SCOPE.oldReleaseHasEditionGate, false);
+});
+
+test('bilingual pages warn about unverified editions, EFS backup and old release gate', async () => {
+  for (const rel of ['index.html', 'guide.html', 'en/index.html', 'en/guide.html']) {
+    const html = await readFile(path.join(dist, rel), 'utf8');
+    assert.match(html, /oslo/);
+    assert.match(html, /46001/);
+    assert.match(html, /46003/);
+    assert.match(html, /149/);
+    assert.match(html, /v1\.2\.4-r1/);
+    assert.match(html, /oslo/);
+    assert.match(html, /wichita/);
+    assert.match(html, /keian/);
+    if (rel.startsWith('en/')) {
+      assert.match(html, /artifacts lack the new edition gate and claims corrections/i);
+      assert.match(html, /still permit one-click writes/i);
+      assert.match(html, /not supported or certified/i);
+      assert.match(html, /inspection log/i);
+      assert.match(html, /calls untested/i);
+      assert.match(html, /SMS over IMS is not implemented/i);
+    } else {
+      assert.match(html, /制品尚无本次门禁及口径修正/);
+      assert.match(html, /仍允许 oslo、wichita、keian 一键写入/);
+      assert.match(html, /紧急呼叫不支持/);
+      assert.match(html, /检查日志/);
+      assert.match(html, /通话未测/);
+      assert.match(html, /IMS 短信未实现/);
+    }
+  }
+});
+
+test('guides explain combined preflight and fixed rollback limitations', async () => {
+  for (const rel of ['guide.html', 'en/guide.html']) {
+    const html = await readFile(path.join(dist, rel), 'utf8');
+    assert.match(html, /MPSS\.DI\.4\.0\.1/);
+    assert.match(html, /AAAAANAZM/);
+    assert.match(html, /AAB982/);
+    assert.match(html, /(?:离线\/模拟验证|offline or with mocks only)/);
+  }
+});
 
 function collectIds(html) {
   return new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]));

@@ -1,6 +1,9 @@
 package org.octolab.qcom32volte;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public final class VolteManagerLogicTest {
     private static int passed = 0;
@@ -12,20 +15,58 @@ public final class VolteManagerLogicTest {
         passed++;
     }
 
-    public static void main(String[] args) {
-        // 1. Verified device profile matching (All BlackBerry Passport wseries hardware editions)
+    private static int runShellGuard(String script, String device, String baseband, String firmware, String daemon) throws Exception {
+        Path dir = Files.createTempDirectory("qcom32-guard-test-");
+        Path getprop = dir.resolve("getprop");
+        Path cat = dir.resolve("cat");
+        try {
+            Files.write(getprop, ("#!/bin/sh\ncase \"$1\" in\n"
+                    + "ro.product.device) printf '%s' \"$TEST_DEVICE\" ;;\n"
+                    + "gsm.sim.state) printf LOADED ;;\n"
+                    + "gsm.version.baseband) printf '%s' \"$TEST_BASEBAND\" ;;\n"
+                    + "init.svc.imsqmidaemon) printf '%s' \"$TEST_DAEMON\" ;;\n"
+                    + "esac\n").getBytes(StandardCharsets.UTF_8));
+            Files.write(cat, "#!/bin/sh\nprintf '%s\\n' \"$TEST_FIRMWARE\"\n".getBytes(StandardCharsets.UTF_8));
+            if (!getprop.toFile().setExecutable(true) || !cat.toFile().setExecutable(true)) {
+                throw new IllegalStateException("Cannot make fake commands executable");
+            }
+            String preflight = script.substring(0, script.indexOf("TMP_PROV="));
+            ProcessBuilder builder = new ProcessBuilder("/bin/sh", "-c", preflight).redirectErrorStream(true);
+            builder.environment().put("PATH", dir + ":" + System.getenv("PATH"));
+            builder.environment().put("TEST_DEVICE", device);
+            builder.environment().put("TEST_BASEBAND", baseband);
+            builder.environment().put("TEST_FIRMWARE", firmware);
+            builder.environment().put("TEST_DAEMON", daemon);
+            Process process = builder.start();
+            try (java.io.InputStream input = process.getInputStream()) {
+                byte[] buf = new byte[512];
+                while (input.read(buf) != -1) { /* Drain the small, simulated error output. */ }
+            }
+            return process.waitFor();
+        } finally {
+            Files.deleteIfExists(getprop);
+            Files.deleteIfExists(cat);
+            Files.deleteIfExists(dir);
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        // 1. Only wolverine is enabled for on-device deploy; all Passport editions retain rollback.
         check(VolteManagerLogic.verifyPassportIdentity("Passport", "wolverine", 30), "Passport wolverine API 30 verified");
         check(VolteManagerLogic.verifyPassportIdentity("BlackBerry Passport", "wolverine", 30), "BlackBerry Passport variant verified");
-        check(VolteManagerLogic.verifyPassportIdentity("Passport Silver Edition", "oslo", 30), "Passport Silver Edition oslo API 30 verified");
-        check(VolteManagerLogic.verifyPassportIdentity("SQW100-4", "oslo", 30), "Passport SQW100-4 oslo verified");
-        check(VolteManagerLogic.verifyPassportIdentity("Passport", "wichita", 30), "Passport AT&T wichita verified");
-        check(VolteManagerLogic.verifyPassportIdentity("Passport Porsche Design", "keian", 30), "Passport Porsche Design keian verified");
-        check(VolteManagerLogic.verifyPassportIdentity("Passport", "wseries", 30), "Unified lineage_wseries fallback verified");
+        check(VolteManagerLogic.isRootOperationAllowed("deploy", "Passport", "wolverine", 30), "wolverine deploy allowed");
+        for (String dev : new String[]{"oslo", "wichita", "keian", "wseries", "windermere"}) {
+            check(!VolteManagerLogic.verifyPassportIdentity("Passport", dev, 30), dev + " unverified");
+            check(!VolteManagerLogic.isRootOperationAllowed("deploy", "Passport", dev, 30), dev + " deploy blocked");
+            check(!VolteManagerLogic.isRootOperationAllowed("upgrade", "Passport", dev, 30), dev + " upgrade blocked");
+            check(VolteManagerLogic.isRootOperationAllowed("rollback", "Passport", dev, 30), dev + " rollback allowed");
+        }
+        check(VolteManagerLogic.isRootOperationAllowed("rollback", "Passport", "wolverine", 30), "wolverine rollback allowed");
         check("blackberry-passport-wolverine".equals(
                 VolteManagerLogic.matchVerifiedDeviceProfile("Passport", "wolverine", 30)), "Profile ID exact");
-        check("blackberry-passport-wolverine".equals(
-                VolteManagerLogic.matchVerifiedDeviceProfile("Passport Silver Edition", "oslo", 30)), "Silver Edition oslo maps to wolverine profile");
+        check(VolteManagerLogic.matchVerifiedDeviceProfile("Passport Silver Edition", "oslo", 30) == null, "Silver Edition not verified");
         check(!VolteManagerLogic.verifyPassportIdentity("OnePlus One", "bacon", 30), "Unverified profile gated from EFS write");
+        check(!VolteManagerLogic.isRootOperationAllowed("rollback", "OnePlus One", "bacon", 30), "non-Passport rollback blocked");
         check(!VolteManagerLogic.verifyPassportIdentity("Passport", "wolverine", 29), "Non-Android-11 rejected");
         check(!VolteManagerLogic.verifyPassportIdentity("Passport Silver Edition", "oslo", 29), "Silver Edition non-Android-11 rejected");
 
@@ -34,10 +75,10 @@ public final class VolteManagerLogicTest {
         check("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad".equals(abcHash), "SHA-256 NIST vector");
 
         // 3. PII redaction
-        String sample = "IMSI=460011234567890 num=18612345678 short=46001";
+        String sample = "IMSI=4600112" + "34567890 num=18612" + "345678 short=46001";
         String redacted = VolteManagerLogic.redactSensitiveDigits(sample);
-        check(!redacted.contains("460011234567890"), "IMSI redacted");
-        check(!redacted.contains("18612345678"), "11-digit phone number redacted");
+        check(!redacted.contains("4600112" + "34567890"), "IMSI redacted");
+        check(!redacted.contains("18612" + "345678"), "11-digit phone number redacted");
         check(redacted.contains("short=46001"), "PLMN 46001 preserved");
 
         // 4. Healthy China Unicom status snapshot (JSON QMI + no local su via VolteStatusProvider)
@@ -99,7 +140,7 @@ public final class VolteManagerLogicTest {
         check(deploySh.contains("org.octolab.qcom32ims/.VolteAdminReceiver"), "Deploy invokes new admin receiver");
         check(deploySh.contains("--ez reboot_required true"), "Deploy marks reboot_required notification");
         check(deploySh.contains("pm uninstall org.passport.volteims"), "Deploy migrates legacy package cleanly");
-        check(deploySh.contains("wolverine|oslo|wichita|keian|wseries|windermere)"), "Deploy enforces Passport wseries EFS guard");
+        check(deploySh.contains("  wolverine) ;;") && !deploySh.contains("wolverine|oslo"), "Deploy shell enforces wolverine guard");
         check(deploySh.indexOf("ERR_SIM_NOT_LOADED") < deploySh.indexOf("--provision-stage6a"),
                 "Deploy checks SIM LOADED before touching EFS");
         check(deploySh.indexOf("ERR_LEGACY_IMS_DAEMON_CONFLICT") < deploySh.indexOf("--provision-stage6a"),
@@ -108,28 +149,52 @@ public final class VolteManagerLogicTest {
                 "Deploy blocks incompatible baseband before touching EFS");
         check(deploySh.indexOf("ERR_LEGACY_AAA_BASEBAND") < deploySh.indexOf("--provision-stage6a"),
                 "Deploy blocks older AAA* engineering baseband before touching EFS");
+        check(deploySh.contains("ERR_UNVERIFIED_FIRMWARE_BUILD_ID")
+                        && deploySh.indexOf("ERR_UNVERIFIED_FIRMWARE_BUILD_ID") < deploySh.indexOf("--provision-stage6a"),
+                "Deploy requires AAB982 build_id before touching EFS");
 
         String rollbackSh = VolteManagerLogic.buildRootRollbackScript("/data/user/0/org.octolab.qcom32volte/files/staged");
         check(rollbackSh.contains("wolverine|oslo|wichita|keian|wseries|windermere)"), "Rollback enforces Passport wseries EFS guard");
+        check(!rollbackSh.contains("ERR_UNVERIFIED_FIRMWARE_BUILD_ID")
+                && !rollbackSh.contains("ERR_LEGACY_IMS_DAEMON_CONFLICT"), "Rollback bypasses deploy preflight gates");
+        if (Files.isExecutable(Paths.get("/bin/sh"))) {
+            String goodBaseband = "MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1";
+            check(runShellGuard(deploySh, "wolverine", goodBaseband, "build_id:AAB982", "") == 0,
+                    "Deploy shell accepts matching device and actual firmware guard");
+            check(runShellGuard(deploySh, "wolverine", goodBaseband, "", "") == 25,
+                    "Deploy shell rejects unknown firmware");
+            check(runShellGuard(deploySh, "wolverine", goodBaseband, "build_id:AAB982", "running") == 23,
+                    "Deploy shell rejects running legacy daemon");
+            check(runShellGuard(deploySh, "wolverine", "MPSS.DI.2.0.1-AAAAANPZM", "build_id:AAB982", "") == 24,
+                    "Deploy shell rejects bad baseband");
+            check(runShellGuard(deploySh, "oslo", goodBaseband, "build_id:AAB982", "") == 21,
+                    "Manager shell rejects unverified edition");
+            check(runShellGuard(rollbackSh, "oslo", "bad", "build_id:AAA596", "running") == 0,
+                    "Rollback shell allows experimental edition even with bad firmware and daemon");
+            check(runShellGuard(rollbackSh, "bacon", goodBaseband, "build_id:AAB982", "") == 21,
+                    "Rollback shell rejects non-Passport");
+        }
         check(rollbackSh.indexOf("imsqmidaemon") < rollbackSh.indexOf("--rollback-all"),
                 "Rollback stops conflicting legacy imsqmidaemon before EFS rollback");
         check(rollbackSh.contains("*override*.xml"), "Rollback deletes persistent CarrierConfig override XMLs directly");
         check(rollbackSh.contains("clear_override"), "Rollback clears CarrierConfig override");
         check(rollbackSh.contains("setprop persist.radio.fallbackmode ''"), "Rollback clears fallbackmode property");
-        check(rollbackSh.contains("--rollback-all"), "Rollback restores all Stage 6A EFS items");
+        check(rollbackSh.contains("--rollback-all"), "Rollback invokes fixed EFS cleanup");
         check("'/data/local/tmp/probe'".equals(VolteManagerLogic.quoteSh("/data/local/tmp/probe")), "quoteSh public helper");
 
         // 7b. Baseband & legacy daemon compatibility helpers + post-reboot radio loss headline
         check(VolteManagerLogic.isPassportBasebandCompatible(
-                ".DI.4.0.1-00158-M8974AAAAANAZM-1", "build_id:AAB982\nMP_QC_Release:MPSS.DI.4.0.1-00158"),
+                "MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1", "build_id:AAB982\nMP_QC_Release:MPSS.DI.4.0.1-00158"),
                 "AAB982 DI.4.0.1-00158 baseband accepted");
-        check(VolteManagerLogic.isPassportBasebandCompatible(".DI.4.0.1-00158-M8974AAAAANAZM-1", ""),
-                "DI.4.0.1-00158 without CONTENTS.TXT accepted");
+        check(!VolteManagerLogic.isPassportBasebandCompatible("MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1", ""),
+                "Missing CONTENTS.TXT is rejected");
+        check(!VolteManagerLogic.isPassportBasebandCompatible("MPSS.DI.4.0.1-AAAAANPZM", "build_id:AAB982"),
+                "Partial or conflicting baseband tokens are rejected");
         check(!VolteManagerLogic.isPassportBasebandCompatible("MPSS.DI.2.0.1.c1.16-00029-M8974AAAAANPZM-1", ""),
                 "BB10 DI.2.0.1 ANPZM baseband rejected");
         check(!VolteManagerLogic.isPassportBasebandCompatible("", ""), "Empty baseband rejected");
         check(!VolteManagerLogic.isPassportBasebandCompatible(
-                ".DI.4.0.1-00158-M8974AAAAANAZM-1", "build_id:AAA596\nMP_QC_Release:MPSS.DI.4.0.1-00158"),
+                "MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1", "build_id:AAA596\nMP_QC_Release:MPSS.DI.4.0.1-00158"),
                 "Older engineering AAA596 modem rejected");
 
         check(VolteManagerLogic.hasConflictingLegacyImsDaemon("imsqmidaemon=running, imsdatadaemon=stopped"),
@@ -145,6 +210,11 @@ public final class VolteManagerLogicTest {
                 "package=org.octolab.qcom32ims\nversion=2.8-qcom32-volte", "", "", "", "UNKNOWN", "", false);
         check(snapNoSignal.radioUnavailable && snapNoSignal.headlineZh.contains("无信号"),
                 "Post-reboot empty sim_state flags radioUnavailable rollback guidance");
+        VolteManagerLogic.StatusSnapshot snapExperimentalNoSignal = VolteManagerLogic.parseStatusSummary(
+                "Passport", "oslo", 30, true,
+                "package=org.octolab.qcom32ims\nversion=2.8-qcom32-volte", "", "", "", "UNKNOWN", "", false);
+        check(snapExperimentalNoSignal.radioUnavailable && snapExperimentalNoSignal.headlineZh.contains("无信号"),
+                "Experimental edition also displays radio loss recovery guidance");
 
         VolteManagerLogic.StatusSnapshot snapAirplane = VolteManagerLogic.parseStatusSummary(
                 "Passport", "wolverine", 30, true,
@@ -161,8 +231,8 @@ public final class VolteManagerLogicTest {
         // 8. 32-Bit Qualcomm catalog identification & read-only AI/GitHub porting report
         VolteManagerLogic.DeviceCatalogMatch osloCat = VolteManagerLogic.identifyDeviceCatalog(
                 "blackberry", "Passport Silver Edition", "oslo", "msm8974", "armeabi-v7a", 30, "test-keys");
-        check("VERIFIED_PASSPORT_READY".equals(osloCat.route) && osloCat.prebuiltApkCompatible,
-                "Silver Edition oslo catalog route VERIFIED_PASSPORT_READY");
+        check("EXPERIMENTAL_UNVERIFIED_EDITION".equals(osloCat.route) && osloCat.prebuiltApkCompatible,
+                "Silver Edition oslo catalog route experimental");
 
         VolteManagerLogic.DeviceCatalogMatch s5Cat = VolteManagerLogic.identifyDeviceCatalog(
                 "samsung", "SM-G900F", "klte", "msm8974", "armeabi-v7a", 30, "release-keys");

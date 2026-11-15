@@ -16,8 +16,8 @@
 | **基带 EFS 修改深度** | **仅将 `/nv/item_files/ims/IMS_enable` 单字节改为 `01`** | **真机实证单改 `IMS_enable=01` 重启后仍 100% `NOT_REGISTERED`**。逆向解压 11.7MB Hexagon Q6ZIP 固件后完成 **Stage 6A 全套 54 项协同配置**：<br>① 补齐原厂缺失的 405B `qp_ims_reg_config`（`mode=0` 动态 PCO 发现，`test_mode=0`）；<br>② 解锁 `/pdp_profiles/profile4` 的 `b753=0`（原为 `1` 禁用）并置位 `b750=1` (`im_cn_flag`) / `b751=1` (`pcscf_flag`)，升级为 789B `IPV4V6`；<br>③ 保持 `ims_hybrid_enable` 为 `ENOENT`，消除 Android `rmnet1` 与 Hexagon DCM 建链死锁；<br>④ 写入 `voice_domain_pref=03`、`ims_operation_mode=02` 及 QIPCALL/SMS/DPL 配套项 |
 | **Android 框架与通话控制桥接** | **无任何 Android 应用层代码**（其 README 提到的 `qcril.db`、`ICCID immutable` 与 `post-fs-data` 在仓库 4 个脚本中均无实际实现代码） | **从零手写通用 32 位高通 Android 11 通话栈应用 [`Qcom32VolteIms.apk`](../../src/android-ims-service/)**（`org.octolab.qcom32ims` v2.6）：<br>① `UID 1001` 严守 `SELinux Enforcing`、零 `<uses-permission>` 保护系统电话全部权限；<br>② 三参 `@SystemApi` `overrideConfig(subId, bundle, true)` 跨重启及换卡自动持久绑定；<br>③ 对接 `/dev/socket/qmux_radio/rild_ims0` Protobuf 状态机，打通主被叫、`AMR-WB` 高清语音、DTMF 与挂断；<br>④ 修复 3GPP `CLIP` -> Android `OIR` 语义反转与 `TOA=145` `+` 号补齐，解决来电显示未知号码（`nump=1`）；<br>⑤ 内置零隐私只读 `VolteStatusProvider` |
 | **QMI 诊断与栈安全防护** | 仅通过 `dumpsys` 文本 grep 模糊查看输出，无法观测基带真实 IMS PDN 与 SIP 状态 | 自研 [`libimsa_probe.so`](../../src/qmi-imsa-probe/) 直读 `QMI_IMSA` 真实承载与注册位，并预留 64B 负向缓冲区修复黑莓旧版 `libqmi_client_qmux.so` 40B 栈帧踩踏 `SIGSEGV` |
-| **原值备份、错误处理与无损回滚** | ① `auto_enable_volte.sh` 未调用备份脚本；<br>② 读取被拒（`EACCES`）变空字节后仍强行解锁写入；<br>③ `EFS_SYNC` 返回失败仍可打印 `SUCCESS` 退出 `0`；<br>④ 无一键恢复原厂工具 | ① **强制 `devices/*/profile.json` 机型锁 + 前置原值备份与哈希/CRC 双重核验**；<br>② 任何一步读写、权限、绑定或 `EFS_SYNC` 轮询状态异常立即中止并自动触发跨重启恢复；<br>③ 内置独立 **`rollback` 一键无损回滚**：自动删除全部 52 个新建 EFS 路径（核验 `ENOENT`）、恢复 `IMS_enable=00` / `voice_domain_pref=00` / 4 项 DS Profile 引用并卸载通话栈包 |
-| **用户交付与使用形态** | 仅提供命令行 Shell + Python 散装脚本（需手动装 Python、ADB、端口转发 9999） | 提供 **4 种完整标准化交付形态**（均经实机端到端验证）：<br>① **Windows 单文件一键 EXE 图形界面**（内置 ADB 与全套签名载荷，免装任何环境）；<br>② **手机端状态/管理伴侣 App（`Qcom32VolteManager.apk`）**（免 `su` 实时屏幕面板 + Magisk 机内激活/回滚）；<br>③ **跨平台零依赖 CLI / Tk GUI**（支持 Windows / macOS / Linux）；<br>④ **LineageOS 18.1 ROM 源码树集成补丁包**（`rom-integration/`） |
+| **备份与回滚** | 请核查上游工具行为。 | 本项目保存 EFS 检查日志和哈希，但不是可回灌的原值备份；固定回滚写入 `00` 并删除指定项，不保证恢复任意设备原值。请预先独立备份并移出手机。 |
+| **用户交付与使用形态** | 仅提供命令行 Shell + Python 散装脚本（需手动装 Python、ADB、端口转发 9999） | 提供 **4 种完整标准化交付形态**（均在一台联通 46001 wolverine 上实机端到端验证）：<br>① **Windows 单文件一键 EXE 图形界面**（内置 ADB 与全套签名载荷，免装任何环境）；<br>② **手机端状态/管理伴侣 App（`Qcom32VolteManager.apk`）**（免 `su` 实时屏幕面板 + Magisk 机内激活/回滚）；<br>③ **跨平台零依赖 CLI / Tk GUI**（支持 Windows / macOS / Linux）；<br>④ **LineageOS 18.1 ROM 源码树集成补丁包**（`rom-integration/`） |
 
 ---
 
@@ -33,4 +33,4 @@
 
 ## 三、总结致谢
 
-尽管技术实现完全不同，`ikimi615/qualcomm-volte-enabler` 验证了“黑莓高通安卓设备在取得 Root 后可通过 `/dev/diag` 操作基带 EFS2”这一关键方向。本项目在此启发下完成了从 `MSM8974` Hexagon 基带逆向、EFS2 动态供给回滚器到 Android 11 原生 `ImsService` 电话栈的完整闭环开源实现。
+尽管技术实现完全不同，`ikimi615/qualcomm-volte-enabler` 验证了“黑莓高通安卓设备在取得 Root 后可通过 `/dev/diag` 操作基带 EFS2”这一关键方向。本项目在此启发下完成了从 `MSM8974` Hexagon 基带逆向、EFS2 动态供给回滚器到 Android 11 原生 `ImsService` 电话栈的源码可见实现（PolyForm Noncommercial 1.0.0 + 商业授权）。

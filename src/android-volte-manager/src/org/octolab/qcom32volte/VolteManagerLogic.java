@@ -10,8 +10,7 @@ import java.util.regex.Pattern;
 /**
  * Pure, host-unit-testable core logic for the Qcom32 VoLTE Companion Manager App.
  * Separates generic 32-bit Qualcomm IMS/QMI telemetry & 4-Gate read-only porting checks
- * from per-device EFS profile guards (verified across all BlackBerry Passport wseries editions:
- * wolverine / oslo Silver Edition / wichita AT&T / keian Porsche Edition on Android 11).
+ * from per-device EFS profile guards. One wolverine unit was verified; other editions are experimental.
  */
 public final class VolteManagerLogic {
     public static final String PROFILE_WOLVERINE_ID = "blackberry-passport-wolverine";
@@ -107,12 +106,12 @@ public final class VolteManagerLogic {
             if (this.volteHealthy) {
                 this.headlineZh = "VoLTE 通话栈已激活并注册就绪（请用系统拨号器实测通话与 4G 保持）";
                 this.headlineEn = "VoLTE stack active & IMS registered (verify with native Dialer call + LTE)";
+            } else if (this.radioUnavailable && imsServicePresent) {
+                this.headlineZh = "检测到基带/SIM 未就绪（无信号）— 可执行固定基带清理，再核查 ROM 与 AAB982 基带；不保证原值或信号恢复";
+                this.headlineEn = "Modem/SIM unavailable — Run fixed EFS cleanup and check ROM and AAB982 modem; original values and signal recovery are not guaranteed";
             } else if (!isVerifiedEfsProfile) {
                 this.headlineZh = "未建档机型（EFS 写入已保护锁定；请点下方「多机型只读适配体检」并用 AI + GitHub 自助适配）";
                 this.headlineEn = "Unverified EFS profile (EFS write locked; tap '32-Bit Readiness Check' & self-adapt via AI + GitHub)";
-            } else if (this.radioUnavailable && imsServicePresent) {
-                this.headlineZh = "检测到基带/SIM 未就绪（无信号）— 请先点下方恢复出厂基带回滚，再核查 Enforcing 版 ROM 与 AAB982 基带";
-                this.headlineEn = "Modem/SIM unavailable (no signal) — Tap 'Restore Factory Modem EFS' below, then update ROM & AAB982 modem";
             } else if (imsServicePresent && telemetryAvailable) {
                 this.headlineZh = "IMS 桥接服务已运行，当前 SIM 尚未完成 4G/IMS 注册（请确认 4G 信号与卡侧 VoLTE）";
                 this.headlineEn = "IMS bridge active, awaiting 4G LTE + IMS registration for current SIM";
@@ -123,8 +122,8 @@ public final class VolteManagerLogic {
                 this.headlineZh = "未检测到本地 Root (su)：请连接电脑使用 Qcom32 VoLTE 桌面激活器（走 ADB Root）";
                 this.headlineEn = "No local su found: connect USB and use the Qcom32 VoLTE Desktop Activator (ADB Root)";
             } else {
-                this.headlineZh = "尚未完成 VoLTE 注册：可点击下方「备份并激活 VoLTE」或重启后复查";
-                this.headlineEn = "VoLTE not yet registered: tap 'Backup & Activate VoLTE' or reboot to recheck";
+                this.headlineZh = "尚未完成 VoLTE 注册：可点击下方「激活 VoLTE」或重启后复查";
+                this.headlineEn = "VoLTE not yet registered: tap 'Activate VoLTE' or reboot to recheck";
             }
         }
     }
@@ -177,7 +176,7 @@ public final class VolteManagerLogic {
     }
 
     public static String matchVerifiedDeviceProfile(String model, String device, int sdkInt) {
-        if (sdkInt == EXPECTED_SDK && isPassportWseriesCodename(device) && matchesPassportModelToken(model)) {
+        if (sdkInt == EXPECTED_SDK && EXPECTED_DEVICE.equalsIgnoreCase(device == null ? "" : device.trim()) && matchesPassportModelToken(model)) {
             return PROFILE_WOLVERINE_ID;
         }
         return null;
@@ -185,6 +184,20 @@ public final class VolteManagerLogic {
 
     public static boolean verifyPassportIdentity(String model, String device, int sdkInt) {
         return PROFILE_WOLVERINE_ID.equals(matchVerifiedDeviceProfile(model, device, sdkInt));
+    }
+
+    public static boolean isPassportFamilyIdentity(String model, String device, int sdkInt) {
+        return sdkInt == EXPECTED_SDK && isPassportWseriesCodename(device) && matchesPassportModelToken(model);
+    }
+
+    public static boolean isExperimentalPassportEdition(String model, String device, int sdkInt) {
+        return isPassportFamilyIdentity(model, device, sdkInt) && !verifyPassportIdentity(model, device, sdkInt);
+    }
+
+    public static boolean isRootOperationAllowed(String mode, String model, String device, int sdkInt) {
+        if ("rollback".equals(mode)) return isPassportFamilyIdentity(model, device, sdkInt);
+        if ("deploy".equals(mode)) return verifyPassportIdentity(model, device, sdkInt);
+        return "upgrade".equals(mode) && !isExperimentalPassportEdition(model, device, sdkInt);
     }
 
     public static DeviceCatalogMatch identifyDeviceCatalog(
@@ -260,11 +273,17 @@ public final class VolteManagerLogic {
             return new DeviceCatalogMatch(
                     "VERIFIED_PASSPORT_READY",
                     PROFILE_WOLVERINE_ID,
-                    "黑莓 Passport 全系已验证机型（普通版 / 银色版 oslo / AT&T wichita / 保时捷 keian）",
-                    "BlackBerry Passport All Editions — Verified (wolverine / oslo / wichita / keian)",
-                    "已完整开放一键备份激活、回滚与电信 46011 防掉线保护（同源 lineage_wseries + NON-HLOS.bin 基带）。",
-                    "Fully unlocked for guarded 1-click EFS backup/activation, rollback, and China Telecom 46011 protection.",
+                    "黑莓 Passport wolverine（仅一台 SQW100-1 已验证）",
+                    "BlackBerry Passport wolverine (one SQW100-1 verified)",
+                    "联通 46001 已实测通话；电信仅验证 LTE 与 IMS 注册，通话未测。",
+                    "46001 calls verified on one unit; Telecom LTE and IMS registration only, calls untested.",
                     testKeys);
+        }
+        if (isExperimentalPassportEdition(model, device, sdkInt)) {
+            return new DeviceCatalogMatch("EXPERIMENTAL_UNVERIFIED_EDITION", PROFILE_WOLVERINE_ID,
+                    "Passport 未经真机验证版本（只读）", "Passport unverified edition (read-only)",
+                    "EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE / 实验性，未经真机验证；仅只读与回滚。",
+                    "EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE / 实验性，未经真机验证; read-only and rollback only.", testKeys);
         }
         if (isPassportWseriesCodename(devL) || matchesPassportModelToken(modU)) {
             return new DeviceCatalogMatch(
@@ -342,12 +361,14 @@ public final class VolteManagerLogic {
     }
 
     public static boolean isPassportBasebandCompatible(String basebandProp, String firmwareContents) {
-        String bb = basebandProp == null ? "" : basebandProp.trim();
-        if (!bb.contains("DI.4.0.1") && !bb.contains("M8974AAAAANAZM")) {
+        String bb = basebandProp == null ? "" : basebandProp.trim().toUpperCase(Locale.ROOT);
+        if (!bb.contains("MPSS.DI.4.0.1") || !bb.contains("AAAAANAZM")
+                || bb.contains("DI.2.0.1") || bb.contains("AAAAANPZM")) {
             return false;
         }
         String fw = firmwareContents == null ? "" : firmwareContents.toUpperCase(Locale.ROOT);
-        return !fw.contains("BUILD_ID:AAA");
+        java.util.regex.Matcher buildId = java.util.regex.Pattern.compile("(?m)^\\s*BUILD_ID\\s*:\\s*([A-Z0-9_.-]+)").matcher(fw);
+        return buildId.find() && "AAB982".equals(buildId.group(1));
     }
 
     public static boolean hasConflictingLegacyImsDaemon(String daemonSummary) {
@@ -483,7 +504,7 @@ public final class VolteManagerLogic {
                     + "[How to Adapt Your Phone Yourself with AI + GitHub]\n"
                     + "  Why EFS write is locked: Passport's IMS APN is /pdp_profiles/profile4, whereas Samsung/Xiaomi/\n"
                     + "  OnePlus/Sony may use profile4 for MMS or mobile data. Blindly writing it would break data/MMS.\n"
-                    + "  1. Clone the open-source repo: " + GITHUB_REPO_URL + "\n"
+                    + "  1. Clone the source-available repo (PolyForm Noncommercial 1.0.0; commercial license available): " + GITHUB_REPO_URL + "\n"
                     + "  2. Open the repo folder in Claude Code, Cursor, Codex, Gemini CLI, or Antigravity\n"
                     + "     (it includes the built-in `.agents/skills/qcom32-volte/` & `.claude/skills/qcom32-volte/` AI Skill!).\n"
                     + "  3. Connect USB, paste this report, and tell your AI assistant:\n"
@@ -505,7 +526,7 @@ public final class VolteManagerLogic {
                 + "  为什么默认锁定写基带：Passport 的 IMS 槽位是 /pdp_profiles/profile4，但三星 S5、小米 4、一加 1、\n"
                 + "  索尼 Z2/Z3、LG G3 等机型的 profile4 可能是彩信或上网槽位，盲写会破坏移动数据。\n"
                 + "  项目已在 GitHub 内置多智能体 AI Skill，您可以用 AI 助手安全自助对应：\n"
-                + "  1. 在电脑克隆开源仓库：" + GITHUB_REPO_URL + "\n"
+                + "  1. 在电脑克隆源码可见仓库（PolyForm Noncommercial 1.0.0 + 商业授权）：" + GITHUB_REPO_URL + "\n"
                 + "  2. 用 Claude Code、Cursor、Codex、Gemini CLI 或 Antigravity 打开仓库目录\n"
                 + "     （会自动加载仓库内置的 `.agents/skills/qcom32-volte/` 与 `.claude/skills/qcom32-volte/` 适配技能）；\n"
                 + "  3. 手机连上电脑 USB，复制本报告发给 AI 并输入：\n"
@@ -695,6 +716,14 @@ public final class VolteManagerLogic {
                 + "esac\n";
     }
 
+    private static String verifiedDeployGuardLines() {
+        return "DEV=$(getprop ro.product.device)\n"
+                + "case \"$DEV\" in\n"
+                + "  wolverine) ;;\n"
+                + "  *) echo \"ERR_UNVERIFIED_EFS_PROFILE:$DEV\"; exit 21 ;;\n"
+                + "esac\n";
+    }
+
     private static String legacyCleanupLines() {
         return "if pm path org.passport.volteims >/dev/null 2>&1; then\n"
                 + "  am broadcast -n org.passport.volteims/.VolteAdminReceiver "
@@ -721,14 +750,18 @@ public final class VolteManagerLogic {
                 + "fi\n"
                 + "BB_VER=$(getprop gsm.version.baseband)\n"
                 + "case \"$BB_VER\" in\n"
-                + "  *DI.4.0.1*|*M8974AAAAANAZM*) ;;\n"
+                + "  *DI.2.0.1*|*AAAAANPZM*) echo \"ERR_INCOMPATIBLE_PASSPORT_BASEBAND:baseband=$BB_VER\"; exit 24 ;;\n"
+                + "  *MPSS.DI.4.0.1*AAAAANAZM*) ;;\n"
                 + "  *) echo \"ERR_INCOMPATIBLE_PASSPORT_BASEBAND:baseband=$BB_VER (Expected BlackBerry Android AAB982 MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1)\"; exit 24 ;;\n"
                 + "esac\n"
                 + "FW_TXT=$(cat /firmware/IMAGE/CONTENTS.TXT /firmware/image/contents.txt /vendor/firmware_mnt/IMAGE/CONTENTS.TXT /vendor/firmware_mnt/image/contents.txt 2>/dev/null || true)\n"
                 + "case \"$FW_TXT\" in\n"
                 + "  *build_id:AAA*|*BUILD_ID:AAA*)\n"
                 + "    echo \"ERR_LEGACY_AAA_BASEBAND:Older engineering AAA* NON-HLOS.bin detected; flash BlackBerry Android AAB982 NON-HLOS.bin first\"; exit 25 ;;\n"
-                + "esac\n";
+                + "esac\n"
+                + "if ! printf '%s\\n' \"$FW_TXT\" | grep -iqE '^[[:space:]]*build_id[[:space:]]*:[[:space:]]*AAB982([[:space:]]|$)'; then\n"
+                + "  echo \"ERR_UNVERIFIED_FIRMWARE_BUILD_ID:AAB982 is required\"; exit 25\n"
+                + "fi\n";
     }
 
     private static String stopLegacyVendorImsDaemonsLines() {
@@ -743,7 +776,7 @@ public final class VolteManagerLogic {
         String stageQuoted = quoteSh(appStagedDir);
         String backupQuoted = quoteSh(backupDir);
         return "set -e\n"
-                + passportDeviceGuardLines()
+                + verifiedDeployGuardLines()
                 + passportDeploySafetyGuardLines()
                 + "TMP_PROV='/data/local/tmp/pp_regconfig_provision_v6'\n"
                 + "TMP_APK='/data/local/tmp/Qcom32VolteIms.apk'\n"

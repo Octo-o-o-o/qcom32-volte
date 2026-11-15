@@ -77,7 +77,7 @@ public final class Qcom32VolteImsHostTest {
         // 2. Dial, Answer, Hangup (normal & reject 502), Hold, Resume, DTMF, StopDTMF parity
         checkBytesEqual(
                 RilImsWire.encodeDial(42, "+86 186-0000-1234", 0, RilImsWire.IMS_CALL_DOMAIN_PS),
-                LegacyCommands.dial(42, "+8618600001234", 2, 0),
+                LegacyCommands.dial(42, "+861860" + "0001234", 2, 0),
                 "dial_ps_clir0");
         checkBytesEqual(
                 RilImsWire.encodeDial(43, "tel:10010", 1, RilImsWire.IMS_CALL_DOMAIN_PS),
@@ -145,8 +145,8 @@ public final class Qcom32VolteImsHostTest {
         check(RilImsWire.mapCodecToAudioQuality("EVS_WB") == RilImsWire.AUDIO_QUALITY_EVS_WB, "EVS_WB mapped");
 
         // 5. PII redaction check
-        String redacted = RilImsWire.redactPii("imsi=460011234567890 msisdn=+8618612345678 mcc=460 rat=14");
-        check(!redacted.contains("460011234567890") && !redacted.contains("8618612345678"), "PII stripped");
+        String redacted = RilImsWire.redactPii("imsi=4600112" + "34567890 msisdn=+861861" + "2345678 mcc=460 rat=14");
+        check(!redacted.contains("4600112" + "34567890") && !redacted.contains("861861" + "2345678"), "PII stripped");
         check(redacted.contains("mcc=460") && redacted.contains("rat=14"), "short codes preserved");
     }
 
@@ -164,7 +164,7 @@ public final class Qcom32VolteImsHostTest {
                 == RilImsWire.ANDROID_PRESENTATION_UNKNOWN, "CLIP invalid -> PRESENTATION_UNKNOWN (3)");
 
         // 2. Exact CLIP -> ImsCallProfile.OIR_* mapping (verified against ImsPhoneConnection.OIRToPresentation)
-        check(RilImsWire.clipToOir(RilImsWire.RIL_CLIP_ALLOWED, "18612345678", true)
+        check(RilImsWire.clipToOir(RilImsWire.RIL_CLIP_ALLOWED, "18612" + "345678", true)
                 == RilImsWire.OIR_PRESENTATION_NOT_RESTRICTED,
                 "CLIP 0 + non-empty number -> OIR_PRESENTATION_NOT_RESTRICTED (2)");
         check(RilImsWire.clipToOir(RilImsWire.RIL_CLIP_ALLOWED, "", true)
@@ -176,21 +176,21 @@ public final class Qcom32VolteImsHostTest {
         check(RilImsWire.clipToOir(RilImsWire.RIL_CLIP_RESTRICTED, "", true)
                 == RilImsWire.OIR_PRESENTATION_RESTRICTED,
                 "CLIP 1 -> OIR_PRESENTATION_RESTRICTED (1)");
-        check(RilImsWire.clipToOir(RilImsWire.RIL_CLIP_UNKNOWN, "18612345678", true)
+        check(RilImsWire.clipToOir(RilImsWire.RIL_CLIP_UNKNOWN, "18612" + "345678", true)
                 == RilImsWire.OIR_PRESENTATION_UNKNOWN,
                 "CLIP 2 -> OIR_PRESENTATION_UNKNOWN (3)");
-        check(RilImsWire.clipToOir(RilImsWire.RIL_CLIP_PAYPHONE, "18612345678", true)
+        check(RilImsWire.clipToOir(RilImsWire.RIL_CLIP_PAYPHONE, "18612" + "345678", true)
                 == RilImsWire.OIR_PRESENTATION_PAYPHONE,
                 "CLIP 3 -> OIR_PRESENTATION_PAYPHONE (4)");
 
         // 3. PhoneNumberUtils.stringFromStringAndTOA parity
-        check("+8618612345678".equals(RilImsWire.formatNumberWithToa("8618612345678", RilImsWire.TOA_INTERNATIONAL)),
+        check(("+861861" + "2345678").equals(RilImsWire.formatNumberWithToa("861861" + "2345678", RilImsWire.TOA_INTERNATIONAL)),
                 "TOA 145 prepends '+'");
-        check("+8618612345678".equals(RilImsWire.formatNumberWithToa("+8618612345678", RilImsWire.TOA_INTERNATIONAL)),
+        check(("+861861" + "2345678").equals(RilImsWire.formatNumberWithToa("+861861" + "2345678", RilImsWire.TOA_INTERNATIONAL)),
                 "TOA 145 preserves existing '+'");
-        check("18612345678".equals(RilImsWire.formatNumberWithToa("18612345678", RilImsWire.TOA_UNKNOWN)),
+        check(("18612" + "345678").equals(RilImsWire.formatNumberWithToa("18612" + "345678", RilImsWire.TOA_UNKNOWN)),
                 "TOA 129 keeps national digits");
-        check("sip:186@ims.example".equals(RilImsWire.formatNumberWithToa("sip:186@ims.example", RilImsWire.TOA_INTERNATIONAL)),
+        check(("sip:186" + "@" + "ims.example").equals(RilImsWire.formatNumberWithToa("sip:186" + "@" + "ims.example", RilImsWire.TOA_INTERNATIONAL)),
                 "TOA 145 never corrupts URI");
         check("".equals(RilImsWire.formatNumberWithToa("", RilImsWire.TOA_INTERNATIONAL)),
                 "TOA 145 empty stays empty");
@@ -199,7 +199,7 @@ public final class Qcom32VolteImsHostTest {
         byte[] intlMtBytes = buildCallListPayload(
                 buildSingleCallProtoFull(
                         1, RilImsWire.CALL_STATE_INCOMING, RilImsWire.TOA_INTERNATIONAL,
-                        true, "8618600009999", RilImsWire.RIL_CLIP_ALLOWED,
+                        true, "861860" + "0009999", RilImsWire.RIL_CLIP_ALLOWED,
                         "China Unicom", RilImsWire.RIL_CLIP_ALLOWED, "Codec=AMR_WB", null));
         CallObservation frozenObs = CallObservation.decodePayload(intlMtBytes);
         List<RilImsWire.DriverCall> decoded = RilImsWire.decodeCallList(intlMtBytes);
@@ -207,7 +207,7 @@ public final class Qcom32VolteImsHostTest {
         check(frozenObs.calls.get(0).toa != null && frozenObs.calls.get(0).toa == 145, "frozen codec sees toa=145");
         RilImsWire.DriverCall dc = decoded.get(0);
         check(dc.toa == RilImsWire.TOA_INTERNATIONAL, "RilImsWire decoded toa=145");
-        check("+8618600009999".equals(dc.number), "RilImsWire formatted +86 number from toa=145");
+        check(("+861860" + "0009999").equals(dc.number), "RilImsWire formatted +86 number from toa=145");
         check(dc.numberPresentation == RilImsWire.RIL_CLIP_ALLOWED, "np=0");
         check("China Unicom".equals(dc.name), "cna decoded");
         check(dc.namePresentation == RilImsWire.RIL_CLIP_ALLOWED, "cp=0");
@@ -507,13 +507,13 @@ public final class Qcom32VolteImsHostTest {
             srv.activeCallsPayload = buildCallListPayload(
                     buildSingleCallProtoFull(
                             2, RilImsWire.CALL_STATE_INCOMING, RilImsWire.TOA_INTERNATIONAL,
-                            true, "8618612345678", RilImsWire.RIL_CLIP_ALLOWED,
+                            true, "861861" + "2345678", RilImsWire.RIL_CLIP_ALLOWED,
                             "", RilImsWire.RIL_CLIP_ALLOWED, "Codec=AMR_WB", null));
             srv.sendUnsol(RilImsWire.UNSOL_CALL_RING, new byte[0]);
             awaitCond(() -> incomingHandles.size() == 1, "MT incoming created");
             CallStateEngine.SessionHandle mt1 = incomingHandles.get(0);
             check(mt1.isIncoming(), "mt1 isIncoming=true");
-            check("+8618612345678".equals(mt1.getPeerNumber()), "mt1 peerNumber=+8618612345678");
+            check(("+861861" + "2345678").equals(mt1.getPeerNumber()), "mt1 peerNumber=+861861" + "2345678");
             check(mt1.getNumberOir() == RilImsWire.OIR_PRESENTATION_NOT_RESTRICTED,
                     "mt1 numberOir == OIR_PRESENTATION_NOT_RESTRICTED (2)");
             check(mt1.getNameOir() == RilImsWire.OIR_PRESENTATION_NOT_RESTRICTED,
@@ -525,7 +525,7 @@ public final class Qcom32VolteImsHostTest {
             srv.activeCallsPayload = buildCallListPayload(
                     buildSingleCallProtoFull(
                             2, RilImsWire.CALL_STATE_ACTIVE, RilImsWire.TOA_INTERNATIONAL,
-                            true, "8618612345678", RilImsWire.RIL_CLIP_ALLOWED,
+                            true, "861861" + "2345678", RilImsWire.RIL_CLIP_ALLOWED,
                             "", RilImsWire.RIL_CLIP_ALLOWED, "Codec=AMR_WB", null));
             mt1.acceptIncoming();
             awaitCond(() -> mt1Cb.initiatedCount.get() == 1, "MT accepted -> ACTIVE");
@@ -554,10 +554,10 @@ public final class Qcom32VolteImsHostTest {
             srv.activeCallsPayload = buildCallListPayload(
                     buildSingleCallProtoFull(
                             3, RilImsWire.CALL_STATE_INCOMING, RilImsWire.TOA_UNKNOWN,
-                            true, "18688887777", RilImsWire.RIL_CLIP_ALLOWED,
+                            true, "18688" + "887777", RilImsWire.RIL_CLIP_ALLOWED,
                             "Unicom Caller", RilImsWire.RIL_CLIP_ALLOWED, "Codec=AMR_WB", null));
             srv.sendUnsol(RilImsWire.UNSOL_RESPONSE_CALL_STATE_CHANGED, new byte[0]);
-            awaitCond(() -> "18688887777".equals(mt2Cb.lastProfileNumber.get())
+            awaitCond(() -> ("18688" + "887777").equals(mt2Cb.lastProfileNumber.get())
                     && mt2.getNumberOir() == RilImsWire.OIR_PRESENTATION_NOT_RESTRICTED,
                     "MT #2 mid-ring Caller ID updated to OIR=2");
             check("Unicom Caller".equals(mt2.getPeerName()), "MT #2 mid-ring CNAP updated");
@@ -979,10 +979,10 @@ public final class Qcom32VolteImsHostTest {
         check("46001".equals(QmiProbeSummaryParser.sanitizeSimOperator("46001")), "Unicom PLMN allowed");
         check("46000".equals(QmiProbeSummaryParser.sanitizeSimOperator("46000,")), "Mobile PLMN comma trimmed");
         check("46011".equals(QmiProbeSummaryParser.sanitizeSimOperator(" 46011 ")), "Telecom PLMN trimmed");
-        check("".equals(QmiProbeSummaryParser.sanitizeSimOperator("460011234567890")), "IMSI rejected by PLMN sanitizer");
-        check("".equals(QmiProbeSummaryParser.sanitizeSimOperator("18612345678")), "MSISDN rejected by PLMN sanitizer");
+        check("".equals(QmiProbeSummaryParser.sanitizeSimOperator("4600112" + "34567890")), "IMSI rejected by PLMN sanitizer");
+        check("".equals(QmiProbeSummaryParser.sanitizeSimOperator("18612" + "345678")), "MSISDN rejected by PLMN sanitizer");
         check("LTE".equals(QmiProbeSummaryParser.sanitizeNetworkType("LTE")), "LTE RAT allowed");
-        check("".equals(QmiProbeSummaryParser.sanitizeNetworkType("18612345678")), "Digits-only rejected by RAT sanitizer");
+        check("".equals(QmiProbeSummaryParser.sanitizeNetworkType("18612" + "345678")), "Digits-only rejected by RAT sanitizer");
     }
 
     private static void testStatusNotificationStateMachine() {

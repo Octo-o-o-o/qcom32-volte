@@ -2,8 +2,8 @@
 name: qcom32-volte
 description: >-
   Identifies connected or user-named phones, checks compatibility, deploys or rolls back native
-  4G VoLTE on verified 32-bit Qualcomm Android 11 devices (BlackBerry Passport all editions:
-  `wolverine`, Silver Edition `oslo`, AT&T `wichita`, Porsche `keian`, `wseries`), and guides safe
+  4G VoLTE on one verified Passport wolverine and checks unverified Passport editions
+  (oslo, wichita, keian, wseries, windermere) read-only, and guides safe
   4-gate VoLTE porting and LineageOS 18.1 preparation for candidate MSM8974/APQ8084 devices
   (Samsung Galaxy S5 `klte`, Xiaomi Mi 4 `cancro`, LG G3 `d855`, OnePlus One `bacon`, Sony Xperia
   Z1/Z2/Z3, HTC One M8, Moto X 2014, Nexus 6). Use whenever the user asks to check device support,
@@ -12,6 +12,12 @@ description: >-
 ---
 
 # Qcom32 VoLTE — AI Device Routing, Deployment & Safe Porting Skill
+
+This project is source-available (PolyForm Noncommercial 1.0.0; commercial license available). Only one SQW100-1 wolverine / China Unicom 46001 has complete call and four-method verification. China Telecom 46003/46011 has LTE attach and IMS registration only; calls are untested (EPS-only fix: 149 s without drops). China Mobile is untested; FDD B3/B8 is theoretical, and the device lacks TDD B38–41. SMS over IMS is not implemented. Emergency calls are unsupported and uncertified; keep another phone. VoWiFi, video, supplementary services and non-Chinese carriers are unsupported or untested.
+
+EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE / 实验性，未经真机验证: oslo, wichita, keian, wseries and windermere default to read-only. CLI baseband writes require --experimental-unverified-edition plus typed confirmation or --i-understand-unverified-baseband-write. GUI and Android manager do not activate them; Passport rollback remains available. Non-Passport baseband writes are blocked. Published v1.2.4-r1 artifacts do not contain this gate or the claims corrections; they still allow one-click writes on oslo, wichita and keian.
+
+Make an independent EFS backup and keep it off-device. Automatic inspection logs contain hashes, not restorable original bytes. Fixed rollback does not guarantee recovery of original values.
 
 `qcom32-volte` splits legacy 32-bit Qualcomm (`MSM8974` / `APQ8084` / `MSM8926`) Android 11 VoLTE into two decoupled layers:
 1. **Generic Android 11 IMS Stack (~85%)**: `Qcom32VolteIms.apk` (`org.octolab.qcom32ims`, `UID 1001`, `SELinux=Enforcing`, zero `<uses-permission>`) + `libimsa_probe.so` + `Qcom32VolteManager.apk` + 32-bit `/dev/diag` EFS2 codecs.
@@ -55,9 +61,9 @@ The phone matches a verified profile (e.g., `blackberry-passport-wolverine`) and
 - To install the on-device status app (works without `su`/Magisk): `python3 cli/volte_ctl.py install-manager`
 
 ### Route B — `VERIFIED_PROFILE_READY` (or `NEEDS_SIM_OR_LTE` / `NEEDS_ROOTED_DEBUGGING`)
-The phone matches a `"status": "verified"` profile in `devices/*/profile.json` (currently all BlackBerry Passport hardware editions: Standard `wolverine` `SQW100-1/2/3`, Silver Edition `oslo` `SQW100-4`, AT&T `wichita` `SQW100-2`, Porsche Design `keian`, and unified `wseries` on LineageOS 18.1):
+The phone matches the verified wolverine profile on Android 11; one SQW100-1 unit was tested:
 1. Ensure an active 4G USIM is inserted (`gsm.sim.state=LOADED`, camped on `LTE`) and the phone has **Settings -> System -> Developer options -> USB debugging + Rooted debugging** enabled.
-2. Run offline self-tests, then execute guarded backup + Stage 6A EFS provisioning + APK install + reboot verification:
+2. Independently back up EFS off-device, run offline self-tests, then execute Stage 6A EFS provisioning + APK install + reboot verification:
    ```bash
    python3 cli/volte_ctl.py self-test
    python3 cli/volte_ctl.py deploy
@@ -65,6 +71,9 @@ The phone matches a `"status": "verified"` profile in `devices/*/profile.json` (
    ```
 3. Verify JSON output shows `"volte_stack_healthy": true`, `"qmi_imsa": {"pdp_connected": 1, "reg_status": 2, "voip": 2, "voip_rat": 1}`, and `"framework_ims_registered": ["true"]`.
 4. Tell the user they can now **turn off Rooted debugging**, unplug USB, and make an outgoing + incoming test call to confirm bidirectional AMR-WB HD voice, Caller ID, and LTE retention.
+
+### Experimental Passport — EXPERIMENTAL_UNVERIFIED_EDITION
+Inspect read-only by default. Do not recommend one-click deploy. Rollback remains available; CLI experimental EFS writes require both explicit opt-ins above.
 
 ### Route C — `NEEDS_ANDROID11_ROM_FIRST` / `IN_FASTBOOT_BOOTLOADER_MODE`
 The phone is not yet running Android 11 (SDK 30):
@@ -93,14 +102,13 @@ Read and follow **every step** in [`PORTING_AND_EFS_SAFETY.md`](./references/POR
    ```
    Only change `"status"` to `"verified"` after full `--rollback-all` verification AND user-confirmed live MO/MT voice calls.
 
-### Route E — `POST_DEPLOY_RADIO_LOSS_NEEDS_ROLLBACK` / `NEEDS_ROM_UPGRADE_LEGACY_IMS_DAEMON` / `NEEDS_COMPATIBLE_BASEBAND` / Factory Rollback
-If a user activated VoLTE on an older `Permissive` ROM with active legacy `imsqmidaemon` or an incompatible baseband (`DI.2.0.1` BB10 radio or older engineering `AAA*` `NON-HLOS.bin`) and lost cellular signal after reboot (`gsm.sim.state == ""`), OR wants to restore factory modem EFS baseline:
-1. Run hardened factory rollback immediately (stops `imsqmidaemon`, clears `CarrierConfig` overrides, uninstalls APKs, runs `--rollback-all`, and reboots to restore cellular signal):
-   ```bash
-   python3 cli/volte_ctl.py rollback
-   ```
-   *(Note: Starting in `v1.2.4-r1`, `cli/volte_ctl.py deploy` blocks incompatible ROMs/basebands BEFORE any EFS write, and automatically executes factory rollback if `gsm.sim.state` becomes `""` after reboot.)*
-2. Before re-deploying on BlackBerry Passport, verify Enforcing LineageOS 18.1 (`lineage-18.1-20260129-UNOFFICIAL-wseries`, where legacy `imsqmidaemon` is absent) AND BlackBerry Android `AAB982` (`MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1`) `NON-HLOS.bin` baseband.
+### Route E — `POST_DEPLOY_RADIO_LOSS_NEEDS_ROLLBACK` / `NEEDS_ROM_UPGRADE_LEGACY_IMS_DAEMON` / `NEEDS_COMPATIBLE_BASEBAND` / Fixed Rollback
+Deployment requires the edition opt-ins where applicable, no conflicting legacy IMS daemon, the MPSS.DI.4.0.1 and AAAAANAZM baseband identifiers, and firmware build_id AAB982. The desktop tool attempts fixed rollback after qualifying post-reboot radio loss; an IMS-only timeout with a ready SIM does not trigger it. Rollback bypasses both deploy gates on recognized Passport editions. v1.2.4 safety features have only offline/mock evidence, not a live test on the affected device.
+
+This fixed cleanup writes 00 and deletes designated EFS items; it does not restore original bytes from the inspection log. Independently back up EFS and verify recovery before modifying the phone:
+```bash
+python3 cli/volte_ctl.py rollback
+```
 
 ---
 
@@ -108,7 +116,7 @@ If a user activated VoLTE on an older `Permissive` ROM with active legacy `imsqm
 
 | Symptom / Error | Root Cause & Fix |
 | --- | --- |
-| No signal after reboot (`"sim_state": ""`, `"network_type": "Unknown"`, `"ims_service": {"present": false}`) | Legacy 32-bit vendor `imsqmidaemon` on older `Permissive` ROMs fighting `rild` once `IMS_enable=01`, OR non-`AAB982` (`DI.2.0.1` / `AAA596`) baseband container. Run `python3 cli/volte_ctl.py rollback` immediately to restore signal, then upgrade to Enforcing `lineage-18.1-20260129-UNOFFICIAL-wseries` + `AAB982` `NON-HLOS.bin`. |
+| No signal after reboot (`"sim_state": ""`, `"network_type": "Unknown"`, `"ims_service": {"present": false}`) | Legacy 32-bit vendor `imsqmidaemon` on older `Permissive` ROMs fighting `rild` once `IMS_enable=01`, OR non-`AAB982` (`DI.2.0.1` / `AAA596`) baseband container. Consider fixed `python3 cli/volte_ctl.py rollback` and check ROM and `AAB982` baseband. Original EFS values and signal recovery are not guaranteed. |
 | `INSTALL_FAILED_SHARED_USER_INCOMPATIBLE` | Target ROM's `com.android.phone` is signed with private `release-keys` instead of AOSP `test-keys`. Re-sign `Qcom32VolteIms.apk` with the ROM's `platform` key (`cli/build_all.py --sign-key ... --sign-cert ...`) or build in-tree via `rom-integration/`. |
 | `QMI_IMSS` returns `INVALID_SERVICE_TYPE (31)` | Normal behavior while `IMS_enable == 00` before Stage 6A provisioning + reboot. |
 | `CAUSE_CODE 54` (`READ_FAILED`) on `GET 0x26` | Only `IMS_enable=01` was flipped without Stage 6A's 405B `qp_ims_reg_config` and companion items. Use full Stage 6A provisioning, never single-byte `IMS_enable` scripts. |

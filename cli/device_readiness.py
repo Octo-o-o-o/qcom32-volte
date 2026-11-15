@@ -44,7 +44,7 @@ def sanitize_text(text: str) -> str:
 CATALOG_FAMILIES: list[dict[str, Any]] = [
     {
         "family_id": "blackberry-passport-wolverine",
-        "tier": "verified",
+        "tier": "mixed_verified_and_experimental",
         "soc": "MSM8974AA (Snapdragon 801)",
         "codenames": list(PASSPORT_WSERIES_DEVICES),
         "models": [
@@ -58,12 +58,12 @@ CATALOG_FAMILIES: list[dict[str, Any]] = [
             "Wichita",
             "Keian",
         ],
-        "name_zh": "黑莓 BlackBerry Passport 全系版本（普通版 wolverine / 银色版 oslo / AT&T 圆角版 wichita / 保时捷版 keian）",
-        "name_en": "BlackBerry Passport All Editions (Standard wolverine / Silver Edition oslo / AT&T wichita / Porsche keian)",
+        "name_zh": "黑莓 Passport 家族（一台 wolverine 已验证；银色版 oslo 等未验证）",
+        "name_en": "BlackBerry Passport family (one wolverine verified; Silver Edition oslo and others unverified)",
         "rom_zh": "LineageOS 18.1 (Android 11 / API 30, lineage_wseries)",
         "rom_en": "LineageOS 18.1 (Android 11 / API 30, lineage_wseries)",
-        "status_zh": "已完整放开：支持一键备份激活、零写入升级、出厂回滚及电信 46011 防掉线保护",
-        "status_en": "Fully unlocked: guarded 1-click EFS backup/activation, zero-EFS APK upgrade, rollback & CT 46011 protection",
+        "status_zh": "仅一台 wolverine 真机验证；其他代号未验证，默认只读；回滚可用",
+        "status_en": "One wolverine unit verified; other codenames unverified and read-only by default; rollback available",
     },
     {
         "family_id": "samsung-galaxy-s5-klte",
@@ -322,20 +322,31 @@ def identify_device_props(props: dict[str, str]) -> dict[str, Any]:
 
     if is_passport_wseries(device, model):
         if sdk_int == 30:
+            if dev_l != "wolverine":
+                return {
+                    "route": "EXPERIMENTAL_UNVERIFIED_EDITION",
+                    "family_id": "blackberry-passport-wolverine",
+                    "tier": "experimental",
+                    "name_zh": "Passport 未经真机验证版本（只读）",
+                    "name_en": "Passport unverified edition (read-only)",
+                    "summary_zh": "EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE / 实验性，未经真机验证；默认只读，回滚可用。",
+                    "summary_en": "EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE / 实验性，未经真机验证; read-only by default; rollback remains available.",
+                    "prebuilt_apk_compatible": test_keys,
+                }
             return {
                 "route": "VERIFIED_PASSPORT_READY",
                 "family_id": "blackberry-passport-wolverine",
                 "tier": "verified",
-                "name_zh": "黑莓 Passport 全系已验证机型（普通版 wolverine / 银色版 oslo / wichita / keian）",
-                "name_en": "BlackBerry Passport All Editions — Verified (wolverine / Silver Edition oslo / wichita / keian)",
-                "summary_zh": "已完整放开：可直接在主界面点击「2. 备份并一键激活 VoLTE」（含电信 46011 防掉线与出厂回滚）。",
-                "summary_en": "Fully unlocked: ready for guarded 1-click EFS backup, VoLTE activation, and factory rollback.",
+                "name_zh": "黑莓 Passport wolverine（仅一台 SQW100-1 已验证）",
+                "name_en": "BlackBerry Passport wolverine (one SQW100-1 verified)",
+                "summary_zh": "仅一台联通 46001 真机完成通话验证；其他运营商和机型请查看验证范围。",
+                "summary_en": "Calls verified on one 46001 unit; see verification limits for other carriers and editions.",
                 "prebuilt_apk_compatible": test_keys,
             }
         return {
             "route": "NEEDS_ANDROID11_ROM_FIRST",
             "family_id": "blackberry-passport-wolverine",
-            "tier": "verified",
+            "tier": "unverified",
             "name_zh": "黑莓 Passport 系列（当前非 Android 11 系统）",
             "name_en": "BlackBerry Passport Family (Requires Android 11 / API 30)",
             "summary_zh": f"检测到 Passport ({device}) 但当前 SDK 为 {sdk_int}；原厂 BB10 系统请看 {BB10_SISTER_URL}，Android 系统请刷入 LineageOS 18.1。",
@@ -494,14 +505,14 @@ def assess_passport_baseband(baseband: str, fw_build_id: str = "") -> dict[str, 
             "firmware_build_id": fw,
             "detail_zh": (
                 "阻断（当前 `gsm.version.baseband` 为空，基带/RIL 未就绪或处于失联状态；"
-                "若此前在不兼容 ROM/基带上激活过 VoLTE 导致无信号，请先执行「一键恢复出厂基带回滚」恢复信号，再检查 `AAB982` 基带）"
+                "可尝试固定基带回滚并检查 `AAB982` 基带；不保证恢复原值或信号）"
             ),
             "detail_en": (
                 "FAIL (`gsm.version.baseband` is empty — RIL/radio is uninitialized or wedged; "
-                "if signal was lost after a prior deploy on an older ROM/modem, run Rollback first to restore signal)"
+                "fixed rollback may be attempted; original values and signal recovery are not guaranteed)"
             ),
         }
-    if "DI.4.0.1" not in bb_u and "M8974AAAAANAZM" not in bb_u:
+    if "MPSS.DI.4.0.1" not in bb_u or "AAAAANAZM" not in bb_u or "DI.2.0.1" in bb_u or "AAAAANPZM" in bb_u:
         return {
             "compatible": False,
             "reason": "INCOMPATIBLE_BASEBAND",
@@ -515,6 +526,15 @@ def assess_passport_baseband(baseband: str, fw_build_id: str = "") -> dict[str, 
                 f"FAIL (Baseband `{bb}` is not BlackBerry Android `DI.4.0.1 / M8974AAAAANAZM` — e.g. BB10 `DI.2.0.1` radio; "
                 "flash `AAB982` `NON-HLOS.bin` baseband before activating VoLTE)"
             ),
+        }
+    if fw_u != "AAB982":
+        return {
+            "compatible": False,
+            "reason": "MISSING_OR_UNVERIFIED_FIRMWARE_BUILD_ID",
+            "baseband": bb,
+            "firmware_build_id": fw,
+            "detail_zh": f"阻断（固件 build_id 为 `{fw or '未知'}`；必须独立核实 AAB982）",
+            "detail_en": f"FAIL (firmware build_id is `{fw or 'unknown'}`; AAB982 is required)",
         }
     return {
         "compatible": True,
@@ -692,12 +712,12 @@ def run_readonly_readiness_audit(adb: Any) -> dict[str, Any]:
         match["summary_zh"] = (
             "基带写入已自动保护阻断："
             + "；".join(reasons_zh)
-            + "。若您此前已在旧版系统上激活导致当前无信号，请直接点击主界面「3. 恢复出厂基带回滚」即可一键恢复信号！"
+            + "。若当前无信号可尝试固定基带回滚，但不保证恢复原值或信号。"
         )
         match["summary_en"] = (
             "EFS write guarded & blocked: "
             + "; ".join(reasons_en)
-            + ". If cellular signal was lost after an earlier deploy, run [3. Rollback to Factory EFS] first to restore signal!"
+            + ". Fixed rollback may be attempted after signal loss; original values and signal recovery are not guaranteed."
         )
 
     # Gate 4: Audio HAL VoLTE Voice Path
@@ -782,11 +802,11 @@ def format_readiness_audit(audit: dict[str, Any], lang: str = "zh") -> str:
             f"  Gate 2 (RIL & /dev/diag): {gates['gate2_ril_diag']['detail_en']}\n"
             f"  Gate 3 (Modem Engine) : {gates['gate3_modem_ims']['detail_en']}\n"
             f"  Gate 4 (Audio HAL)    : {gates['gate4_audio_hal']['detail_en']}\n\n"
-            "[Self-Adapt Your Phone Safely with AI + GitHub Open-Source Project]\n"
-            "  Why non-Passport EFS write is locked: BlackBerry Passport (all editions: wolverine / oslo Silver /\n"
-            "  wichita / keian) uses `/pdp_profiles/profile4` for IMS, whereas Samsung S5, Xiaomi Mi 4, OnePlus One,\n"
+            "[Self-Adapt Your Phone Safely with AI + GitHub Source-Available Project]\n"
+            "  Why EFS writes are guarded: only one wolverine unit was verified; other Passport editions and\n"
+            "  other phones are unverified. Samsung S5, Xiaomi Mi 4, OnePlus One,\n"
             "  Sony Z2/Z3, and LG G3 may store MMS or mobile-data APNs in `profile4`. Blind writes would break data.\n\n"
-            f"  Step 1: Clone the open-source repository on your computer:\n"
+            f"  Step 1: Clone the source-available repository (PolyForm Noncommercial 1.0.0; commercial license available) on your computer:\n"
             f"          git clone {GITHUB_REPO_URL}\n"
             "  Step 2: Open the cloned folder in Claude Code, Cursor, Codex, Gemini CLI, or Antigravity.\n"
             f"          It automatically loads `{SKILL_PATH_AGENTS}` & `{SKILL_PATH_CLAUDE}`!\n"
@@ -809,11 +829,11 @@ def format_readiness_audit(audit: dict[str, Any], lang: str = "zh") -> str:
         f"  Gate 2 (RIL 与诊断) : {gates['gate2_ril_diag']['detail_zh']}\n"
         f"  Gate 3 (基带引擎)   : {gates['gate3_modem_ims']['detail_zh']}\n"
         f"  Gate 4 (音频通路)   : {gates['gate4_audio_hal']['detail_zh']}\n\n"
-        "【如何使用 AI + GitHub 开源项目自行对应适配本机型？】\n"
-        "  为什么非 Passport 机型默认锁住基带写入：黑莓 Passport 全系（含普通版 wolverine / 银色版 oslo /\n"
-        "  AT&T 版 wichita / 保时捷版 keian）共用同一套基带且 IMS 槽位固定为 `/pdp_profiles/profile4`；\n"
+        "【如何使用 AI + GitHub 源码可见项目（PolyForm Noncommercial 1.0.0 + 商业授权）自行对应适配本机型？】\n"
+        "  为什么基带写入默认受限：仅一台 wolverine 已验证；其他 Passport 版本和其他机型均未验证，\n"
+        "  不能假设它们共用同一 EFS 布局；\n"
         "  而三星 S5、小米 4、一加 1、索尼 Z2/Z3、LG G3 等机型的 `profile4` 往往存着上网或彩信 APN，盲写会破坏移动数据。\n\n"
-        f"  第 1 步：在电脑上克隆开源项目仓库：\n"
+        f"  第 1 步：在电脑上克隆源码可见项目仓库：\n"
         f"          git clone {GITHUB_REPO_URL}\n"
         "  第 2 步：用 Claude Code、Cursor、Codex、Gemini CLI 或 Antigravity 打开克隆下来的项目文件夹\n"
         f"          （项目已内置 `{SKILL_PATH_AGENTS}` 与 `{SKILL_PATH_CLAUDE}` 智能体适配技能，AI 会自动识别！）。\n"
@@ -829,7 +849,7 @@ def format_catalog_overview(lang: str = "zh") -> str:
         lines = [
             "=== Qcom32 VoLTE · Supported Editions & 32-Bit Qualcomm Porting Matrix ===",
             "",
-            "[1] Fully Unlocked (1-Click Backup, VoLTE Activation, Rollback & CT 46011 Protection):",
+            "[1] One wolverine unit verified; other Passport editions experimental:",
             f"  * {CATALOG_FAMILIES[0]['name_en']}",
             f"    Codenames: {', '.join(CATALOG_FAMILIES[0]['codenames'])} | Models: SQW100-1/2/3/4 (incl. Silver Edition)",
             "",
@@ -858,7 +878,7 @@ def format_catalog_overview(lang: str = "zh") -> str:
     lines = [
         "=== Qcom32 VoLTE · 已放开版本与高通 32 位机型只读体检 / AI 自助适配矩阵 ===",
         "",
-        "【一、已完整放开一键激活与出厂回滚的机型（同源基带已实机闭环验证）】",
+        "【一、仅一台 wolverine 真机已验证；其他 Passport 版本实验性只读】",
         f"  * {CATALOG_FAMILIES[0]['name_zh']}",
         f"    覆盖代号：{', '.join(CATALOG_FAMILIES[0]['codenames'])} | 型号：SQW100-1 / 2 / 3 / 4（含银色版 Silver Edition）",
         "",
@@ -877,7 +897,7 @@ def format_catalog_overview(lang: str = "zh") -> str:
             "",
             "【四、其他高通 32 位机型如何用 AI + GitHub 项目自行对应？】",
             "  1. 将手机开启 USB 调试连上电脑，点击下方【对当前连接手机执行 100% 只读四门禁体检】；",
-            f"  2. 在电脑克隆开源仓库：`git clone {GITHUB_REPO_URL}`；",
+            f"  2. 在电脑克隆源码可见仓库：`git clone {GITHUB_REPO_URL}`；",
             "  3. 用 Claude Code / Cursor / Codex / Gemini CLI / Antigravity 打开该仓库目录",
             f"     （仓库内置 `{SKILL_PATH_AGENTS}` 与 `{SKILL_PATH_CLAUDE}` 智能体适配技能）；",
             "  4. 点击【复制体检报告与 AI 提示词】粘贴给 AI，AI 会按四门禁安全只读解码本机 `/pdp_profiles/*`，",
@@ -896,7 +916,7 @@ def run_unit_tests() -> int:
             raise AssertionError(f"device_readiness test failed: {msg}")
         assertions += 1
 
-    # 1. All BlackBerry Passport wseries variants unlocked on SDK 30
+    # 1. Only the wolverine codename is verified; others remain read-only.
     for dev, mod in (
         ("wolverine", "Passport"),
         ("oslo", "Passport Silver Edition"),
@@ -904,6 +924,7 @@ def run_unit_tests() -> int:
         ("wichita", "Passport"),
         ("keian", "Passport Porsche Design"),
         ("wseries", "BlackBerry Passport"),
+        ("windermere", "Passport"),
     ):
         m = identify_device_props(
             {
@@ -916,7 +937,8 @@ def run_unit_tests() -> int:
                 "ro.build.tags": "test-keys",
             }
         )
-        check(m["route"] == "VERIFIED_PASSPORT_READY", f"{dev}/{mod} expected VERIFIED_PASSPORT_READY")
+        expected = "VERIFIED_PASSPORT_READY" if dev == "wolverine" else "EXPERIMENTAL_UNVERIFIED_EDITION"
+        check(m["route"] == expected, f"{dev}/{mod} expected {expected}")
         check(m["prebuilt_apk_compatible"] is True, f"{dev}/{mod} test-keys compatible")
 
     # 2. Candidate 32-bit Qualcomm models
@@ -1081,6 +1103,10 @@ def run_unit_tests() -> int:
     check(bb_bb10["compatible"] is False and bb_bb10["reason"] == "INCOMPATIBLE_BASEBAND", "BB10 DI.2.0.1 blocked")
     bb_empty = assess_passport_baseband("", "")
     check(bb_empty["compatible"] is False and bb_empty["reason"] == "EMPTY_BASEBAND_PROP", "Empty baseband blocked")
+    bb_missing_fw = assess_passport_baseband("MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1", "")
+    check(bb_missing_fw["compatible"] is False, "Missing firmware build_id blocked")
+    bb_partial = assess_passport_baseband("MPSS.DI.4.0.1-AAAAANPZM", "AAB982")
+    check(bb_partial["compatible"] is False, "Partial or conflicting baseband tokens blocked")
 
     class _MockConflictedPassportAdb:
         def shell(self, cmd: str, timeout: int = 15, check: bool = False) -> str:

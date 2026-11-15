@@ -65,7 +65,7 @@ DEVICE_FAMILIES: tuple[dict[str, Any], ...] = (
         ],
         "codenames": ["wolverine", "oslo", "wichita", "keian", "wseries", "windermere"],
         "soc": "Snapdragon 801 (MSM8974AA/AC, 32-bit ARMv7-A)",
-        "support_tier": "verified",
+        "support_tier": "mixed_verified_and_experimental",
         "verified_profile_id": "blackberry-passport-wolverine",
         "flash_protocol": "BlackBerry autoloader / emmc + LineageOS 18.1-wseries recovery",
         "recommended_variants": [
@@ -80,7 +80,7 @@ DEVICE_FAMILIES: tuple[dict[str, Any], ...] = (
             "Older Permissive LineageOS 18.1 ROMs with active legacy vendor `imsqmidaemon` (`init.svc.imsqmidaemon=running`): enabling `IMS_enable=01` causes QMI_IMSS/IMSA contention with `rild` and loses cellular signal (`gsm.sim.state=''`). Upgrade to Enforcing `lineage-18.1-20260129-UNOFFICIAL-wseries` first.",
             "Older BB10 `DI.2.0.1` radios or engineering `AAA*` (`AAA594`/`AAA596`/`AAA620`) `NON-HLOS.bin` basebands: flash BlackBerry Android `AAB982` (`MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1`) `NON-HLOS.bin` before activating VoLTE.",
         ],
-        "notes": "All BlackBerry Passport hardware editions (wolverine / oslo Silver Edition / wichita / keian / wseries) share unified lineage_wseries + NON-HLOS.bin modem and are unlocked for guarded 1-click deploy, APK upgrade, companion app, China Telecom 46011 fallbackmode=9 stabilization, and full 54-item EFS rollback.",
+        "notes": "One wolverine unit verified; other Passport editions unverified and read-only by default. Rollback remains available; inspection logs are not full backups.",
     },
     {
         "family_id": "samsung-galaxy-s5-klte",
@@ -249,7 +249,7 @@ def load_repo_profiles(repo_root: Path) -> list[dict[str, Any]]:
     return out
 
 
-def match_repo_profile(profiles: list[dict[str, Any]], device: str, model: str, sdk_int: int) -> dict[str, Any] | None:
+def match_repo_profile(profiles: list[dict[str, Any]], device: str, model: str, sdk_int: int, *, experimental: bool = False) -> dict[str, Any] | None:
     dev_norm = device.strip().lower()
     mod_norm = model.strip().lower()
     for prof in profiles:
@@ -258,11 +258,11 @@ def match_repo_profile(profiles: list[dict[str, Any]], device: str, model: str, 
             continue
         if int(m.get("android_sdk", 30)) != sdk_int:
             continue
-        raw_devs = m.get("ro_product_device_aliases")
+        raw_devs = m.get("experimental_unverified_device_props" if experimental else "ro_product_device_aliases")
         dev_aliases = (
             [str(x).strip().lower() for x in raw_devs if str(x).strip()]
             if isinstance(raw_devs, list) and raw_devs
-            else [str(m.get("ro_product_device", "")).strip().lower()]
+            else ([] if experimental else [str(m.get("ro_product_device", "")).strip().lower()])
         )
         raw_mods = m.get("ro_product_model_aliases")
         mod_aliases = (
@@ -536,11 +536,13 @@ def assess_passport_baseband(baseband: str, fw_build_id: str = "") -> tuple[bool
             False,
             "`gsm.version.baseband` is empty (radio/RIL uninitialized or wedged). If signal was lost after a prior deploy, run `python3 cli/volte_ctl.py rollback` first.",
         )
-    if "DI.4.0.1" not in bb_u and "M8974AAAAANAZM" not in bb_u:
+    if "MPSS.DI.4.0.1" not in bb_u or "AAAAANAZM" not in bb_u or "DI.2.0.1" in bb_u or "AAAAANPZM" in bb_u:
         return (
             False,
             f"Baseband `{bb}` is not BlackBerry Android `DI.4.0.1 / M8974AAAAANAZM` (e.g. BB10 `DI.2.0.1` radio). Flash `AAB982` `NON-HLOS.bin` first.",
         )
+    if fw.upper() != "AAB982":
+        return False, f"Firmware build_id `{fw or 'unknown'}` is unverified; AAB982 is required."
     return True, "OK"
 
 
@@ -568,6 +570,7 @@ def classify_device_props(
     blocker_code, blocker_reason = detect_specific_variant_blocker(device, model, platform, abi)
     fam = match_catalog_family(device, model, brand)
     matched_prof = match_repo_profile(profiles, device, model, sdk_int)
+    experimental_prof = match_repo_profile(profiles, device, model, sdk_int, experimental=True)
     rom_sig = assess_rom_signature(build_tags, build_display)
 
     warnings: list[str] = []
@@ -604,6 +607,37 @@ def classify_device_props(
             ],
         }
 
+    if experimental_prof is not None:
+        if ("gsm.sim.state" in props and sim_state == "" and (props.get("airplane_mode") or "").strip() != "1"
+                and bool(gates.get("ims_package_installed") or props.get("ims_package_installed") == "true")):
+            return {
+                "route": "POST_DEPLOY_RADIO_LOSS_NEEDS_ROLLBACK",
+                "reason": ("EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE / 实验性，未经真机验证. "
+                           "Radio/SIM unavailable after deployment; fixed rollback may be attempted, "
+                           "but original EFS values and signal recovery are not guaranteed."),
+                "matched_profile": experimental_prof["profile_id"],
+                "catalog_family": fam["family_id"] if fam else None,
+                "rom_signature": rom_sig,
+                "warnings": warnings,
+                "recommended_commands": ["python3 cli/volte_ctl.py rollback"],
+            }
+        legacy_hits = assess_legacy_ims_daemon_conflict(props)
+        if legacy_hits:
+            warnings.append("Deployment preflight blocks conflicting legacy IMS daemons: " + ", ".join(legacy_hits))
+        if "gsm.version.baseband" in props or "firmware_build_id" in props:
+            bb_ok, bb_msg = assess_passport_baseband(props.get("gsm.version.baseband", ""), props.get("firmware_build_id", ""))
+            if not bb_ok:
+                warnings.append("Deployment preflight blocks baseband: " + bb_msg)
+        return {
+            "route": "EXPERIMENTAL_UNVERIFIED_EDITION",
+            "reason": "EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE / 实验性，未经真机验证. Read-only by default; rollback remains available.",
+            "matched_profile": experimental_prof["profile_id"],
+            "catalog_family": fam["family_id"] if fam else None,
+            "rom_signature": rom_sig,
+            "warnings": warnings,
+            "recommended_commands": ["python3 cli/volte_ctl.py status", "python3 cli/volte_ctl.py inspect-device"],
+        }
+
     if matched_prof is not None and matched_prof.get("status") == "verified":
         if volte_healthy:
             return {
@@ -627,7 +661,7 @@ def classify_device_props(
                 "reason": (
                     f"Verified profile `{matched_prof['profile_id']}` has `Qcom32VolteIms` installed, but cellular radio/SIM is unavailable "
                     "(`gsm.sim.state=''`). This happens when VoLTE EFS was provisioned on an older Permissive ROM with `imsqmidaemon` or "
-                    "a non-`AAB982` (`AAA*` / `DI.2.0.1`) baseband. Run `python3 cli/volte_ctl.py rollback` immediately to restore signal!"
+                    "a non-`AAB982` (`AAA*` / `DI.2.0.1`) baseband. Consider fixed `python3 cli/volte_ctl.py rollback`; original EFS values and signal recovery are not guaranteed."
                 ),
                 "matched_profile": matched_prof["profile_id"],
                 "catalog_family": fam["family_id"] if fam else None,
@@ -699,7 +733,7 @@ def classify_device_props(
             }
         return {
             "route": "VERIFIED_PROFILE_READY",
-            "reason": f"Verified profile `{matched_prof['profile_id']}` matched on Android 11 with SIM LOADED. Ready for guarded one-command backup + Stage 6A provisioning + APK deployment.",
+            "reason": f"Verified profile `{matched_prof['profile_id']}` matched on Android 11 with SIM LOADED. Stage 6A provisioning is available after an independent off-device EFS backup; inspection logs cannot restore original bytes.",
             "matched_profile": matched_prof["profile_id"],
             "catalog_family": fam["family_id"] if fam else None,
             "rom_signature": rom_sig,
@@ -978,7 +1012,7 @@ def cmd_self_test(repo_root: Path) -> int:
     assert d_pp_ready["matched_profile"] == "blackberry-passport-wolverine"
     assert d_pp_ready["rom_signature"]["prebuilt_apk_compatible"] is True
 
-    # 1B. Passport Silver Edition (oslo / SQW100-4) & AT&T Wichita also unlocked via profile aliases
+    # 1B. Other Passport codenames stay experimental, including when healthy.
     d_oslo_ready = classify_device_props(
         {
             "ro.product.brand": "blackberry",
@@ -995,7 +1029,7 @@ def cmd_self_test(repo_root: Path) -> int:
         },
         profiles,
     )
-    assert d_oslo_ready["route"] == "VERIFIED_PROFILE_READY"
+    assert d_oslo_ready["route"] == "EXPERIMENTAL_UNVERIFIED_EDITION"
     assert d_oslo_ready["matched_profile"] == "blackberry-passport-wolverine"
 
     d_wichita_ready = classify_device_props(
@@ -1014,7 +1048,11 @@ def cmd_self_test(repo_root: Path) -> int:
         },
         profiles,
     )
-    assert d_wichita_ready["route"] == "VERIFIED_PROFILE_READY"
+    assert d_wichita_ready["route"] == "EXPERIMENTAL_UNVERIFIED_EDITION"
+    for dev in ("oslo", "wichita", "keian", "wseries", "windermere"):
+        route = classify_device_props({"ro.product.device": dev, "ro.product.model": "Passport",
+                                       "ro.build.version.sdk": "30"}, profiles, volte_healthy=True)
+        assert route["route"] == "EXPERIMENTAL_UNVERIFIED_EDITION"
 
     # 2. Verified Passport already healthy
     d_pp_healthy = classify_device_props(
@@ -1197,7 +1235,20 @@ def cmd_self_test(repo_root: Path) -> int:
     assert d_pp_bb10["route"] == "NEEDS_COMPATIBLE_BASEBAND"
     assert extract_firmware_build_id("build_id:AAB982\n") == "AAB982"
 
-    print(json.dumps({"self_test": "PASS", "assertions": 36, "catalog_families": len(DEVICE_FAMILIES)}, indent=2))
+    good_bb = "MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1"
+    assert assess_passport_baseband(good_bb, "AAB982")[0]
+    assert not assess_passport_baseband(good_bb, "")[0]
+    assert not assess_passport_baseband("MPSS.DI.4.0.1-AAAAANPZM", "AAB982")[0]
+    experimental_base = {"ro.product.device": "oslo", "ro.product.model": "Passport", "ro.build.version.sdk": "30"}
+    experimental_loss = classify_device_props({**experimental_base, "gsm.sim.state": "", "airplane_mode": "0"},
+                                              profiles, gates={"ims_package_installed": True})
+    assert experimental_loss["route"] == "POST_DEPLOY_RADIO_LOSS_NEEDS_ROLLBACK"
+    assert "NOT VERIFIED" in experimental_loss["reason"]
+    assert "python3 cli/volte_ctl.py rollback" in experimental_loss["recommended_commands"]
+    experimental_conflict = classify_device_props({**experimental_base, "gsm.sim.state": "LOADED", "init.svc.imsqmidaemon": "running"}, profiles)
+    assert experimental_conflict["route"] == "EXPERIMENTAL_UNVERIFIED_EDITION"
+    assert any("preflight blocks" in warning for warning in experimental_conflict["warnings"])
+    print(json.dumps({"self_test": "PASS", "assertions": 44, "catalog_families": len(DEVICE_FAMILIES)}, indent=2))
     return 0
 
 

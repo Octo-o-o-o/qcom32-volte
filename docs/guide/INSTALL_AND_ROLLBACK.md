@@ -1,112 +1,41 @@
-# 安装部署、状态检查与回滚指南 (`INSTALL_AND_ROLLBACK.md`)
+# 安装、检查与回滚
 
-本指南适用于刷入 **LineageOS 18.1 (Android 11, `lineage_wseries`)** 的 **BlackBerry Passport 全系硬件版本**（含普通版 `wolverine` `SQW100-1/3`、**银色版 Silver Edition `oslo` `SQW100-4`**、AT&T 圆角版 `wichita` `SQW100-2` 与保时捷版 `keian`）。其他高通 32 位老旗舰用户也可直接运行软件内的**「多机型识别与只读体检」**面板获取 AI + GitHub 自助适配报告。
+仅一台 BlackBerry Passport SQW100-1 `wolverine`、社区 LineageOS 18.1 `wseries`、联通 46001 真机完成主被叫、双向 AMR-WB、来显、通话中 LTE 数据、拔线重启及四种交付方式验收。原厂设备须先进行 eMMC 硬件改造并安装该 ROM。
 
-> [!IMPORTANT]
-> - 整个激活过程**不刷写分区、不安装 Magisk、不关闭 SELinux (`Enforcing`)**。
-> - 首次激活需要通过数据线连接电脑并使用 LineageOS 自带的 **ADB 调试 Root** 写入一次基带 EFS 配置；激活完成后拔掉数据线，手机在任意正常关机/重启后均可 **100% 本地独立运行原生 VoLTE**。
+> ⚠️ 紧急呼叫不支持、未认证；请保留另一部手机。在 2G/3G 关闭的 LTE-only 网络上，本机可能无法拨通 110/112/119/120/911。
+>
+> **先独立备份本机基带 EFS 并存到手机之外。** 工具自动保存的只是检查日志和哈希，不是可完整回灌的原始备份。写入有风险，使用者自行承担；固定回滚不保证恢复任意设备的原值。
+>
+> 已发布的 `v1.2.4-r1` 不含本次机型门禁和口径修正，仍允许 `oslo`、`wichita`、`keian` 一键写入；未验证版本请勿使用该版写入。
 
----
+电信 46003/46011 仅验证 LTE 驻留与 IMS 注册，通话未测；EPS-only 防掉线观察 149 秒无掉线。移动未测，FDD B3/B8 仅为理论可能，机身无 TDD B38–41。IMS 短信未实现；VoWiFi、视频、紧急呼叫、补充业务及非中国运营商不支持或未测试。
 
-## 1. 前置条件检查
+## 机型门禁
 
-1. **手机系统与基带**：BlackBerry Passport 全系（`ro.product.device` 为 `wolverine` / `oslo` 银色版 / `wichita` / `keian` / `wseries`），运行 Enforcing 版 LineageOS 18.1 (`lineage-18.1-20260129-UNOFFICIAL-wseries`，无遗留 32 位 `imsqmidaemon` 争抢) 及黑莓 Android `AAB982` (`MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1`) 版 `NON-HLOS.bin` 基带。`v1.2.4-r1` 会在任何基带写入前自动拦截冲突旧版 ROM/基带，并在重启后若出现无信号（`gsm.sim.state == ""`）自动回滚恢复手机信号。
-2. **SIM 卡**：已插入开通 VoLTE 业务且处于 Passport 硬件支持频段内的 4G USIM 卡（如中国联通 4G/5G USIM 卡），手机状态栏已正常驻留 `LTE`。
-3. **开启 ADB 调试与 Root 调试**：
-   - 进入手机 **设置 -> 关于手机**，连续点击 **版本号** 开启开发者选项；
-   - 进入 **设置 -> 系统 -> 开发者选项**，同时打开：
-     - **Android 调试 (USB debugging)**
-     - **Root 身份调试 (Rooted debugging)**
-4. **电脑环境**：
-   - Python 3.9+（仅使用标准库，无需 `pip install` 第三方包）；
-   - Android `adb` 工具已加入系统 `PATH`。
+`wolverine` 保持部署、升级和回滚。`oslo`、`wichita`、`keian`、`wseries`、`windermere` 尚未真机验证，默认只读；桌面 GUI 和 Android 管理端不提供激活。CLI 若自行承担实验风险，必须同时指定 `--experimental-unverified-edition` 和输入终端所要求的强确认文本；非交互模式用 `--i-understand-unverified-baseband-write` 作为第二项确认。所有已识别 Passport 版本保留回滚；非 Passport 基带写入被拒绝。
 
----
+无论机型，部署前还必须通过旧 IMS 守护进程和基带检查：四个遗留服务均不得运行，基带必须包含 `MPSS.DI.4.0.1` 和 `AAAAANAZM`，固件 `build_id` 必须为 `AAB982`。CLI 在重启前 SIM 已就绪、重启后超时且 SIM 状态为空并非飞行模式时尝试自动固定回滚；仅 IMS 超时不会触发。回滚不受上述部署门禁阻断，但不保证原值或信号恢复。此防护仅经离线/模拟验证。
 
-## 2. 从源码构建（可选，面向开发者）
+## 基本操作
 
-仓库正式源码全部位于 [`src/`](../../src/)，可通过 [`cli/build_all.py`](../../cli/build_all.py) 一键运行宿主机单元测试并交叉编译：
+确认独立备份与恢复路径、SIM 和 LTE 状态、空闲通话状态及供电后，在 Android 11 开启 USB 调试和 Root 调试：
 
 ```bash
-# 1. 仅运行宿主机单元测试（559 项 EFS 断言 + 17 项 QMI 断言 + POSIX 头文件编译门禁 + Java 协议栈与管理端断言）
-python3 cli/build_all.py --host-tests-only
-
-# 2. 完整编译 ARM32 二进制与签名 APK（输出至 build/release/）
-python3 cli/build_all.py
-```
-
-构建需要的工具链可通过环境变量或命令行参数指定：
-- `ZIG_EXE` / `--zig`：Zig `0.13+`（提供零配置 ARM32 Linux/Android 交叉编译器 `zig cc`）
-- `JAVA_HOME` / `--jdk-bin`：JDK `17`（注：Android 11 Build-Tools 30 的 `d8.jar` 需要 JDK 11~17，不支持 JDK 25）
-- `ANDROID_BUILD_TOOLS_DIR` / `--android-build-tools`：Android SDK Build-Tools 30+（含 `aapt2`, `zipalign`, `lib/d8.jar`, `lib/apksigner.jar`, `core-lambda-stubs.jar`）
-- `ANDROID_SYSTEM_SDK_JAR` / `--android-sdk-jar`：包含 `@SystemApi` `ImsService` 的 Android 11 API 30 `android.jar`
-- `SYSROOT_LIB_DIR` / `--sysroot-lib`：从目标 Passport `/system/lib/` 提取的 `libc.so` 与 `libdl.so` 链接桩
-- `PLATFORM_KEY_PK8` & `PLATFORM_CERT_PEM`：ROM 对应的 `platform` 签名密钥（社区版 LineageOS `18.1-wseries` 使用标准 AOSP 公开 `platform` 签名）
-
-构建完成后产物位于 `build/release/`：
-- `build/release/pp_regconfig_provision_v6`
-- `build/release/libimsa_probe.so`
-- `build/release/Qcom32VolteIms.apk`
-- `build/release/Qcom32VolteManager.apk`
-- `build/release/release-manifest.json`
-
----
-
-## 3. 一键激活部署 VoLTE
-
-将手机通过 USB 连接电脑，确认手机无正在进行的通话后执行（普通 Windows 用户也可直接运行单文件 `qcom32-volte-1.2.4-r1-windows-x64.exe`）：
-
-```bash
-# 先运行 CLI 本地自检
 python3 cli/volte_ctl.py self-test
-
-# 执行受控部署（自动匹配设备 Profile -> 备份原始 EFS -> 写入 Stage 6A -> 安装 Qcom32VolteIms -> 自动重启并核验注册）
+python3 cli/volte_ctl.py status
+python3 cli/volte_ctl.py inspect-device
 python3 cli/volte_ctl.py deploy
-
-# （推荐）安装手机端实时状态与管理伴侣 App，拔线换卡后可在手机屏幕免 su 查看实时状态
 python3 cli/volte_ctl.py install-manager
 ```
 
-部署成功时终端会输出 JSON，其中关键指标如下：
-- `"volte_stack_healthy": true`
-- `"ims_service": { "present": true, "version": "2.8-qcom32-volte", "ril_connected": true, "voice_ims_ready": true, "published_framework_reg": 1 }`
-- `"qmi_imsa": { "pdp_connected": 1, "reg_status": 2, "legacy_reg": 1, "voip": 2, "voip_rat": 1 }`
-- `"framework_ims_registered": ["true"]`
+GUI 用 `python3 cli/gui.py`；Windows 发行 EXE 双击打开 GUI。CLI 发行版的回滚形式是 `<EXE> --cli rollback`。注册成功只说明检测到 IMS 状态，须由用户自行验证普通主被叫、双向声音和 LTE 数据；不要用紧急号码测试。
 
-此时即可拔掉 USB 数据线，直接使用系统自带电话应用拨打和接听高清 VoLTE 电话（通话时状态栏保持 `LTE` 不断网，来电号码正常显示）。
-
----
-
-## 4. 日常只读状态诊断与仅升级 APK
-
-```bash
-# 只读查看当前 VoLTE 注册、ImsService 与基带 QMI_IMSA 状态（不修改任何配置）
-python3 cli/volte_ctl.py status
-
-# 仅升级 Android 侧 Qcom32VolteIms.apk（零基带 EFS 写入，自动清理旧包 org.passport.volteims）
-python3 cli/volte_ctl.py upgrade-apk --reboot
-```
-
----
-
-## 5. 一键完整回滚（恢复出厂基带与系统状态）
-
-如果需要彻底卸载本方案并将基带 EFS 恢复至部署前的出厂基线（`IMS_enable=00`, `voice_domain_pref=00`，清理全部新建 IMS/PDP 条目并卸载 `org.octolab.qcom32ims`）：
+## 回滚边界
 
 ```bash
 python3 cli/volte_ctl.py rollback
 ```
 
-回滚脚本会自动清除持久化 `CarrierConfig` 覆盖、卸载 `Qcom32VolteIms.apk`、还原 `persist.radio.fallbackmode`、调用 `pp_regconfig_provision_v6 --rollback-all` 执行 EFS2 删除与 `SYNC` 落盘，随后正常重启手机恢复至纯 CSFB 出厂状态。
+GUI 点击“执行固定基带清理并卸载”，Android 管理端也提供回滚。当前 `--rollback-all` 将指定项目写成 `00`，删除指定 EFS 项并同步，随后清理应用／配置和重启；它不是从检查日志恢复原始字节，也不保证任意设备的出厂状态。提前核对独立备份及实际恢复工具。
 
----
-
-## 6. `SELinux Enforcing` 与基带 `EFSmodem` (`modemst1` / `modemst2`) 安全说明
-
-1. **全程原生兼容 `SELinux Enforcing`（绝不降级 `Permissive`）**：
-   - 本项目所有运行时组件（`Qcom32VolteIms.apk`、`libimsa_probe.so`、`VolteStatusProvider`）均在官方 LineageOS 18.1 严格 **`SELinux Enforcing`** 策略下原生运行于 `u:r:radio:s0` (`UID 1001`) 域，从不执行 `setenforce 0`，也不注入任何第三方 sepolicy 补丁；
-   - 首次激活并正常重启确认 VoLTE 就绪后，您完全可以在「开发者选项」中**关闭「Root 身份调试」甚至「USB 调试」**——手机日常通话、开机与换卡自愈均无需任何 Root 权限。
-2. **`EFSmodem` 分区持久性与跨机/跨运营商兼容性**：
-   - 激活写入的 54 项 Stage 6A 配置经 `EFS2_DIAG_SYNC` 持久落盘在手机独立的 `modemst1` / `modemst2` 基带分区中。日常刷入同系 LineageOS 更新包或清除 `userdata` 不会擦除基带侧配置（仅需重装 `Qcom32VolteIms.apk` 并触发一次持久绑定，或直接采用方式四合入 ROM）；
-   - 自 `v1.2.1` 起，`pp_regconfig_provision_v6` 对基带内置非 IMS 数据承载采用结构化校验（严格守护 `embedded_call_prof_nums` 与 `profile1`/`profile2` 非 IMS 属性，同时兼容高通 `libqdp.so` 随联通 `3gnet`、移动 `cmnet`、电信 `ctnet`、海外 SIM 卡动态更新或全新 `fsg` 恢复后的 `/pdp_profiles/profile3` 状态），不会因不同机器或换卡产生的数据 APN 差异误报错；
-   - **刷机防护建议**：每台手机的 `modemst1` / `modemst2` / `fsg`（即 TWRP 中的 **EFS** 分区）包含本机独有的射频校准与串号数据。在进行跨大版本底包刷写或分区折腾前，建议在 TWRP Recovery 中顺手勾选 **EFS** 备份留存一份离线副本。
+源码可见（PolyForm Noncommercial 1.0.0 + 商业授权）；详见 [许可](../../LICENSE) 和 [商业授权](../../COMMERCIAL-LICENSE.md)。
