@@ -46,6 +46,7 @@ public final class VolteManagerLogic {
         public final boolean qmiRegistered;
         public final boolean frameworkRegistered;
         public final boolean volteHealthy;
+        public final boolean radioUnavailable;
         public final String carrierSummary;
         public final String headlineZh;
         public final String headlineEn;
@@ -61,6 +62,32 @@ public final class VolteManagerLogic {
                 boolean qmiRegistered,
                 boolean frameworkRegistered,
                 String carrierSummary) {
+            this(
+                    matchedProfileId,
+                    isVerifiedEfsProfile,
+                    suAvailable,
+                    telemetryAvailable,
+                    imsServicePresent,
+                    imsServiceVersion,
+                    rilConnected,
+                    qmiRegistered,
+                    frameworkRegistered,
+                    carrierSummary,
+                    false);
+        }
+
+        public StatusSnapshot(
+                String matchedProfileId,
+                boolean isVerifiedEfsProfile,
+                boolean suAvailable,
+                boolean telemetryAvailable,
+                boolean imsServicePresent,
+                String imsServiceVersion,
+                boolean rilConnected,
+                boolean qmiRegistered,
+                boolean frameworkRegistered,
+                String carrierSummary,
+                boolean radioUnavailable) {
             this.matchedProfileId = matchedProfileId != null ? matchedProfileId : "generic-qcom32-readonly";
             this.isVerifiedEfsProfile = isVerifiedEfsProfile;
             this.suAvailable = suAvailable;
@@ -74,6 +101,7 @@ public final class VolteManagerLogic {
                     && rilConnected
                     && qmiRegistered
                     && frameworkRegistered;
+            this.radioUnavailable = !this.volteHealthy && radioUnavailable;
             this.carrierSummary = carrierSummary != null ? carrierSummary : "UNKNOWN";
 
             if (this.volteHealthy) {
@@ -82,6 +110,9 @@ public final class VolteManagerLogic {
             } else if (!isVerifiedEfsProfile) {
                 this.headlineZh = "未建档机型（EFS 写入已保护锁定；请点下方「多机型只读适配体检」并用 AI + GitHub 自助适配）";
                 this.headlineEn = "Unverified EFS profile (EFS write locked; tap '32-Bit Readiness Check' & self-adapt via AI + GitHub)";
+            } else if (this.radioUnavailable && imsServicePresent) {
+                this.headlineZh = "检测到基带/SIM 未就绪（无信号）— 请先点下方恢复出厂基带回滚，再核查 Enforcing 版 ROM 与 AAB982 基带";
+                this.headlineEn = "Modem/SIM unavailable (no signal) — Tap 'Restore Factory Modem EFS' below, then update ROM & AAB982 modem";
             } else if (imsServicePresent && telemetryAvailable) {
                 this.headlineZh = "IMS 桥接服务已运行，当前 SIM 尚未完成 4G/IMS 注册（请确认 4G 信号与卡侧 VoLTE）";
                 this.headlineEn = "IMS bridge active, awaiting 4G LTE + IMS registration for current SIM";
@@ -310,6 +341,26 @@ public final class VolteManagerLogic {
                 testKeys);
     }
 
+    public static boolean isPassportBasebandCompatible(String basebandProp, String firmwareContents) {
+        String bb = basebandProp == null ? "" : basebandProp.trim();
+        if (!bb.contains("DI.4.0.1") && !bb.contains("M8974AAAAANAZM")) {
+            return false;
+        }
+        String fw = firmwareContents == null ? "" : firmwareContents.toUpperCase(Locale.ROOT);
+        return !fw.contains("BUILD_ID:AAA");
+    }
+
+    public static boolean hasConflictingLegacyImsDaemon(String daemonSummary) {
+        if (daemonSummary == null || daemonSummary.trim().isEmpty()) {
+            return false;
+        }
+        String s = daemonSummary.toLowerCase(Locale.ROOT);
+        return s.contains("=running")
+                || s.contains("=restarting")
+                || s.contains("qmi_daemon_status=1")
+                || s.contains("data_daemon_status=1");
+    }
+
     public static String buildReadOnlyPortingReport(
             String brand,
             String model,
@@ -325,7 +376,49 @@ public final class VolteManagerLogic {
             boolean audioMarkersFound,
             Boolean modemHasImsSymbols,
             boolean english) {
+        return buildReadOnlyPortingReport(
+                brand,
+                model,
+                device,
+                boardPlatform,
+                cpuAbi,
+                sdkInt,
+                buildTags,
+                selinuxMode,
+                suAvailable,
+                rildSocketPresent,
+                diagNodePresent,
+                audioMarkersFound,
+                modemHasImsSymbols,
+                english,
+                "",
+                "",
+                "");
+    }
+
+    public static String buildReadOnlyPortingReport(
+            String brand,
+            String model,
+            String device,
+            String boardPlatform,
+            String cpuAbi,
+            int sdkInt,
+            String buildTags,
+            String selinuxMode,
+            boolean suAvailable,
+            boolean rildSocketPresent,
+            boolean diagNodePresent,
+            boolean audioMarkersFound,
+            Boolean modemHasImsSymbols,
+            boolean english,
+            String basebandProp,
+            String firmwareContents,
+            String legacyDaemonSummary) {
         DeviceCatalogMatch m = identifyDeviceCatalog(brand, model, device, boardPlatform, cpuAbi, sdkInt, buildTags);
+        boolean legacyConflict = hasConflictingLegacyImsDaemon(legacyDaemonSummary);
+        String bbClean = basebandProp == null ? "" : basebandProp.trim();
+        boolean isPassport = "VERIFIED_PASSPORT_READY".equals(m.route);
+
         String modemGate;
         if (modemHasImsSymbols == null) {
             modemGate = english
@@ -336,12 +429,28 @@ public final class VolteManagerLogic {
         } else {
             modemGate = english ? "FAIL (No qipcall IMS symbol in modem firmware)" : "未检出（当前基带镜像不含 qipcall IMS 引擎）";
         }
+        if (isPassport && (!bbClean.isEmpty() || (firmwareContents != null && !firmwareContents.trim().isEmpty()))) {
+            if (isPassportBasebandCompatible(bbClean, firmwareContents)) {
+                modemGate += english
+                        ? (" | Baseband PASS (" + safeText(bbClean) + ")")
+                        : (" | 基带版本通过 (" + safeText(bbClean) + ")");
+            } else {
+                modemGate = english
+                        ? ("FAIL (Incompatible Passport modem '" + safeText(bbClean) + "' — flash BlackBerry Android AAB982 NON-HLOS.bin first)")
+                        : ("不兼容（当前基带 '" + safeText(bbClean) + "' 非 AAB982 DI.4.0.1-00158 正式版，请先刷入 AAB982 NON-HLOS.bin）");
+            }
+        }
 
         String romGate = (sdkInt == EXPECTED_SDK)
                 ? (m.prebuiltApkCompatible
                         ? (english ? "PASS (SDK 30 + test-keys; prebuilt APK installs directly)" : "通过（Android 11 SDK 30 + test-keys，可直接安装预编译 APK）")
                         : (english ? "WARN (SDK 30 + release-keys; sign with ROM platform key or use rom-integration/)" : "注意（Android 11 SDK 30 + release-keys 官方签名，需用 ROM 平台密钥重签或放入 priv-app）"))
                 : (english ? ("FAIL (SDK " + sdkInt + ", requires Android 11 SDK 30)") : ("未满足（当前 SDK " + sdkInt + "，需 Android 11 / LineageOS 18.1）"));
+        if (legacyConflict) {
+            romGate = english
+                    ? ("FAIL (Legacy vendor imsqmidaemon active [" + safeText(legacyDaemonSummary) + "] — upgrade to Enforcing LineageOS 18.1 20260129+)")
+                    : ("冲突拦截（检出旧版 ROM 残留 imsqmidaemon 运行中 [" + safeText(legacyDaemonSummary) + "]，开启 IMS_enable=01 会导致重启无信号；请先升级 Enforcing 版 LineageOS 18.1）");
+        }
 
         String sockGate = rildSocketPresent
                 ? (english ? "PASS (/dev/socket/qmux_radio/rild_ims0 present)" : "已检出 (/dev/socket/qmux_radio/rild_ims0)")
@@ -479,6 +588,32 @@ public final class VolteManagerLogic {
             String phoneDump,
             String simNumeric,
             String networkType) {
+        return parseStatusSummary(
+                model,
+                device,
+                sdkInt,
+                suAvailable,
+                serviceDump,
+                qmiOut,
+                phoneDump,
+                simNumeric,
+                networkType,
+                null,
+                false);
+    }
+
+    public static StatusSnapshot parseStatusSummary(
+            String model,
+            String device,
+            int sdkInt,
+            boolean suAvailable,
+            String serviceDump,
+            String qmiOut,
+            String phoneDump,
+            String simNumeric,
+            String networkType,
+            String simStateProp,
+            boolean airplaneMode) {
         String profile = matchVerifiedDeviceProfile(model, device, sdkInt);
         boolean verifiedProfile = profile != null;
         String sDump = serviceDump == null ? "" : serviceDump;
@@ -501,6 +636,12 @@ public final class VolteManagerLogic {
         boolean fwReg = pDump.contains("mImsRegistered=true")
                 || sDump.contains("publishedFrameworkReg=1");
 
+        String simOpClean = simNumeric == null ? "" : simNumeric.trim();
+        boolean radioDown = simStateProp != null
+                && simStateProp.trim().isEmpty()
+                && simOpClean.isEmpty()
+                && !airplaneMode;
+
         return new StatusSnapshot(
                 verifiedProfile ? profile : "generic-qcom32-readonly",
                 verifiedProfile,
@@ -511,7 +652,8 @@ public final class VolteManagerLogic {
                 rilConn,
                 qmiOk,
                 fwReg,
-                formatCarrierLabel(simNumeric, networkType));
+                formatCarrierLabel(simNumeric, networkType),
+                radioDown);
     }
 
     private static String extractValue(String text, String regex) {
@@ -561,11 +703,48 @@ public final class VolteManagerLogic {
                 + "fi\n";
     }
 
+    private static String passportDeploySafetyGuardLines() {
+        return "SIM_ST=$(getprop gsm.sim.state)\n"
+                + "case \"$SIM_ST\" in\n"
+                + "  *LOADED*) ;;\n"
+                + "  *) echo \"ERR_SIM_NOT_LOADED:gsm.sim.state=$SIM_ST (Insert active 4G USIM and disable Airplane Mode first)\"; exit 22 ;;\n"
+                + "esac\n"
+                + "for SVC in imsqmidaemon imsdatadaemon ims_rtp_daemon imscmservice; do\n"
+                + "  ST=$(getprop init.svc.$SVC)\n"
+                + "  case \"$ST\" in\n"
+                + "    running|restarting)\n"
+                + "      echo \"ERR_LEGACY_IMS_DAEMON_CONFLICT:$SVC=$ST (Older Permissive ROM runs legacy vendor imsqmidaemon which collides with Stage 6A IMS_enable=01 after reboot; upgrade to Enforcing LineageOS 18.1 20260129+ first)\"; exit 23 ;;\n"
+                + "  esac\n"
+                + "done\n"
+                + "if [ \"$(getprop sys.ims.QMI_DAEMON_STATUS)\" = \"1\" ] || [ \"$(getprop sys.ims.DATA_DAEMON_STATUS)\" = \"1\" ]; then\n"
+                + "  echo \"ERR_LEGACY_IMS_DAEMON_CONFLICT:sys.ims_active=1 (Upgrade to Enforcing LineageOS 18.1 20260129+ without legacy vendor imsqmidaemon)\"; exit 23\n"
+                + "fi\n"
+                + "BB_VER=$(getprop gsm.version.baseband)\n"
+                + "case \"$BB_VER\" in\n"
+                + "  *DI.4.0.1*|*M8974AAAAANAZM*) ;;\n"
+                + "  *) echo \"ERR_INCOMPATIBLE_PASSPORT_BASEBAND:baseband=$BB_VER (Expected BlackBerry Android AAB982 MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1)\"; exit 24 ;;\n"
+                + "esac\n"
+                + "FW_TXT=$(cat /firmware/IMAGE/CONTENTS.TXT /firmware/image/contents.txt /vendor/firmware_mnt/IMAGE/CONTENTS.TXT /vendor/firmware_mnt/image/contents.txt 2>/dev/null || true)\n"
+                + "case \"$FW_TXT\" in\n"
+                + "  *build_id:AAA*|*BUILD_ID:AAA*)\n"
+                + "    echo \"ERR_LEGACY_AAA_BASEBAND:Older engineering AAA* NON-HLOS.bin detected; flash BlackBerry Android AAB982 NON-HLOS.bin first\"; exit 25 ;;\n"
+                + "esac\n";
+    }
+
+    private static String stopLegacyVendorImsDaemonsLines() {
+        return "setprop sys.ims.DATA_DAEMON_STATUS 0 2>/dev/null || true\n"
+                + "setprop sys.ims.QMI_DAEMON_STATUS 0 2>/dev/null || true\n"
+                + "for SVC in imscmservice ims_rtp_daemon imsdatadaemon imsqmidaemon; do\n"
+                + "  stop \"$SVC\" 2>/dev/null || true\n"
+                + "done\n";
+    }
+
     public static String buildRootDeployScript(String appStagedDir, String backupDir) {
         String stageQuoted = quoteSh(appStagedDir);
         String backupQuoted = quoteSh(backupDir);
         return "set -e\n"
                 + passportDeviceGuardLines()
+                + passportDeploySafetyGuardLines()
                 + "TMP_PROV='/data/local/tmp/pp_regconfig_provision_v6'\n"
                 + "TMP_APK='/data/local/tmp/Qcom32VolteIms.apk'\n"
                 + "trap 'rm -f /data/local/tmp/pp_regconfig_provision_v6 /data/local/tmp/Qcom32VolteIms.apk' EXIT\n"
@@ -604,9 +783,13 @@ public final class VolteManagerLogic {
                 + passportDeviceGuardLines()
                 + "TMP_PROV='/data/local/tmp/pp_regconfig_provision_v6'\n"
                 + "trap 'rm -f /data/local/tmp/pp_regconfig_provision_v6' EXIT\n"
+                + stopLegacyVendorImsDaemonsLines()
                 + legacyCleanupLines()
+                + "(timeout 8 content call --uri content://org.octolab.qcom32ims.status --method clear_override || true) >/dev/null 2>&1 || true\n"
                 + "am broadcast -n org.octolab.qcom32ims/.VolteAdminReceiver "
                 + "-a org.octolab.qcom32ims.ACTION_ADMIN --es op clear_override --es cmd clear_override --include-stopped-packages || true\n"
+                + "rm -f /data/user_de/0/com.android.phone/files/carrierconfig-org.octolab.qcom32ims-*.xml /data/user_de/0/com.android.phone/files/*override*.xml || true\n"
+                + "sync || true\n"
                 + "sleep 1\n"
                 + "pm uninstall org.octolab.qcom32ims || true\n"
                 + "setprop persist.radio.fallbackmode '' || true\n"

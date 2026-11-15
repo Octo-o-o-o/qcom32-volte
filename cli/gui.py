@@ -4,7 +4,7 @@
 Runs identically:
   - From source (`python cli/gui.py` or `Start-GUI.cmd`)
   - From portable ZIP (`python3 cli/gui.py`)
-  - From standalone Windows x64 EXE (`qcom32-volte-1.2.3-r1-windows-x64.exe`, with bundled Python/Tk/ADB/Payloads)
+  - From standalone Windows x64 EXE (`qcom32-volte-1.2.4-r1-windows-x64.exe`, with bundled Python/Tk/ADB/Payloads)
 
 Supports:
   - `--self-test <report.json>` for automated offline build & packaging verification without touching any connected phone
@@ -35,7 +35,7 @@ if str(SCRIPT_DIR) not in sys.path:
 import device_readiness  # noqa: E402
 import volte_ctl  # noqa: E402
 
-APP_VERSION = "1.2.3-r1"
+APP_VERSION = "1.2.4-r1"
 WEBSITE_URL = "https://qcom32-volte.octoooo.com/"
 SISTER_URL = "https://bb10-volte.octoooo.com/"
 GITHUB_URL = "https://github.com/Octo-o-o-o/qcom32-volte"
@@ -74,6 +74,7 @@ STRINGS = {
         "state_idle": "待检测（连接手机并开启 USB 调试后点击“只读检查状态”或“多机型识别与只读体检”）",
         "state_healthy": "VoLTE 栈运行正常（IMS 已注册 + LTE 语音就绪）",
         "state_unhealthy": "已连接设备，但 VoLTE 尚未完成激活或当前 SIM 尚未注册",
+        "state_radio_unavailable": "基带/SIM 未就绪无信号（请点击下方「恢复出厂基带配置并卸载」一键恢复手机信号！）",
         "actions_box": "操作流程（Passport 全系支持备份写入与回滚；其他 32 位高通机型可点右上体检面板用 AI 自助适配）",
         "btn_status": "1. 只读检查状态",
         "btn_deploy": "2. 备份并一键激活 VoLTE（Passport 全系）",
@@ -87,10 +88,10 @@ STRINGS = {
         "confirm_deploy_title": "确认备份并激活 VoLTE",
         "confirm_deploy_msg": (
             "即将对连接的已验证机型（覆盖 BlackBerry Passport 普通版 wolverine / 银色版 oslo / AT&T wichita / 保时捷 keian / LineageOS 18.1）执行：\n\n"
-            "1. 通过 ADB Root 读取并保存当前基带 EFS 原始状态到本地备份目录；\n"
+            "1. 预检 ROM 遗留 imsqmidaemon 冲突与 AAB982 基带兼容性，并备份基带 EFS 原始状态到本地目录；\n"
             "2. 写入机型专属 Stage 6A 协同基带配置并执行 EFS_SYNC；\n"
-            "3. 安装 Qcom32VolteIms.apk v2.7 并写入持久化 CarrierConfig（含开机/换卡通知与电信 46011 保护）；\n"
-            "4. 正常重启手机并自动核验 QMI_IMSA / ImsResolver 注册状态。\n\n"
+            "3. 安装 Qcom32VolteIms.apk v2.8 并写入持久化 CarrierConfig（含开机/换卡通知与电信 46011 保护）；\n"
+            "4. 正常重启手机并自动核验 QMI_IMSA / ImsResolver 注册状态（若异常无信号将自动回滚恢复信号）。\n\n"
             "请确认手机已插入开通 VoLTE 的 SIM 卡且当前无正在进行的通话。是否继续？"
         ),
         "confirm_rollback_title": "确认恢复出厂基带配置",
@@ -124,6 +125,7 @@ STRINGS = {
         "state_idle": "Ready (Connect device with USB Debugging enabled and click 'Check Status' or '32-Bit Device Check')",
         "state_healthy": "VoLTE Stack Healthy (IMS REGISTERED + LTE Voice Ready)",
         "state_unhealthy": "Device connected, but VoLTE is not yet provisioned or registered",
+        "state_radio_unavailable": "Cellular radio/SIM unavailable (click 'Restore Factory Modem EFS & Uninstall' to restore signal!)",
         "actions_box": "Operations (Passport all editions unlocked; use '32-Bit Device Check & AI Porting' for other Qualcomm 32-bit models)",
         "btn_status": "1. Check Status (Read-Only)",
         "btn_deploy": "2. Backup & Activate VoLTE (Passport All Editions)",
@@ -137,10 +139,10 @@ STRINGS = {
         "confirm_deploy_title": "Confirm Backup & VoLTE Activation",
         "confirm_deploy_msg": (
             "This will run the guarded activation flow on the connected verified Passport edition (wolverine / Silver Edition oslo / wichita / keian on LineageOS 18.1):\n\n"
-            "1. Enable ADB Root (UID 0) and save a pre-deployment modem EFS snapshot locally;\n"
+            "1. Pre-check ROM legacy imsqmidaemon conflicts & AAB982 baseband compatibility, then back up modem EFS locally;\n"
             "2. Provision Stage 6A modem EFS items + EFS_SYNC;\n"
-            "3. Install Qcom32VolteIms.apk v2.7 & apply persistent CarrierConfig overrides (with boot/SIM-swap notifications);\n"
-            "4. Reboot normally and verify QMI_IMSA / ImsResolver registration.\n\n"
+            "3. Install Qcom32VolteIms.apk v2.8 & apply persistent CarrierConfig overrides (with boot/SIM-swap notifications);\n"
+            "4. Reboot normally and verify QMI_IMSA / ImsResolver registration (auto-rollbacks if cellular radio fails).\n\n"
             "Ensure a VoLTE-provisioned SIM card is inserted and no call is active. Continue?"
         ),
         "confirm_rollback_title": "Confirm Factory Modem Rollback",
@@ -492,6 +494,12 @@ class PassportVolteApp:
                     self.lbl_status_banner.configure(
                         text=self._t("state_healthy"), bg="#e4f5eb", fg=PALETTE["ok"]
                     )
+                elif res.get("radio_unavailable") is True:
+                    self.lbl_status_banner.configure(
+                        text=self._t("state_radio_unavailable"), bg="#fceaea", fg=PALETTE["danger"]
+                    )
+                    if res.get("recovery_hint"):
+                        self._append_log(f"RECOVERY: {res['recovery_hint']}")
                 elif "volte_stack_healthy" in res:
                     self.lbl_status_banner.configure(
                         text=self._t("state_unhealthy"), bg="#fff3cf", fg=PALETTE["warn"]

@@ -93,11 +93,14 @@ Read and follow **every step** in [`PORTING_AND_EFS_SAFETY.md`](./references/POR
    ```
    Only change `"status"` to `"verified"` after full `--rollback-all` verification AND user-confirmed live MO/MT voice calls.
 
-### Route E — Factory Rollback
-To completely restore all 54 managed modem EFS items to factory baseline, remove `CarrierConfig` overrides, uninstall APKs, and verify across a clean reboot:
-```bash
-python3 cli/volte_ctl.py rollback
-```
+### Route E — `POST_DEPLOY_RADIO_LOSS_NEEDS_ROLLBACK` / `NEEDS_ROM_UPGRADE_LEGACY_IMS_DAEMON` / `NEEDS_COMPATIBLE_BASEBAND` / Factory Rollback
+If a user activated VoLTE on an older `Permissive` ROM with active legacy `imsqmidaemon` or an incompatible baseband (`DI.2.0.1` BB10 radio or older engineering `AAA*` `NON-HLOS.bin`) and lost cellular signal after reboot (`gsm.sim.state == ""`), OR wants to restore factory modem EFS baseline:
+1. Run hardened factory rollback immediately (stops `imsqmidaemon`, clears `CarrierConfig` overrides, uninstalls APKs, runs `--rollback-all`, and reboots to restore cellular signal):
+   ```bash
+   python3 cli/volte_ctl.py rollback
+   ```
+   *(Note: Starting in `v1.2.4-r1`, `cli/volte_ctl.py deploy` blocks incompatible ROMs/basebands BEFORE any EFS write, and automatically executes factory rollback if `gsm.sim.state` becomes `""` after reboot.)*
+2. Before re-deploying on BlackBerry Passport, verify Enforcing LineageOS 18.1 (`lineage-18.1-20260129-UNOFFICIAL-wseries`, where legacy `imsqmidaemon` is absent) AND BlackBerry Android `AAB982` (`MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1`) `NON-HLOS.bin` baseband.
 
 ---
 
@@ -105,6 +108,7 @@ python3 cli/volte_ctl.py rollback
 
 | Symptom / Error | Root Cause & Fix |
 | --- | --- |
+| No signal after reboot (`"sim_state": ""`, `"network_type": "Unknown"`, `"ims_service": {"present": false}`) | Legacy 32-bit vendor `imsqmidaemon` on older `Permissive` ROMs fighting `rild` once `IMS_enable=01`, OR non-`AAB982` (`DI.2.0.1` / `AAA596`) baseband container. Run `python3 cli/volte_ctl.py rollback` immediately to restore signal, then upgrade to Enforcing `lineage-18.1-20260129-UNOFFICIAL-wseries` + `AAB982` `NON-HLOS.bin`. |
 | `INSTALL_FAILED_SHARED_USER_INCOMPATIBLE` | Target ROM's `com.android.phone` is signed with private `release-keys` instead of AOSP `test-keys`. Re-sign `Qcom32VolteIms.apk` with the ROM's `platform` key (`cli/build_all.py --sign-key ... --sign-cert ...`) or build in-tree via `rom-integration/`. |
 | `QMI_IMSS` returns `INVALID_SERVICE_TYPE (31)` | Normal behavior while `IMS_enable == 00` before Stage 6A provisioning + reboot. |
 | `CAUSE_CODE 54` (`READ_FAILED`) on `GET 0x26` | Only `IMS_enable=01` was flipped without Stage 6A's 405B `qp_ims_reg_config` and companion items. Use full Stage 6A provisioning, never single-byte `IMS_enable` scripts. |

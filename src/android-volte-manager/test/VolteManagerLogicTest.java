@@ -100,13 +100,63 @@ public final class VolteManagerLogicTest {
         check(deploySh.contains("--ez reboot_required true"), "Deploy marks reboot_required notification");
         check(deploySh.contains("pm uninstall org.passport.volteims"), "Deploy migrates legacy package cleanly");
         check(deploySh.contains("wolverine|oslo|wichita|keian|wseries|windermere)"), "Deploy enforces Passport wseries EFS guard");
+        check(deploySh.indexOf("ERR_SIM_NOT_LOADED") < deploySh.indexOf("--provision-stage6a"),
+                "Deploy checks SIM LOADED before touching EFS");
+        check(deploySh.indexOf("ERR_LEGACY_IMS_DAEMON_CONFLICT") < deploySh.indexOf("--provision-stage6a"),
+                "Deploy blocks conflicting imsqmidaemon before touching EFS");
+        check(deploySh.indexOf("ERR_INCOMPATIBLE_PASSPORT_BASEBAND") < deploySh.indexOf("--provision-stage6a"),
+                "Deploy blocks incompatible baseband before touching EFS");
+        check(deploySh.indexOf("ERR_LEGACY_AAA_BASEBAND") < deploySh.indexOf("--provision-stage6a"),
+                "Deploy blocks older AAA* engineering baseband before touching EFS");
 
         String rollbackSh = VolteManagerLogic.buildRootRollbackScript("/data/user/0/org.octolab.qcom32volte/files/staged");
         check(rollbackSh.contains("wolverine|oslo|wichita|keian|wseries|windermere)"), "Rollback enforces Passport wseries EFS guard");
+        check(rollbackSh.indexOf("imsqmidaemon") < rollbackSh.indexOf("--rollback-all"),
+                "Rollback stops conflicting legacy imsqmidaemon before EFS rollback");
+        check(rollbackSh.contains("*override*.xml"), "Rollback deletes persistent CarrierConfig override XMLs directly");
         check(rollbackSh.contains("clear_override"), "Rollback clears CarrierConfig override");
         check(rollbackSh.contains("setprop persist.radio.fallbackmode ''"), "Rollback clears fallbackmode property");
         check(rollbackSh.contains("--rollback-all"), "Rollback restores all Stage 6A EFS items");
         check("'/data/local/tmp/probe'".equals(VolteManagerLogic.quoteSh("/data/local/tmp/probe")), "quoteSh public helper");
+
+        // 7b. Baseband & legacy daemon compatibility helpers + post-reboot radio loss headline
+        check(VolteManagerLogic.isPassportBasebandCompatible(
+                ".DI.4.0.1-00158-M8974AAAAANAZM-1", "build_id:AAB982\nMP_QC_Release:MPSS.DI.4.0.1-00158"),
+                "AAB982 DI.4.0.1-00158 baseband accepted");
+        check(VolteManagerLogic.isPassportBasebandCompatible(".DI.4.0.1-00158-M8974AAAAANAZM-1", ""),
+                "DI.4.0.1-00158 without CONTENTS.TXT accepted");
+        check(!VolteManagerLogic.isPassportBasebandCompatible("MPSS.DI.2.0.1.c1.16-00029-M8974AAAAANPZM-1", ""),
+                "BB10 DI.2.0.1 ANPZM baseband rejected");
+        check(!VolteManagerLogic.isPassportBasebandCompatible("", ""), "Empty baseband rejected");
+        check(!VolteManagerLogic.isPassportBasebandCompatible(
+                ".DI.4.0.1-00158-M8974AAAAANAZM-1", "build_id:AAA596\nMP_QC_Release:MPSS.DI.4.0.1-00158"),
+                "Older engineering AAA596 modem rejected");
+
+        check(VolteManagerLogic.hasConflictingLegacyImsDaemon("imsqmidaemon=running, imsdatadaemon=stopped"),
+                "Running imsqmidaemon flagged as conflict");
+        check(VolteManagerLogic.hasConflictingLegacyImsDaemon("sys.ims.QMI_DAEMON_STATUS=1"),
+                "Active QMI_DAEMON_STATUS=1 flagged as conflict");
+        check(!VolteManagerLogic.hasConflictingLegacyImsDaemon("imsdatadaemon=stopped")
+                && !VolteManagerLogic.hasConflictingLegacyImsDaemon(""),
+                "Stopped or absent legacy services do not false-positive");
+
+        VolteManagerLogic.StatusSnapshot snapNoSignal = VolteManagerLogic.parseStatusSummary(
+                "Passport", "wolverine", 30, true,
+                "package=org.octolab.qcom32ims\nversion=2.8-qcom32-volte", "", "", "", "UNKNOWN", "", false);
+        check(snapNoSignal.radioUnavailable && snapNoSignal.headlineZh.contains("无信号"),
+                "Post-reboot empty sim_state flags radioUnavailable rollback guidance");
+
+        VolteManagerLogic.StatusSnapshot snapAirplane = VolteManagerLogic.parseStatusSummary(
+                "Passport", "wolverine", 30, true,
+                "package=org.octolab.qcom32ims\nversion=2.8-qcom32-volte", "", "", "", "UNKNOWN", "", true);
+        check(!snapAirplane.radioUnavailable, "Airplane mode does not false-positive radioUnavailable");
+
+        String ppConflictReport = VolteManagerLogic.buildReadOnlyPortingReport(
+                "blackberry", "Passport", "wolverine", "msm8974", "armeabi-v7a", 30, "test-keys",
+                "Permissive", true, true, true, true, Boolean.TRUE, false,
+                ".DI.4.0.1-00158-M8974AAAAANAZM-1", "build_id:AAA596", "imsqmidaemon=running");
+        check(ppConflictReport.contains("冲突拦截") && ppConflictReport.contains("AAB982"),
+                "Passport read-only report flags imsqmidaemon conflict and non-AAB982 modem");
 
         // 8. 32-Bit Qualcomm catalog identification & read-only AI/GitHub porting report
         VolteManagerLogic.DeviceCatalogMatch osloCat = VolteManagerLogic.identifyDeviceCatalog(

@@ -1215,5 +1215,48 @@ public final class Qcom32VolteImsHostTest {
                                 "/system/priv-app/Qcom32VolteIms/lib/arm",
                                 new String[] { "/system/bin/libimsa_probe.so" })),
                 "ROM build falls back to /system/bin/libimsa_probe.so when present");
+
+        // 11. Post-reboot RADIO_UNAVAILABLE (sim_state == "" / modem failed to init) notification & zero-false-positive guards
+        VolteStatusNotificationLogic.SessionState stRadio = new VolteStatusNotificationLogic.SessionState();
+        VolteStatusNotificationLogic.Decision dRadioEarly = VolteStatusNotificationLogic.evaluate(
+                stRadio,
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-radio", false, false, false, "", "", "wolverine", false, true, -1, false, 30_000L, true));
+        check(dRadioEarly.action == VolteStatusNotificationLogic.Action.NOOP,
+                "radioUnavailable before 50s uptime stays quiet to avoid false positives during slow boot");
+
+        VolteStatusNotificationLogic.Decision dRadioAirplane = VolteStatusNotificationLogic.evaluate(
+                stRadio,
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-radio", false, false, false, "", "", "wolverine", false, true, -1, false, 60_000L, false));
+        check(dRadioAirplane.action == VolteStatusNotificationLogic.Action.NOOP,
+                "airplane mode or PIN-locked SIM (radioUnavailable=false) stays quiet");
+
+        VolteStatusNotificationLogic.Decision dRadioAlert = VolteStatusNotificationLogic.evaluate(
+                stRadio,
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-radio", false, false, false, "", "", "wolverine", false, true, -1, false, 55_000L, true));
+        check(dRadioAlert.action == VolteStatusNotificationLogic.Action.POST
+                        && dRadioAlert.kind == VolteStatusNotificationLogic.Kind.RADIO_UNAVAILABLE
+                        && dRadioAlert.title.contains("无信号")
+                        && dRadioAlert.body.contains("imsqmidaemon")
+                        && dRadioAlert.body.contains("AAB982"),
+                "post-reboot radioUnavailable at >=50s posts actionable rollback & ROM/AAB982 guidance");
+        stRadio = dRadioAlert.nextState;
+
+        VolteStatusNotificationLogic.Decision dRadioDup = VolteStatusNotificationLogic.evaluate(
+                stRadio,
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-radio", false, false, false, "", "", "wolverine", false, true, -1, false, 70_000L, true));
+        check(dRadioDup.action == VolteStatusNotificationLogic.Action.NOOP,
+                "RADIO_UNAVAILABLE alert is deduplicated in same session");
+
+        VolteStatusNotificationLogic.Decision dRadioRecovered = VolteStatusNotificationLogic.evaluate(
+                stRadio,
+                new VolteStatusNotificationLogic.EvalInput(
+                        "boot-radio", false, false, true, "46001", "LTE", "wolverine", true, true, 0, false, 85_000L, false));
+        check(dRadioRecovered.action == VolteStatusNotificationLogic.Action.POST
+                        && dRadioRecovered.kind == VolteStatusNotificationLogic.Kind.ACTIVATED,
+                "if radio subsequently recovers and registers IMS, notification upgrades to ACTIVATED");
     }
 }

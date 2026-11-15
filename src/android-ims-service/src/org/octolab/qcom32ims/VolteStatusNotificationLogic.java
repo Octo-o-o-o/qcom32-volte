@@ -31,7 +31,8 @@ public final class VolteStatusNotificationLogic {
         SIM_SWAP_REBOOT_NEEDED,
         AWAITING_4G_LTE,
         MODEM_CONFIG_INACTIVE,
-        LTE_IMS_PENDING
+        LTE_IMS_PENDING,
+        RADIO_UNAVAILABLE
     }
 
     public static final class SessionState {
@@ -75,6 +76,7 @@ public final class VolteStatusNotificationLogic {
         public final int qmiTestMode;
         public final boolean englishLocale;
         public final long uptimeMs;
+        public final boolean radioUnavailable;
 
         public EvalInput(
                 String bootToken,
@@ -100,7 +102,8 @@ public final class VolteStatusNotificationLogic {
                     settleWindowElapsed,
                     qmiTestMode,
                     englishLocale,
-                    60_000L);
+                    60_000L,
+                    false);
         }
 
         public EvalInput(
@@ -116,6 +119,36 @@ public final class VolteStatusNotificationLogic {
                 int qmiTestMode,
                 boolean englishLocale,
                 long uptimeMs) {
+            this(
+                    bootToken,
+                    bootstrapDisabled,
+                    simAbsent,
+                    simReady,
+                    simOperator,
+                    networkType,
+                    deviceCodename,
+                    imsHealthy,
+                    settleWindowElapsed,
+                    qmiTestMode,
+                    englishLocale,
+                    uptimeMs,
+                    false);
+        }
+
+        public EvalInput(
+                String bootToken,
+                boolean bootstrapDisabled,
+                boolean simAbsent,
+                boolean simReady,
+                String simOperator,
+                String networkType,
+                String deviceCodename,
+                boolean imsHealthy,
+                boolean settleWindowElapsed,
+                int qmiTestMode,
+                boolean englishLocale,
+                long uptimeMs,
+                boolean radioUnavailable) {
             this.bootToken = safeStr(bootToken);
             this.bootstrapDisabled = bootstrapDisabled;
             this.simAbsent = simAbsent;
@@ -128,6 +161,7 @@ public final class VolteStatusNotificationLogic {
             this.qmiTestMode = qmiTestMode;
             this.englishLocale = englishLocale;
             this.uptimeMs = uptimeMs;
+            this.radioUnavailable = radioUnavailable;
         }
     }
 
@@ -522,6 +556,25 @@ public final class VolteStatusNotificationLogic {
         }
 
         if (!in.simReady && in.simOperator.isEmpty()) {
+            if (in.radioUnavailable && in.uptimeMs >= 50_000L) {
+                String rTitle = in.englishLocale
+                        ? "Modem/SIM Not Ready (No Signal) — Rollback VoLTE"
+                        : "基带或 SIM 未就绪（无信号）— 请执行 VoLTE 回滚恢复";
+                String rBody = in.englishLocale
+                        ? "Modem failed to initialize after boot (typically caused by legacy imsqmidaemon on older Permissive ROMs or non-AAB982 modem). Tap to open Manager or run PC rollback to restore signal."
+                        : "开机后基带未完成初始化（常见于旧版 Permissive ROM 残留 imsqmidaemon 或非 AAB982 底包）。点击打开管理端或连电脑运行回滚即可恢复信号。";
+                String rFp = sessionKey + "|kind=" + Kind.RADIO_UNAVAILABLE.name() + "|en=" + in.englishLocale;
+                if (rFp.equals(st.lastPostedFingerprint)) {
+                    return Decision.noop("duplicate_diagnostic_" + Kind.RADIO_UNAVAILABLE.name(), st);
+                }
+                return Decision.post(
+                        Kind.RADIO_UNAVAILABLE,
+                        rTitle,
+                        rBody,
+                        rFp,
+                        "diagnostic_" + Kind.RADIO_UNAVAILABLE.name(),
+                        st);
+            }
             return Decision.noop("sim_not_ready_yet", st);
         }
 

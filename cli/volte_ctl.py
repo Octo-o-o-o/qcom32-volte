@@ -28,6 +28,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from typing import Callable
 
@@ -57,7 +58,7 @@ LEGACY_ADMIN_RECEIVER = f"{LEGACY_IMS_PKG}/.VolteAdminReceiver"
 LEGACY_ADMIN_ACTION = "org.passport.volteims.ACTION_ADMIN"
 
 REMOTE_TMP_PROVISIONER = "/data/local/tmp/pp_regconfig_provision_v6"
-EXPECTED_VERSION = "2.7-qcom32-volte"
+EXPECTED_VERSION = "2.8-qcom32-volte"
 
 PII_REDACT_RE = re.compile(r"\b\d{11,20}\b")
 
@@ -321,6 +322,12 @@ def validate_selinux_mode(selinux: str) -> str | None:
     raise RuntimeError(f"Unexpected SELinux mode {selinux!r}; expected `Enforcing` (or custom-ROM `Permissive`).")
 
 
+class VoltePollTimeoutError(RuntimeError):
+    def __init__(self, message: str, last_status: dict[str, object]):
+        super().__init__(message)
+        self.last_status = last_status
+
+
 def verify_device_identity(adb: AdbClient, require_verified_efs_profile: bool = True) -> dict[str, object]:
     brand = adb.shell("getprop ro.product.brand", check=False).strip()
     device = adb.shell("getprop ro.product.device").strip()
@@ -335,6 +342,24 @@ def verify_device_identity(adb: AdbClient, require_verified_efs_profile: bool = 
     sim_state = adb.shell("getprop gsm.sim.state").strip()
     operator = adb.shell("getprop gsm.sim.operator.numeric").strip()
     net_type = adb.shell("getprop gsm.network.type").strip()
+    baseband = sanitize_text(adb.shell("getprop gsm.version.baseband", check=False).strip())
+    lineage_ver = sanitize_text(adb.shell("getprop ro.lineage.version", check=False).strip())
+    display_id = sanitize_text(adb.shell("getprop ro.build.display.id", check=False).strip())
+    rom_display = lineage_ver or display_id
+    ril_daemon_svc = sanitize_text(adb.shell("getprop init.svc.ril-daemon", check=False).strip())
+    airplane_raw = sanitize_text(adb.shell("settings get global airplane_mode_on", timeout=15, check=False).strip())
+
+    legacy_svc_states: dict[str, str] = {}
+    for svc_name in device_readiness.CONFLICTING_LEGACY_IMS_SERVICES:
+        st = sanitize_text(adb.shell(f"getprop init.svc.{svc_name}", timeout=10, check=False).strip())
+        if st:
+            legacy_svc_states[svc_name] = st
+    sys_ims_props: dict[str, str] = {}
+    for sys_k in ("sys.ims.QMI_DAEMON_STATUS", "sys.ims.DATA_DAEMON_STATUS"):
+        sv = sanitize_text(adb.shell(f"getprop {sys_k}", timeout=10, check=False).strip())
+        if sv:
+            sys_ims_props[sys_k] = sv
+    legacy_conflict = device_readiness.assess_legacy_ims_daemon_conflict(legacy_svc_states, sys_ims_props)
 
     cat_match = device_readiness.identify_device_props(
         {
@@ -365,6 +390,13 @@ def verify_device_identity(adb: AdbClient, require_verified_efs_profile: bool = 
         "board_platform": platform,
         "cpu_abi": cpu_abi,
         "build_tags": build_tags,
+        "rom_display": rom_display,
+        "baseband": baseband,
+        "ril_daemon_svc": ril_daemon_svc,
+        "airplane_mode": airplane_raw,
+        "legacy_ims_daemons": legacy_svc_states,
+        "legacy_sys_ims_props": sys_ims_props,
+        "legacy_ims_conflict": legacy_conflict["conflicting"],
         "sdk": sdk_int,
         "selinux": selinux,
         "boot_id": boot_id,
@@ -378,6 +410,54 @@ def verify_device_identity(adb: AdbClient, require_verified_efs_profile: bool = 
     if selinux_warn is not None:
         res["selinux_warning"] = selinux_warn
     return res
+
+
+def validate_passport_deploy_environment(adb: AdbClient, ident: dict[str, object]) -> dict[str, str]:
+    """Pre-flight ROM & baseband safety guard executed BEFORE any modem EFS write on Passport."""
+    legacy_svcs = ident.get("legacy_ims_daemons")
+    sys_props = ident.get("legacy_sys_ims_props")
+    conflict = device_readiness.assess_legacy_ims_daemon_conflict(
+        legacy_svcs if isinstance(legacy_svcs, dict) else {},
+        sys_props if isinstance(sys_props, dict) else {},
+    )
+    if conflict["conflicting"]:
+        tokens = ", ".join(conflict["active_services"] + conflict["active_sys_props"])
+        raise RuntimeError(
+            f"Refusing EFS write (ZERO EFS items modified): conflicting legacy 32-bit vendor IMS daemon is active ({tokens}). "
+            "On older Permissive LineageOS 18.1 ROMs, enabling IMS_enable=01 causes `imsqmidaemon` to fight `rild` over "
+            "QMI_IMSS/IMSA and crash cellular signal. Please upgrade to Enforcing `lineage-18.1-20260129-UNOFFICIAL-wseries` "
+            "(or disable legacy vendor ims* daemons) before activating VoLTE. / "
+            f"已安全拦截（未改动任何基带 EFS 项）：检测到旧版 ROM 遗留 vendor IMS 守护进程运行中 ({tokens})，"
+            "强行开启 VoLTE 会导致重启后无信号；请升级至 Enforcing 版 `lineage-18.1-20260129-UNOFFICIAL-wseries` 后再激活。"
+        )
+
+    fw_raw = sanitize_text(
+        adb.shell(
+            "cat /firmware/IMAGE/CONTENTS.TXT /firmware/image/contents.txt "
+            "/vendor/firmware_mnt/IMAGE/CONTENTS.TXT /vendor/firmware_mnt/image/contents.txt 2>/dev/null || true",
+            timeout=15,
+            check=False,
+        ).strip()
+    )
+    fw_build_id = device_readiness.extract_firmware_build_id(fw_raw)
+    baseband = str(ident.get("baseband") or "")
+    bb_check = device_readiness.assess_passport_baseband(baseband, fw_build_id)
+    if not bb_check["compatible"]:
+        raise RuntimeError(
+            f"Refusing EFS write (ZERO EFS items modified): incompatible Passport baseband "
+            f"(gsm.version.baseband={baseband!r}, firmware_build_id={fw_build_id!r}, reason={bb_check['reason']}). "
+            "BlackBerry Passport VoLTE requires the BlackBerry Android `AAB982` (`MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1`) "
+            "`NON-HLOS.bin` baseband; older BB10 `DI.2.0.1` or `AAA*` engineering modems lose cellular signal when IMS_enable=01. / "
+            f"已安全拦截（未改动任何基带 EFS 项）：当前基带版本 ({baseband or '未知'} / {fw_build_id or '无容器标识'}) 不兼容，"
+            "请先刷入黑莓 Android `AAB982` 版 `NON-HLOS.bin` 基带镜像后再激活 VoLTE。"
+        )
+    return {"baseband": baseband, "firmware_build_id": fw_build_id}
+
+
+def is_post_deploy_radio_unavailable(ident: dict[str, object]) -> bool:
+    sim_st = str(ident.get("sim_state") or "").strip()
+    airplane = str(ident.get("airplane_mode") or "").strip()
+    return sim_st == "" and airplane != "1"
 
 
 def cleanup_legacy_packages(adb: AdbClient, include_manager: bool = False) -> None:
@@ -421,9 +501,11 @@ def query_live_volte_status(adb: AdbClient) -> dict[str, object]:
         and qmi["voip_rat"] == 1
         and "true" in ims_reg_matches
     )
-    return {
+    radio_unavail = is_post_deploy_radio_unavailable(ident)
+    out: dict[str, object] = {
         "checked_at": dt.datetime.now(dt.timezone.utc).astimezone().isoformat(),
         "volte_stack_healthy": healthy,
+        "radio_unavailable": radio_unavail,
         "identity": ident,
         "ims_service": svc,
         "qmi_imsa": qmi,
@@ -431,18 +513,31 @@ def query_live_volte_status(adb: AdbClient) -> dict[str, object]:
         "call_states": call_states[:2],
         "data_states": data_states[:2],
     }
+    if radio_unavail:
+        out["recovery_hint"] = (
+            "Cellular radio/SIM failed to initialize (gsm.sim.state=''). Run `rollback` (or GUI button [3. Rollback to Factory EFS]) "
+            "immediately to restore signal, then verify Enforcing ROM `lineage-18.1-20260129-UNOFFICIAL-wseries` + `AAB982` `NON-HLOS.bin`."
+        )
+    return out
 
 
-def poll_until_volte_ready(adb: AdbClient, timeout_sec: int = 90) -> dict[str, object]:
+def poll_until_volte_ready(
+    adb: AdbClient,
+    timeout_sec: int = 90,
+    poll_interval_sec: float = 4.0,
+) -> dict[str, object]:
     deadline = time.time() + timeout_sec
-    last_status: dict[str, object] = {}
+    last_status: dict[str, object] = query_live_volte_status(adb)
+    if last_status.get("volte_stack_healthy") is True:
+        return last_status
     while time.time() < deadline:
+        time.sleep(poll_interval_sec)
         last_status = query_live_volte_status(adb)
         if last_status.get("volte_stack_healthy") is True:
             return last_status
-        time.sleep(4.0)
-    raise RuntimeError(
-        f"VoLTE stack did not reach healthy REGISTERED state within {timeout_sec}s: {json.dumps(last_status)}"
+    raise VoltePollTimeoutError(
+        f"VoLTE stack did not reach healthy REGISTERED state within {timeout_sec}s: {json.dumps(last_status)}",
+        last_status,
     )
 
 
@@ -495,8 +590,163 @@ def cmd_self_test(out_json: str | None = None) -> int:
     except RuntimeError:
         rejected_selinux = True
     assert rejected_selinux is True
+
+    # Offline mock-ADB safety tests: pre-flight ROM/baseband guards, post-reboot radio-loss auto-rollback,
+    # non-destructive IMS timeout when SIM remains LOADED, and hardened rollback when radio is wedged.
+    class _SimPassportAdb(AdbClient):
+        def __init__(self, props: dict[str, str], fw_contents: str = "build_id:AAB982", post_reboot_sim: str = "LOADED"):
+            super().__init__("mock-adb", "MOCKSERIAL")
+            self.props = dict(props)
+            self.fw_contents = fw_contents
+            self.post_reboot_sim = post_reboot_sim
+            self.commands: list[str] = []
+            self.reboots = 0
+
+        def ensure_root(self) -> None:
+            self.commands.append("ensure_root")
+
+        def run(self, args: list[str], timeout: int = 60, check: bool = True) -> subprocess.CompletedProcess[str]:
+            joined = " ".join(args)
+            self.commands.append(f"run:{joined}")
+            return subprocess.CompletedProcess(["adb", *args], 0, stdout="Success\n", stderr="")
+
+        def wait_after_reboot(self, old_boot_id: str, timeout_sec: int = 180) -> str:
+            self.reboots += 1
+            new_b = f"boot-after-{self.reboots}"
+            self.props["boot_id"] = new_b
+            if self.reboots == 1:
+                self.props["gsm.sim.state"] = self.post_reboot_sim
+                if not self.post_reboot_sim:
+                    self.props["gsm.sim.operator.numeric"] = ""
+                    self.props["gsm.network.type"] = "Unknown"
+            else:
+                self.props["gsm.sim.state"] = "LOADED"
+                self.props["gsm.sim.operator.numeric"] = "46001"
+                self.props["gsm.network.type"] = "LTE"
+            self.commands.append(f"reboot->{new_b}")
+            return new_b
+
+        def shell(self, cmd: str, timeout: int = 60, check: bool = True) -> str:
+            self.commands.append(f"shell:{cmd}")
+            if cmd == "getenforce":
+                return self.props.get("selinux", "Enforcing")
+            if cmd == "cat /proc/sys/kernel/random/boot_id":
+                return self.props.get("boot_id", "boot-initial")
+            if cmd == "settings get global airplane_mode_on":
+                return self.props.get("airplane_mode", "0")
+            if cmd.startswith("getprop "):
+                k = cmd.split(" ", 1)[1].strip()
+                return self.props.get(k, "")
+            if "CONTENTS.TXT" in cmd:
+                return self.fw_contents
+            if cmd == f"dumpsys package {IMS_PKG}":
+                return "User 0: installed=true stopped=false\n"
+            if "--rollback-all" in cmd:
+                self.post_reboot_sim = "LOADED"
+                return "ROLLBACK_OK\n"
+            if "--inspect-state" in cmd:
+                return "INSPECT_OK\n"
+            if "--provision-stage6a" in cmd:
+                return "STAGE6A_OK\n"
+            return ""
+
+    base_pp_props = {
+        "ro.product.brand": "blackberry",
+        "ro.product.device": "wolverine",
+        "ro.product.model": "Passport",
+        "ro.board.platform": "msm8974",
+        "ro.product.cpu.abi": "armeabi-v7a",
+        "ro.build.tags": "test-keys",
+        "ro.build.version.sdk": "30",
+        "ro.lineage.version": "18.1-20260129-UNOFFICIAL-wseries",
+        "gsm.version.baseband": "MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1",
+        "gsm.sim.state": "LOADED",
+        "gsm.sim.operator.numeric": "46001",
+        "gsm.network.type": "LTE",
+        "selinux": "Enforcing",
+        "boot_id": "boot-0",
+        "airplane_mode": "0",
+    }
+
+    with tempfile.TemporaryDirectory() as td:
+        td_path = Path(td)
+        fake_apk = td_path / "Qcom32VolteIms.apk"
+        fake_prov = td_path / "pp_regconfig_provision_v6"
+        fake_apk.write_bytes(b"apk-placeholder")
+        fake_prov.write_bytes(b"prov-placeholder")
+
+        # (a) Conflicting legacy imsqmidaemon -> blocked BEFORE any EFS push/write
+        adb_conflict = _SimPassportAdb({**base_pp_props, "selinux": "Permissive", "init.svc.imsqmidaemon": "running"})
+        blocked_daemon = False
+        try:
+            run_deploy_flow(adb_conflict, fake_apk, fake_prov, poll_timeout_sec=0, poll_interval_sec=0.01, backup_root=td_path)
+        except RuntimeError as exc:
+            blocked_daemon = "imsqmidaemon=running" in str(exc) and "ZERO EFS items modified" in str(exc)
+        assert blocked_daemon is True
+        assert not any("--provision-stage6a" in c or "run:push" in c for c in adb_conflict.commands)
+
+        # (b) Legacy AAA596 engineering modem -> blocked BEFORE any EFS push/write
+        adb_aaa = _SimPassportAdb(base_pp_props, fw_contents="build_id:AAA596")
+        blocked_aaa = False
+        try:
+            run_deploy_flow(adb_aaa, fake_apk, fake_prov, poll_timeout_sec=0, poll_interval_sec=0.01, backup_root=td_path)
+        except RuntimeError as exc:
+            blocked_aaa = "AAA596" in str(exc) and "ZERO EFS items modified" in str(exc)
+        assert blocked_aaa is True
+        assert not any("--provision-stage6a" in c or "run:push" in c for c in adb_aaa.commands)
+
+        # (c) BB10 DI.2.0.1 baseband -> blocked BEFORE any EFS push/write
+        adb_bb10 = _SimPassportAdb({**base_pp_props, "gsm.version.baseband": "MPSS.DI.2.0.1.c1.16-M8974AAAAANPZM-1"}, fw_contents="")
+        blocked_bb10 = False
+        try:
+            run_deploy_flow(adb_bb10, fake_apk, fake_prov, poll_timeout_sec=0, poll_interval_sec=0.01, backup_root=td_path)
+        except RuntimeError as exc:
+            blocked_bb10 = "INCOMPATIBLE_BASEBAND" in str(exc)
+        assert blocked_bb10 is True
+        assert not any("--provision-stage6a" in c or "run:push" in c for c in adb_bb10.commands)
+
+        # (d) Post-reboot catastrophic radio loss (sim_state == '') -> triggers automatic factory rollback & restores LOADED!
+        adb_radio_loss = _SimPassportAdb(base_pp_props, fw_contents="build_id:AAB982", post_reboot_sim="")
+        auto_rb_triggered = False
+        try:
+            run_deploy_flow(adb_radio_loss, fake_apk, fake_prov, poll_timeout_sec=0, poll_interval_sec=0.01, backup_root=td_path)
+        except RuntimeError as exc:
+            msg = str(exc)
+            auto_rb_triggered = "AUTOMATIC FACTORY EFS ROLLBACK COMPLETED" in msg and "sim_state='LOADED'" in msg
+        assert auto_rb_triggered is True
+        assert adb_radio_loss.reboots == 2
+        assert any("--rollback-all" in c for c in adb_radio_loss.commands)
+
+        # (e) Post-reboot SIM stays LOADED (signal healthy, only IMS timed out) -> NO destructive auto-rollback
+        adb_ims_timeout = _SimPassportAdb(base_pp_props, fw_contents="build_id:AAB982", post_reboot_sim="LOADED")
+        plain_timeout = False
+        try:
+            run_deploy_flow(adb_ims_timeout, fake_apk, fake_prov, poll_timeout_sec=0, poll_interval_sec=0.01, backup_root=td_path)
+        except VoltePollTimeoutError:
+            plain_timeout = True
+        assert plain_timeout is True
+        assert adb_ims_timeout.reboots == 1
+        assert not any("--rollback-all" in c for c in adb_ims_timeout.commands)
+
+        # (f) Hardened rollback works even when phone already has no signal (sim_state='', baseband='', imsqmidaemon=running)
+        adb_wedged = _SimPassportAdb(
+            {
+                **base_pp_props,
+                "selinux": "Permissive",
+                "gsm.sim.state": "",
+                "gsm.version.baseband": "",
+                "init.svc.imsqmidaemon": "running",
+            },
+            fw_contents="build_id:AAA596",
+        )
+        rb_done = run_rollback_flow(adb_wedged, fake_prov, post_reboot_sim_wait_sec=0, backup_root=td_path)
+        assert rb_done["rollback"] == "COMPLETE"
+        assert any("stop imscmservice ims_rtp_daemon imsdatadaemon imsqmidaemon" in c for c in adb_wedged.commands)
+        assert any("*override*.xml" in c for c in adb_wedged.commands)
+        assert any("--rollback-all" in c for c in adb_wedged.commands)
+
     readiness_assertions = device_readiness.run_unit_tests()
-    emit_json({"self_test": "PASS", "assertions": 22 + readiness_assertions}, out_json)
+    emit_json({"self_test": "PASS", "assertions": 37 + readiness_assertions}, out_json)
     return 0
 
 
@@ -505,6 +755,9 @@ def run_deploy_flow(
     apk_path: Path,
     prov_path: Path,
     on_progress: Callable[[str], None] | None = None,
+    poll_timeout_sec: int = 90,
+    poll_interval_sec: float = 4.0,
+    backup_root: Path | None = None,
 ) -> dict[str, object]:
     def step(msg: str) -> None:
         if on_progress:
@@ -516,10 +769,14 @@ def run_deploy_flow(
     if "LOADED" not in str(ident["sim_state"]):
         raise RuntimeError(f"SIM must be LOADED before deployment (got {ident['sim_state']!r}).")
 
+    step("Checking ROM legacy IMS daemons & Passport baseband compatibility...")
+    env_info = validate_passport_deploy_environment(adb, ident)
+
     step("Cleaning up any superseded legacy IMS package...")
     cleanup_legacy_packages(adb, include_manager=False)
 
-    backup_dir = persistent_backup_root() / ("volte-ctl-deploy-" + dt.datetime.now().strftime("%Y%m%d-%H%M%S"))
+    root_dir = backup_root if backup_root is not None else persistent_backup_root()
+    backup_dir = root_dir / ("volte-ctl-deploy-" + dt.datetime.now().strftime("%Y%m%d-%H%M%S"))
     backup_dir.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -536,7 +793,7 @@ def run_deploy_flow(
     finally:
         adb.shell(f"rm -f {REMOTE_TMP_PROVISIONER}", check=False)
 
-    step("Installing Qcom32VolteIms.apk v2.7 & applying persistent CarrierConfig...")
+    step("Installing Qcom32VolteIms.apk v2.8 & applying persistent CarrierConfig...")
     adb.run(["install", "-r", str(apk_path)], timeout=60)
     adb.shell(
         f"am broadcast -n {IMS_ADMIN_RECEIVER} -a {IMS_ADMIN_ACTION} "
@@ -549,9 +806,54 @@ def run_deploy_flow(
 
     step("Rebooting phone normally & waiting for hands-free IMS / VoLTE registration...")
     new_boot = adb.wait_after_reboot(str(ident["boot_id"]))
-    ready_status = poll_until_volte_ready(adb, timeout_sec=90)
+    try:
+        ready_status = poll_until_volte_ready(
+            adb,
+            timeout_sec=poll_timeout_sec,
+            poll_interval_sec=poll_interval_sec,
+        )
+    except VoltePollTimeoutError as poll_err:
+        last_status = poll_err.last_status
+        post_ident = last_status.get("identity", {})
+        if isinstance(post_ident, dict) and is_post_deploy_radio_unavailable(post_ident):
+            step(
+                "ALERT: Cellular radio/SIM failed to initialize after reboot (gsm.sim.state=''). "
+                "Running automatic factory EFS rollback now to restore cellular signal..."
+            )
+            (backup_dir / "post-deploy-radio-unavailable.json").write_text(
+                json.dumps(last_status, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            try:
+                rb_res = run_rollback_flow(
+                    adb,
+                    prov_path,
+                    on_progress=on_progress,
+                    uninstall_manager=False,
+                    backup_root=backup_root,
+                )
+            except Exception as rb_exc:
+                raise RuntimeError(
+                    "Post-reboot cellular radio/SIM became unavailable (gsm.sim.state=''), AND automatic rollback "
+                    f"encountered an error ({rb_exc}). Please run `rollback` manually to restore cellular signal! "
+                    f"Pre-rollback failure snapshot: {json.dumps(last_status)}"
+                ) from poll_err
+            rb_ident = rb_res.get("identity", {})
+            restored_sim = rb_ident.get("sim_state") if isinstance(rb_ident, dict) else None
+            raise RuntimeError(
+                "Post-reboot cellular radio/SIM became unavailable (gsm.sim.state='') on this ROM/baseband combination; "
+                f"AUTOMATIC FACTORY EFS ROLLBACK COMPLETED (restored post-rollback sim_state={restored_sim!r}). "
+                "Please verify you are running Enforcing LineageOS 18.1 (`lineage-18.1-20260129-UNOFFICIAL-wseries`) "
+                "and BlackBerry Android `AAB982` `NON-HLOS.bin` baseband before trying again. / "
+                f"重启后检测到基带/SIM 未就绪 (gsm.sim.state='')，工具已自动执行出厂基带回滚并重启恢复信号 (恢复后 sim_state={restored_sim!r})！"
+                "请确认刷入 Enforcing 版 LineageOS 18.1 与 `AAB982` 基带镜像后再重新激活。 "
+                f"Pre-rollback failure snapshot: {json.dumps(last_status)}"
+            ) from poll_err
+        raise
+
     ready_status["post_reboot_boot_id"] = new_boot
     ready_status["backup_directory"] = str(backup_dir)
+    ready_status["verified_firmware_build_id"] = env_info["firmware_build_id"]
     ready_status["apk_sha256"] = sha256_bytes(apk_path.read_bytes())
     ready_status["provisioner_sha256"] = sha256_bytes(prov_path.read_bytes())
     return ready_status
@@ -656,27 +958,51 @@ def run_rollback_flow(
     adb: AdbClient,
     prov_path: Path,
     on_progress: Callable[[str], None] | None = None,
+    uninstall_manager: bool = True,
+    post_reboot_sim_wait_sec: int = 20,
+    backup_root: Path | None = None,
 ) -> dict[str, object]:
     def step(msg: str) -> None:
         if on_progress:
             on_progress(msg)
 
-    step("Enabling ADB Root & clearing persistent CarrierConfig overrides...")
+    step("Enabling ADB Root, stopping any legacy vendor IMS daemons & clearing CarrierConfig overrides...")
     adb.ensure_root()
     ident = verify_device_identity(adb, require_verified_efs_profile=True)
 
-    cleanup_legacy_packages(adb, include_manager=True)
+    adb.shell(
+        "setprop sys.ims.DATA_DAEMON_STATUS 0; setprop sys.ims.QMI_DAEMON_STATUS 0; "
+        "stop imscmservice ims_rtp_daemon imsdatadaemon imsqmidaemon 2>/dev/null || true",
+        timeout=15,
+        check=False,
+    )
+    cleanup_legacy_packages(adb, include_manager=uninstall_manager)
+    adb.shell(
+        "timeout 10 content call --uri content://org.octolab.qcom32ims.status "
+        "--method clear_override >/dev/null 2>&1 || true",
+        timeout=20,
+        check=False,
+    )
     adb.shell(
         f"am broadcast -n {IMS_ADMIN_RECEIVER} -a {IMS_ADMIN_ACTION} "
         "--es op clear_override --es cmd clear_override --include-stopped-packages",
-        timeout=30,
+        timeout=25,
+        check=False,
+    )
+    adb.shell(
+        "rm -f /data/user_de/0/com.android.phone/files/carrierconfig-org.octolab.qcom32ims-*.xml "
+        "/data/user_de/0/com.android.phone/files/carrierconfig-org.passport.volteims-*.xml "
+        "/data/user_de/0/com.android.phone/files/*override*.xml && sync",
+        timeout=20,
         check=False,
     )
     adb.run(["uninstall", IMS_PKG], timeout=30, check=False)
-    adb.run(["uninstall", MANAGER_PKG], timeout=30, check=False)
+    if uninstall_manager:
+        adb.run(["uninstall", MANAGER_PKG], timeout=30, check=False)
     adb.shell("setprop persist.radio.fallbackmode ''", timeout=15, check=False)
 
-    backup_dir = persistent_backup_root() / ("volte-ctl-rollback-" + dt.datetime.now().strftime("%Y%m%d-%H%M%S"))
+    root_dir = backup_root if backup_root is not None else persistent_backup_root()
+    backup_dir = root_dir / ("volte-ctl-rollback-" + dt.datetime.now().strftime("%Y%m%d-%H%M%S"))
     backup_dir.mkdir(parents=True, exist_ok=True)
     try:
         step("Restoring all 54 modem EFS items to factory baseline + EFS_SYNC...")
@@ -690,6 +1016,13 @@ def run_rollback_flow(
     step("Rebooting phone normally to finalize factory baseline...")
     new_boot = adb.wait_after_reboot(str(ident["boot_id"]))
     post_ident = verify_device_identity(adb, require_verified_efs_profile=True)
+    sim_deadline = time.time() + post_reboot_sim_wait_sec
+    while time.time() < sim_deadline:
+        cur_sim = str(post_ident.get("sim_state") or "").strip().upper()
+        if any(tok in cur_sim for tok in ("LOADED", "READY", "ABSENT", "PIN_REQUIRED", "PUK_REQUIRED")):
+            break
+        time.sleep(2.0)
+        post_ident = verify_device_identity(adb, require_verified_efs_profile=True)
     return {
         "rollback": "COMPLETE",
         "post_reboot_boot_id": new_boot,

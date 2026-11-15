@@ -10,7 +10,7 @@
 
 ## 1. 前置条件检查
 
-1. **手机系统**：BlackBerry Passport 全系（`ro.product.device` 为 `wolverine` / `oslo` 银色版 / `wichita` / `keian` / `wseries`），运行 LineageOS 18.1 (Android 11)。
+1. **手机系统与基带**：BlackBerry Passport 全系（`ro.product.device` 为 `wolverine` / `oslo` 银色版 / `wichita` / `keian` / `wseries`），运行 Enforcing 版 LineageOS 18.1 (`lineage-18.1-20260129-UNOFFICIAL-wseries`，无遗留 32 位 `imsqmidaemon` 争抢) 及黑莓 Android `AAB982` (`MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1`) 版 `NON-HLOS.bin` 基带。`v1.2.4-r1` 会在任何基带写入前自动拦截冲突旧版 ROM/基带，并在重启后若出现无信号（`gsm.sim.state == ""`）自动回滚恢复手机信号。
 2. **SIM 卡**：已插入开通 VoLTE 业务且处于 Passport 硬件支持频段内的 4G USIM 卡（如中国联通 4G/5G USIM 卡），手机状态栏已正常驻留 `LTE`。
 3. **开启 ADB 调试与 Root 调试**：
    - 进入手机 **设置 -> 关于手机**，连续点击 **版本号** 开启开发者选项；
@@ -54,7 +54,7 @@ python3 cli/build_all.py
 
 ## 3. 一键激活部署 VoLTE
 
-将手机通过 USB 连接电脑，确认手机无正在进行的通话后执行（普通 Windows 用户也可直接运行单文件 `qcom32-volte-1.2.3-r1-windows-x64.exe`）：
+将手机通过 USB 连接电脑，确认手机无正在进行的通话后执行（普通 Windows 用户也可直接运行单文件 `qcom32-volte-1.2.4-r1-windows-x64.exe`）：
 
 ```bash
 # 先运行 CLI 本地自检
@@ -69,7 +69,7 @@ python3 cli/volte_ctl.py install-manager
 
 部署成功时终端会输出 JSON，其中关键指标如下：
 - `"volte_stack_healthy": true`
-- `"ims_service": { "present": true, "version": "2.7-qcom32-volte", "ril_connected": true, "voice_ims_ready": true, "published_framework_reg": 1 }`
+- `"ims_service": { "present": true, "version": "2.8-qcom32-volte", "ril_connected": true, "voice_ims_ready": true, "published_framework_reg": 1 }`
 - `"qmi_imsa": { "pdp_connected": 1, "reg_status": 2, "legacy_reg": 1, "voip": 2, "voip_rat": 1 }`
 - `"framework_ims_registered": ["true"]`
 

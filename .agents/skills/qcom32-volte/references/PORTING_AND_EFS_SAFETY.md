@@ -67,8 +67,9 @@ In Qualcomm `MSM8974` EFS2, each 3GPP PDP profile under `/pdp_profiles/profile<N
 
 ## Gate 3: Verify `rild_ims0` & Align Android 11 `platform` Key
 
-1. **Check Vendor RIL Socket**:
-   `inspect` checks `ls -lZ /dev/socket/qmux_radio/rild_ims0`. As long as Qualcomm's 32-bit `libril-qc-qmi-1.so` exposes `rild_ims0`, `Qcom32VolteIms.apk` (`src/android-ims-service/`) works **without Java protocol changes**.
+1. **Check Vendor RIL Socket & Ensure Legacy Vendor IMS Daemons Are Disabled**:
+   - `inspect` checks `ls -lZ /dev/socket/qmux_radio/rild_ims0`. As long as Qualcomm's 32-bit `libril-qc-qmi-1.so` exposes `rild_ims0`, `Qcom32VolteIms.apk` (`src/android-ims-service/`) works **without Java protocol changes**.
+   - **Critical**: Ensure obsolete 32-bit Android 5/6 vendor IMS daemons (`imsqmidaemon`, `imsdatadaemon`, `ims_rtp_daemon`, `imscmservice`) are **not** running (`init.svc.*` empty or `stopped`). On Android 11, those legacy blobs break on 64-bit kernel IPC / missing `libimsmedia_jni.so` and fight `rild` over QMI IMS/NAS once `IMS_enable=01`, wedging `rild` (`sim_state == ""`, no cellular signal).
 2. **Align `sharedUserId="android.uid.phone"` Signing Certificate**:
    - **Community / Unofficial ROMs (`ro.build.tags=test-keys`)**: Prebuilt `Qcom32VolteIms.apk` is signed with the standard AOSP `platform` test key and installs directly via `adb install -r`.
    - **Official LineageOS 18.1 / Custom-Signed ROMs (`release-keys` / `dev-keys`)**: `adb install` of an AOSP-signed APK will return `INSTALL_FAILED_SHARED_USER_INCOMPATIBLE` because `com.android.phone` is signed with the ROM builder's private `platform` key. Use one of:

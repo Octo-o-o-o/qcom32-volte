@@ -157,14 +157,26 @@ public final class VolteNotificationManager {
                         simState = tm.getSimState();
                     }
                 } catch (Exception ignored) { }
+                boolean airplaneMode = false;
+                try {
+                    airplaneMode = Settings.Global.getInt(
+                            appCtx.getContentResolver(), Settings.Global.AIRPLANE_MODE_ON, 0) != 0;
+                } catch (Exception ignored) { }
                 boolean simAbsent = (simState == TelephonyManager.SIM_STATE_ABSENT);
                 boolean simReady = (simState == TelephonyManager.SIM_STATE_READY);
 
                 Bundle status = Qcom32VolteImsService.buildSanitizedStatusBundle(appCtx);
                 String simOp = status.getString("sim_operator", "");
+                String rawSimState = status.getString("sim_state", "");
                 if (!simOp.isEmpty()) {
                     simReady = true;
                 }
+                boolean radioUnavailable = !airplaneMode
+                        && !simAbsent
+                        && !simReady
+                        && simOp.isEmpty()
+                        && rawSimState.trim().isEmpty()
+                        && simState == TelephonyManager.SIM_STATE_UNKNOWN;
                 String netType = status.getString("network_type", "");
                 boolean imsHealthy = status.getBoolean("volte_healthy", false)
                         || (status.getBoolean("voice_ims_ready", false)
@@ -183,7 +195,8 @@ public final class VolteNotificationManager {
                         settleWindowElapsed,
                         qmiTestMode,
                         isEnglishLocale(),
-                        SystemClock.elapsedRealtime());
+                        SystemClock.elapsedRealtime(),
+                        radioUnavailable);
 
                 VolteStatusNotificationLogic.SessionState cur = loadState(appCtx);
                 if (trigger != null

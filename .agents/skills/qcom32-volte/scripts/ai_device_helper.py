@@ -32,6 +32,12 @@ from typing import Any
 PII_DIGITS_RE = re.compile(r"(?<![0-9a-fA-F])\b\d{11,20}\b(?![0-9a-fA-F])")
 
 SUPPORTED_32BIT_PLATFORMS = {"msm8974", "apq8084", "msm8226", "msm8926", "msm8610"}
+CONFLICTING_LEGACY_IMS_SERVICES: tuple[str, ...] = (
+    "imsqmidaemon",
+    "imsdatadaemon",
+    "ims_rtp_daemon",
+    "imscmservice",
+)
 
 PDP_TYPE_NAMES = {
     0: "IPV4",
@@ -70,7 +76,9 @@ DEVICE_FAMILIES: tuple[dict[str, Any], ...] = (
             "Keian (Porsche Design Edition) — all running LineageOS 18.1 Android 11",
         ],
         "blocked_or_risky_variants": [
-            "Phones still running stock BlackBerry 10 OS (QNX 10.3.3): do NOT use qcom32-volte; use sister repo Octo-o-o-o/bb10-volte instead."
+            "Phones still running stock BlackBerry 10 OS (QNX 10.3.3): do NOT use qcom32-volte; use sister repo Octo-o-o-o/bb10-volte instead.",
+            "Older Permissive LineageOS 18.1 ROMs with active legacy vendor `imsqmidaemon` (`init.svc.imsqmidaemon=running`): enabling `IMS_enable=01` causes QMI_IMSS/IMSA contention with `rild` and loses cellular signal (`gsm.sim.state=''`). Upgrade to Enforcing `lineage-18.1-20260129-UNOFFICIAL-wseries` first.",
+            "Older BB10 `DI.2.0.1` radios or engineering `AAA*` (`AAA594`/`AAA596`/`AAA620`) `NON-HLOS.bin` basebands: flash BlackBerry Android `AAB982` (`MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1`) `NON-HLOS.bin` before activating VoLTE.",
         ],
         "notes": "All BlackBerry Passport hardware editions (wolverine / oslo Silver Edition / wichita / keian / wseries) share unified lineage_wseries + NON-HLOS.bin modem and are unlocked for guarded 1-click deploy, APK upgrade, companion app, China Telecom 46011 fallbackmode=9 stabilization, and full 54-item EFS rollback.",
     },
@@ -470,6 +478,16 @@ def validate_profile_dict(prof: dict[str, Any]) -> list[str]:
         prov_bin = str(mp.get("provisioner_binary", "")).strip()
         if not prov_bin or ("TODO" in prov_bin.upper() and status == "verified"):
             errors.append("`modem_provisioning.provisioner_binary` cannot be empty or TODO when status=='verified'")
+        for opt_list_key in (
+            "verified_baseband_tokens",
+            "verified_firmware_build_ids",
+            "unverified_legacy_firmware_prefixes",
+            "conflicting_init_services",
+        ):
+            if opt_list_key in mp:
+                val = mp[opt_list_key]
+                if not isinstance(val, list) or not val or not all(isinstance(x, str) and x.strip() for x in val):
+                    errors.append(f"`modem_provisioning.{opt_list_key}` must be a non-empty list of strings when present")
 
     ims = prof.get("ims_service")
     if not isinstance(ims, dict):
@@ -480,6 +498,50 @@ def validate_profile_dict(prof: dict[str, Any]) -> list[str]:
         if ims.get("ril_socket") != "/dev/socket/qmux_radio/rild_ims0":
             errors.append("`ims_service.ril_socket` must be `/dev/socket/qmux_radio/rild_ims0`")
     return errors
+
+
+def extract_firmware_build_id(contents_text: str) -> str:
+    if not contents_text:
+        return ""
+    m = re.search(r"(?im)^\s*build_id\s*:\s*([A-Za-z0-9_.-]+)", contents_text)
+    if m:
+        return m.group(1).strip()
+    m_any = re.search(r"(?i)build_id\s*:\s*([A-Za-z0-9_.-]+)", contents_text)
+    return m_any.group(1).strip() if m_any else ""
+
+
+def assess_legacy_ims_daemon_conflict(props: dict[str, str]) -> list[str]:
+    hits: list[str] = []
+    for svc in CONFLICTING_LEGACY_IMS_SERVICES:
+        st = (props.get(f"init.svc.{svc}") or "").strip().lower()
+        if st in ("running", "restarting"):
+            hits.append(f"init.svc.{svc}={st}")
+    for sys_k in ("sys.ims.QMI_DAEMON_STATUS", "sys.ims.DATA_DAEMON_STATUS"):
+        if (props.get(sys_k) or "").strip() == "1":
+            hits.append(f"{sys_k}=1")
+    return hits
+
+
+def assess_passport_baseband(baseband: str, fw_build_id: str = "") -> tuple[bool, str]:
+    bb = (baseband or "").strip()
+    bb_u = bb.upper()
+    fw = (fw_build_id or "").strip()
+    if fw.upper().startswith("AAA"):
+        return (
+            False,
+            f"Legacy engineering modem container `build_id:{fw}` lacks the full 135-item AAB982 MCFG IMS baseline and loses signal when IMS_enable=01. Flash BlackBerry Android `AAB982` `NON-HLOS.bin` first.",
+        )
+    if not bb:
+        return (
+            False,
+            "`gsm.version.baseband` is empty (radio/RIL uninitialized or wedged). If signal was lost after a prior deploy, run `python3 cli/volte_ctl.py rollback` first.",
+        )
+    if "DI.4.0.1" not in bb_u and "M8974AAAAANAZM" not in bb_u:
+        return (
+            False,
+            f"Baseband `{bb}` is not BlackBerry Android `DI.4.0.1 / M8974AAAAANAZM` (e.g. BB10 `DI.2.0.1` radio). Flash `AAB982` `NON-HLOS.bin` first.",
+        )
+    return True, "OK"
 
 
 def classify_device_props(
@@ -556,6 +618,60 @@ def classify_device_props(
                     "python3 cli/volte_ctl.py install-manager",
                 ],
             }
+        ims_installed = bool(gates.get("ims_package_installed") or props.get("ims_package_installed") == "true")
+        airplane_on = (props.get("airplane_mode") or "").strip() == "1"
+        legacy_hits = assess_legacy_ims_daemon_conflict(props)
+        if sim_state == "" and not airplane_on and ims_installed:
+            return {
+                "route": "POST_DEPLOY_RADIO_LOSS_NEEDS_ROLLBACK",
+                "reason": (
+                    f"Verified profile `{matched_prof['profile_id']}` has `Qcom32VolteIms` installed, but cellular radio/SIM is unavailable "
+                    "(`gsm.sim.state=''`). This happens when VoLTE EFS was provisioned on an older Permissive ROM with `imsqmidaemon` or "
+                    "a non-`AAB982` (`AAA*` / `DI.2.0.1`) baseband. Run `python3 cli/volte_ctl.py rollback` immediately to restore signal!"
+                ),
+                "matched_profile": matched_prof["profile_id"],
+                "catalog_family": fam["family_id"] if fam else None,
+                "rom_signature": rom_sig,
+                "warnings": warnings,
+                "recommended_commands": [
+                    "python3 cli/volte_ctl.py rollback",
+                ],
+            }
+        if legacy_hits:
+            return {
+                "route": "NEEDS_ROM_UPGRADE_LEGACY_IMS_DAEMON",
+                "reason": (
+                    f"Conflicting legacy 32-bit vendor IMS daemon active ({', '.join(legacy_hits)}). "
+                    "Enabling `IMS_enable=01` on this ROM causes QMI_IMSS/IMSA contention with `rild` and loses cellular signal. "
+                    "Upgrade to Enforcing `lineage-18.1-20260129-UNOFFICIAL-wseries` (or disable vendor ims* daemons) before running `deploy`."
+                ),
+                "matched_profile": matched_prof["profile_id"],
+                "catalog_family": fam["family_id"] if fam else None,
+                "rom_signature": rom_sig,
+                "warnings": warnings,
+                "recommended_commands": [
+                    "python3 cli/volte_ctl.py status",
+                ],
+            }
+        if matched_prof["profile_id"] == "blackberry-passport-wolverine" and (
+            "gsm.version.baseband" in props or "firmware_build_id" in props
+        ):
+            bb_ok, bb_msg = assess_passport_baseband(
+                props.get("gsm.version.baseband", ""),
+                props.get("firmware_build_id", ""),
+            )
+            if not bb_ok:
+                return {
+                    "route": "NEEDS_COMPATIBLE_BASEBAND",
+                    "reason": bb_msg,
+                    "matched_profile": matched_prof["profile_id"],
+                    "catalog_family": fam["family_id"] if fam else None,
+                    "rom_signature": rom_sig,
+                    "warnings": warnings,
+                    "recommended_commands": [
+                        "python3 cli/volte_ctl.py status",
+                    ],
+                }
         if "LOADED" not in sim_state:
             return {
                 "route": "NEEDS_SIM_OR_LTE",
@@ -758,8 +874,28 @@ def run_live_inspect(repo_root: Path, adb_explicit: str | None, serial: str | No
     props: dict[str, str] = {}
     for k in prop_keys:
         props[k] = sanitize_text(sh(f"getprop {k}"))
+    for svc in CONFLICTING_LEGACY_IMS_SERVICES:
+        st = sanitize_text(sh(f"getprop init.svc.{svc}"))
+        if st:
+            props[f"init.svc.{svc}"] = st
+    for sys_k in ("sys.ims.QMI_DAEMON_STATUS", "sys.ims.DATA_DAEMON_STATUS"):
+        sv = sanitize_text(sh(f"getprop {sys_k}"))
+        if sv:
+            props[sys_k] = sv
+    props["airplane_mode"] = sanitize_text(sh("settings get global airplane_mode_on 2>/dev/null || true"))
     props["selinux"] = sanitize_text(sh("getenforce"))
     props["adb_uid"] = sanitize_text(sh("id -u"))
+    if props["adb_uid"] == "0":
+        fw_txt = sanitize_text(
+            sh(
+                "cat /firmware/IMAGE/CONTENTS.TXT /firmware/image/contents.txt "
+                "/vendor/firmware_mnt/IMAGE/CONTENTS.TXT /vendor/firmware_mnt/image/contents.txt 2>/dev/null || true"
+            )
+        )
+        fw_id = extract_firmware_build_id(fw_txt)
+        if fw_id:
+            props["firmware_build_id"] = fw_id
+    ims_pm = sh("pm path org.octolab.qcom32ims 2>/dev/null || true")
 
     rild_sock_out = sh("ls -lZ /dev/socket/qmux_radio/rild_ims0 2>/dev/null || true")
     diag_node_out = sh("ls -lZ /dev/diag 2>/dev/null || true")
@@ -799,6 +935,7 @@ def run_live_inspect(repo_root: Path, adb_explicit: str | None, serial: str | No
         "modem_ims_symbols_checked": modem_checked,
         "modem_has_ims_symbols": modem_has_syms if modem_checked else None,
         "adb_root_currently_uid0": props["adb_uid"] == "0",
+        "ims_package_installed": bool(ims_pm),
     }
 
     decision = classify_device_props(props, profiles, gates=gates, volte_healthy=volte_healthy)
@@ -987,7 +1124,80 @@ def cmd_self_test(repo_root: Path) -> int:
     assert len(search_catalog("cancro")) == 1
     assert len(search_catalog("d855")) == 1
 
-    print(json.dumps({"self_test": "PASS", "assertions": 30, "catalog_families": len(DEVICE_FAMILIES)}, indent=2))
+    # 10. Passport legacy vendor IMS daemon conflict, incompatible baseband & post-deploy radio-loss rollback routing
+    d_pp_radio_loss = classify_device_props(
+        {
+            "ro.product.brand": "blackberry",
+            "ro.product.device": "wolverine",
+            "ro.product.model": "Passport",
+            "ro.board.platform": "msm8974",
+            "ro.product.cpu.abi": "armeabi-v7a",
+            "ro.build.version.sdk": "30",
+            "ro.build.tags": "test-keys",
+            "selinux": "Permissive",
+            "gsm.sim.state": "",
+            "gsm.network.type": "Unknown",
+        },
+        profiles,
+        gates={"ims_package_installed": True},
+    )
+    assert d_pp_radio_loss["route"] == "POST_DEPLOY_RADIO_LOSS_NEEDS_ROLLBACK"
+    assert "python3 cli/volte_ctl.py rollback" in d_pp_radio_loss["recommended_commands"]
+
+    d_pp_daemon = classify_device_props(
+        {
+            "ro.product.brand": "blackberry",
+            "ro.product.device": "wolverine",
+            "ro.product.model": "Passport",
+            "ro.board.platform": "msm8974",
+            "ro.product.cpu.abi": "armeabi-v7a",
+            "ro.build.version.sdk": "30",
+            "ro.build.tags": "test-keys",
+            "selinux": "Permissive",
+            "gsm.sim.state": "LOADED",
+            "init.svc.imsqmidaemon": "running",
+        },
+        profiles,
+    )
+    assert d_pp_daemon["route"] == "NEEDS_ROM_UPGRADE_LEGACY_IMS_DAEMON"
+
+    d_pp_aaa = classify_device_props(
+        {
+            "ro.product.brand": "blackberry",
+            "ro.product.device": "wolverine",
+            "ro.product.model": "Passport",
+            "ro.board.platform": "msm8974",
+            "ro.product.cpu.abi": "armeabi-v7a",
+            "ro.build.version.sdk": "30",
+            "ro.build.tags": "test-keys",
+            "selinux": "Enforcing",
+            "gsm.sim.state": "LOADED",
+            "gsm.version.baseband": "MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1",
+            "firmware_build_id": "AAA596",
+        },
+        profiles,
+    )
+    assert d_pp_aaa["route"] == "NEEDS_COMPATIBLE_BASEBAND"
+
+    d_pp_bb10 = classify_device_props(
+        {
+            "ro.product.brand": "blackberry",
+            "ro.product.device": "wolverine",
+            "ro.product.model": "Passport",
+            "ro.board.platform": "msm8974",
+            "ro.product.cpu.abi": "armeabi-v7a",
+            "ro.build.version.sdk": "30",
+            "ro.build.tags": "test-keys",
+            "selinux": "Enforcing",
+            "gsm.sim.state": "LOADED",
+            "gsm.version.baseband": "MPSS.DI.2.0.1.c1.16-M8974AAAAANPZM-1",
+        },
+        profiles,
+    )
+    assert d_pp_bb10["route"] == "NEEDS_COMPATIBLE_BASEBAND"
+    assert extract_firmware_build_id("build_id:AAB982\n") == "AAB982"
+
+    print(json.dumps({"self_test": "PASS", "assertions": 36, "catalog_families": len(DEVICE_FAMILIES)}, indent=2))
     return 0
 
 

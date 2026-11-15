@@ -409,6 +409,123 @@ def build_ai_prompt(props: dict[str, str], match: dict[str, Any], gates: dict[st
     )
 
 
+CONFLICTING_LEGACY_IMS_SERVICES: tuple[str, ...] = (
+    "imsqmidaemon",
+    "imsdatadaemon",
+    "ims_rtp_daemon",
+    "imscmservice",
+)
+
+
+def extract_firmware_build_id(contents_text: str) -> str:
+    if not contents_text:
+        return ""
+    m = re.search(r"(?im)^\s*build_id\s*:\s*([A-Za-z0-9_.-]+)", contents_text)
+    if m:
+        return m.group(1).strip()
+    m_any = re.search(r"(?i)build_id\s*:\s*([A-Za-z0-9_.-]+)", contents_text)
+    return m_any.group(1).strip() if m_any else ""
+
+
+def assess_legacy_ims_daemon_conflict(
+    svc_states: dict[str, str],
+    sys_ims_props: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    active_services: list[str] = []
+    for svc, raw_state in (svc_states or {}).items():
+        st = (raw_state or "").strip().lower()
+        if st in ("running", "restarting"):
+            active_services.append(f"{svc}={st}")
+    active_sys_props: list[str] = []
+    for prop_k, raw_val in (sys_ims_props or {}).items():
+        val = (raw_val or "").strip()
+        if val == "1":
+            active_sys_props.append(f"{prop_k}=1")
+    conflicting = bool(active_services or active_sys_props)
+    tokens = ", ".join(active_services + active_sys_props)
+    if conflicting:
+        detail_zh = (
+            f"阻断（检测到旧版 ROM 遗留 32 位 vendor IMS 守护进程运行中：{tokens}；"
+            "开启 IMS_enable=01 后会与 rild 争抢 QMI_IMSS/IMSA 导致 RIL 崩溃无信号。"
+            "请升级 Enforcing 版 LineageOS 18.1 `lineage-18.1-20260129-UNOFFICIAL-wseries` 或在 vendor init 中禁用遗留 ims* 守护进程）"
+        )
+        detail_en = (
+            f"FAIL (Conflicting legacy 32-bit vendor IMS daemon active: {tokens}; "
+            "enabling IMS_enable=01 causes QMI_IMSS/IMSA contention and RIL radio loss. "
+            "Upgrade to Enforcing LineageOS 18.1 `lineage-18.1-20260129-UNOFFICIAL-wseries` or disable vendor ims* daemons)"
+        )
+    else:
+        detail_zh = "无遗留 vendor IMS 守护进程争抢"
+        detail_en = "No conflicting legacy vendor IMS daemons running"
+    return {
+        "conflicting": conflicting,
+        "active_services": active_services,
+        "active_sys_props": active_sys_props,
+        "detail_zh": detail_zh,
+        "detail_en": detail_en,
+    }
+
+
+def assess_passport_baseband(baseband: str, fw_build_id: str = "") -> dict[str, Any]:
+    bb = (baseband or "").strip()
+    bb_u = bb.upper()
+    fw = (fw_build_id or "").strip()
+    fw_u = fw.upper()
+    if fw_u.startswith("AAA"):
+        return {
+            "compatible": False,
+            "reason": "LEGACY_AAA_FIRMWARE",
+            "baseband": bb,
+            "firmware_build_id": fw,
+            "detail_zh": (
+                f"阻断（检测到早期工程版基带容器 `build_id:{fw}`，缺少正式版 AAB982 完整的 135 项 MCFG IMS 配置，"
+                "写入 IMS_enable=01 会导致重启后无信号；请先刷入黑莓 Android `AAB982` 版 `NON-HLOS.bin` 基带镜像）"
+            ),
+            "detail_en": (
+                f"FAIL (Legacy engineering modem container `build_id:{fw}` lacks the full 135-item AAB982 MCFG IMS baseline "
+                "and loses cellular signal when IMS_enable=01; flash BlackBerry Android `AAB982` `NON-HLOS.bin` first)"
+            ),
+        }
+    if not bb:
+        return {
+            "compatible": False,
+            "reason": "EMPTY_BASEBAND_PROP",
+            "baseband": bb,
+            "firmware_build_id": fw,
+            "detail_zh": (
+                "阻断（当前 `gsm.version.baseband` 为空，基带/RIL 未就绪或处于失联状态；"
+                "若此前在不兼容 ROM/基带上激活过 VoLTE 导致无信号，请先执行「一键恢复出厂基带回滚」恢复信号，再检查 `AAB982` 基带）"
+            ),
+            "detail_en": (
+                "FAIL (`gsm.version.baseband` is empty — RIL/radio is uninitialized or wedged; "
+                "if signal was lost after a prior deploy on an older ROM/modem, run Rollback first to restore signal)"
+            ),
+        }
+    if "DI.4.0.1" not in bb_u and "M8974AAAAANAZM" not in bb_u:
+        return {
+            "compatible": False,
+            "reason": "INCOMPATIBLE_BASEBAND",
+            "baseband": bb,
+            "firmware_build_id": fw,
+            "detail_zh": (
+                f"阻断（当前基带为 `{bb}`，非黑莓 Android `DI.4.0.1 / M8974AAAAANAZM` 基带——例如仍为 BB10 `DI.2.0.1` 射频；"
+                "请先刷入 `AAB982` 版 `NON-HLOS.bin` 基带镜像后再激活 VoLTE）"
+            ),
+            "detail_en": (
+                f"FAIL (Baseband `{bb}` is not BlackBerry Android `DI.4.0.1 / M8974AAAAANAZM` — e.g. BB10 `DI.2.0.1` radio; "
+                "flash `AAB982` `NON-HLOS.bin` baseband before activating VoLTE)"
+            ),
+        }
+    return {
+        "compatible": True,
+        "reason": "OK",
+        "baseband": bb,
+        "firmware_build_id": fw,
+        "detail_zh": f"通过（已核验兼容 Android 基带 `{bb}`{f' / {fw}' if fw else ''}）",
+        "detail_en": f"PASS (Compatible Android baseband `{bb}`{f' / {fw}' if fw else ''})",
+    }
+
+
 def run_readonly_readiness_audit(adb: Any) -> dict[str, Any]:
     """Run a 100% read-only 4-Gate hardware/ROM/RIL/Modem/Audio inspection over ADB.
     Never calls `adb root` and never writes any file, property, or EFS item.
@@ -424,17 +541,43 @@ def run_readonly_readiness_audit(adb: Any) -> dict[str, Any]:
         "ro.build.version.release",
         "ro.build.display.id",
         "ro.build.tags",
+        "ro.lineage.version",
         "gsm.version.baseband",
+        "gsm.sim.state",
         "gsm.sim.operator.numeric",
         "gsm.network.type",
+        "init.svc.ril-daemon",
     )
     props: dict[str, str] = {}
     for k in prop_keys:
         props[k] = sanitize_text(adb.shell(f"getprop {k}", timeout=15, check=False).strip())
 
+    legacy_svc_states: dict[str, str] = {}
+    for svc_name in CONFLICTING_LEGACY_IMS_SERVICES:
+        st = sanitize_text(adb.shell(f"getprop init.svc.{svc_name}", timeout=10, check=False).strip())
+        if st:
+            legacy_svc_states[svc_name] = st
+    sys_ims_props: dict[str, str] = {}
+    for sys_k in ("sys.ims.QMI_DAEMON_STATUS", "sys.ims.DATA_DAEMON_STATUS"):
+        sv = sanitize_text(adb.shell(f"getprop {sys_k}", timeout=10, check=False).strip())
+        if sv:
+            sys_ims_props[sys_k] = sv
+
     uid_out = adb.shell("id -u", timeout=15, check=False).strip()
     is_root_shell = uid_out == "0"
     selinux = sanitize_text(adb.shell("getenforce", timeout=15, check=False).strip() or "unknown")
+
+    fw_contents_raw = ""
+    if is_root_shell:
+        fw_contents_raw = sanitize_text(
+            adb.shell(
+                "cat /firmware/IMAGE/CONTENTS.TXT /firmware/image/contents.txt "
+                "/vendor/firmware_mnt/IMAGE/CONTENTS.TXT /vendor/firmware_mnt/image/contents.txt 2>/dev/null || true",
+                timeout=15,
+                check=False,
+            ).strip()
+        )
+    fw_build_id = extract_firmware_build_id(fw_contents_raw)
 
     rild_ls = sanitize_text(
         adb.shell("ls -l /dev/socket/qmux_radio/rild_ims0 2>/dev/null || true", timeout=15, check=False).strip()
@@ -459,16 +602,25 @@ def run_readonly_readiness_audit(adb: Any) -> dict[str, Any]:
         ).strip()
     )
 
-    match = identify_device_props(props)
+    match = dict(identify_device_props(props))
     sdk_str = props.get("ro.build.version.sdk") or "0"
     sdk_int = int(sdk_str) if sdk_str.isdigit() else 0
     test_keys = "test-keys" in (props.get("ro.build.tags") or "").lower()
+    is_passport = is_passport_wseries(props.get("ro.product.device") or "", props.get("ro.product.model") or "")
+    legacy_conflict = assess_legacy_ims_daemon_conflict(legacy_svc_states, sys_ims_props)
+    passport_bb = (
+        assess_passport_baseband(props.get("gsm.version.baseband") or "", fw_build_id)
+        if is_passport
+        else None
+    )
 
     # Gate 1: Android 11 (SDK 30) & Platform Signature
+    selinux_note_zh = "；注意当前内核为 SELinux Permissive，建议确认无旧版 vendor 守护进程冲突" if selinux.lower() == "permissive" else ""
+    selinux_note_en = "; note kernel is SELinux Permissive — verify no legacy vendor daemon conflicts" if selinux.lower() == "permissive" else ""
     if sdk_int == 30 and test_keys:
         g1_status = "PASS"
-        g1_zh = "通过（Android 11 SDK 30 + test-keys，可直接安装预编译 Qcom32VolteIms.apk）"
-        g1_en = "PASS (Android 11 SDK 30 + test-keys; prebuilt Qcom32VolteIms.apk installs directly)"
+        g1_zh = f"通过（Android 11 SDK 30 + test-keys，可直接安装预编译 Qcom32VolteIms.apk{selinux_note_zh}）"
+        g1_en = f"PASS (Android 11 SDK 30 + test-keys; prebuilt Qcom32VolteIms.apk installs directly{selinux_note_en})"
     elif sdk_int == 30:
         g1_status = "WARN_RELEASE_KEYS"
         g1_zh = f"注意（Android 11 SDK 30，但签名为 `{props.get('ro.build.tags')}`；需用 ROM 平台密钥重签 APK 或通过 rom-integration/ 集成）"
@@ -478,13 +630,17 @@ def run_readonly_readiness_audit(adb: Any) -> dict[str, Any]:
         g1_zh = f"未满足（当前 SDK {sdk_int} / Android {props.get('ro.build.version.release') or '?'}，需先刷入 LineageOS 18.1 Android 11）"
         g1_en = f"FAIL (Running SDK {sdk_int} / Android {props.get('ro.build.version.release') or '?'}; flash LineageOS 18.1 Android 11 first)"
 
-    # Gate 2: QCRIL IMS Socket & /dev/diag
+    # Gate 2: QCRIL IMS Socket, /dev/diag & Legacy IMS Daemon Conflict
     rild_ok = "rild_ims0" in rild_ls and "No such file" not in rild_ls
     diag_ok = "/dev/diag" in diag_ls and "No such file" not in diag_ls
-    if rild_ok and diag_ok:
+    if legacy_conflict["conflicting"]:
+        g2_status = "FAIL_LEGACY_IMS_DAEMON_CONFLICT"
+        g2_zh = legacy_conflict["detail_zh"]
+        g2_en = legacy_conflict["detail_en"]
+    elif rild_ok and diag_ok:
         g2_status = "PASS"
-        g2_zh = "通过（已检出 /dev/socket/qmux_radio/rild_ims0 与 /dev/diag）"
-        g2_en = "PASS (/dev/socket/qmux_radio/rild_ims0 and /dev/diag both present)"
+        g2_zh = "通过（已检出 /dev/socket/qmux_radio/rild_ims0 与 /dev/diag，且无遗留 imsqmidaemon 争抢）"
+        g2_en = "PASS (/dev/socket/qmux_radio/rild_ims0 and /dev/diag both present; no legacy imsqmidaemon contention)"
     elif not is_root_shell and (not rild_ok or not diag_ok):
         g2_status = "NEEDS_ROOT_VISIBILITY"
         g2_zh = (
@@ -500,12 +656,18 @@ def run_readonly_readiness_audit(adb: Any) -> dict[str, Any]:
         g2_zh = f"待核查（rild_ims0={'存在' if rild_ok else '未检出'}, /dev/diag={'存在' if diag_ok else '未检出'}）"
         g2_en = f"WARN (rild_ims0={'present' if rild_ok else 'missing'}, /dev/diag={'present' if diag_ok else 'missing'})"
 
-    # Gate 3: Modem Hexagon IMS Engine
-    if modem_hits:
+    # Gate 3: Modem Hexagon IMS Engine & Passport Baseband Verification
+    if passport_bb is not None and not passport_bb["compatible"]:
+        g3_status = "FAIL_INCOMPATIBLE_BASEBAND"
+        g3_zh = passport_bb["detail_zh"]
+        g3_en = passport_bb["detail_en"]
+    elif modem_hits:
         g3_status = "PASS"
         first_modem = modem_hits.splitlines()[0]
-        g3_zh = f"通过（基带镜像检出 `qp_ims_reg_config` IMS 引擎符号：{first_modem}）"
-        g3_en = f"PASS (`qp_ims_reg_config` IMS symbol confirmed in {first_modem})"
+        bb_note_zh = f"，基带版本 `{fw_build_id}`" if fw_build_id else ""
+        bb_note_en = f", container `{fw_build_id}`" if fw_build_id else ""
+        g3_zh = f"通过（基带镜像检出 `qp_ims_reg_config` IMS 引擎符号：{first_modem}{bb_note_zh}）"
+        g3_en = f"PASS (`qp_ims_reg_config` IMS symbol confirmed in {first_modem}{bb_note_en})"
     elif not is_root_shell:
         g3_status = "NEEDS_ROOT_VISIBILITY"
         g3_zh = "待开启 Root 调试后只读扫描 `/firmware/image/modem*` 中的 `qp_ims_reg_config` 符号"
@@ -514,6 +676,29 @@ def run_readonly_readiness_audit(adb: Any) -> dict[str, Any]:
         g3_status = "WARN_NOT_DETECTED"
         g3_zh = "未直接扫到（可能基带分区为 Q6ZIP 压缩段或挂载路径不同，可由 AI 用 `qcom32-volte` 技能深入核验）"
         g3_en = "WARN (Not matched in plain strings; may use Q6ZIP compressed segments or alternate mount path — check with AI Skill)"
+
+    if is_passport and sdk_int == 30 and (
+        legacy_conflict["conflicting"] or (passport_bb is not None and not passport_bb["compatible"])
+    ):
+        reasons_zh: list[str] = []
+        reasons_en: list[str] = []
+        if legacy_conflict["conflicting"]:
+            reasons_zh.append(legacy_conflict["detail_zh"])
+            reasons_en.append(legacy_conflict["detail_en"])
+        if passport_bb is not None and not passport_bb["compatible"]:
+            reasons_zh.append(passport_bb["detail_zh"])
+            reasons_en.append(passport_bb["detail_en"])
+        match["route"] = "NEEDS_ROM_OR_BASEBAND_UPGRADE"
+        match["summary_zh"] = (
+            "基带写入已自动保护阻断："
+            + "；".join(reasons_zh)
+            + "。若您此前已在旧版系统上激活导致当前无信号，请直接点击主界面「3. 恢复出厂基带回滚」即可一键恢复信号！"
+        )
+        match["summary_en"] = (
+            "EFS write guarded & blocked: "
+            + "; ".join(reasons_en)
+            + ". If cellular signal was lost after an earlier deploy, run [3. Rollback to Factory EFS] first to restore signal!"
+        )
 
     # Gate 4: Audio HAL VoLTE Voice Path
     if audio_hits:
@@ -533,10 +718,18 @@ def run_readonly_readiness_audit(adb: Any) -> dict[str, Any]:
             "rild_ims0_ls": rild_ls,
             "diag_ls": diag_ls,
             "daemons": qmuxd_pid,
+            "legacy_ims_conflict": legacy_conflict,
             "detail_zh": g2_zh,
             "detail_en": g2_en,
         },
-        "gate3_modem_ims": {"status": g3_status, "modem_hits": modem_hits, "detail_zh": g3_zh, "detail_en": g3_en},
+        "gate3_modem_ims": {
+            "status": g3_status,
+            "modem_hits": modem_hits,
+            "firmware_build_id": fw_build_id,
+            "passport_baseband_check": passport_bb,
+            "detail_zh": g3_zh,
+            "detail_en": g3_en,
+        },
         "gate4_audio_hal": {"status": g4_status, "audio_hits": audio_hits, "detail_zh": g4_zh, "detail_en": g4_en},
     }
 
@@ -545,6 +738,9 @@ def run_readonly_readiness_audit(adb: Any) -> dict[str, Any]:
         "readonly_zero_writes": True,
         "shell_uid": uid_out,
         "selinux": selinux,
+        "firmware_build_id": fw_build_id,
+        "legacy_ims_conflict": legacy_conflict,
+        "passport_baseband_check": passport_bb,
         "props": props,
         "catalog_match": match,
         "gates": gates,
@@ -864,5 +1060,64 @@ def run_unit_tests() -> int:
     check(mock_audit["gates"]["gate4_audio_hal"]["status"] == "PASS", "Mock Gate 4 PASS")
     check(GITHUB_REPO_URL in mock_audit["formatted_zh"], "Formatted ZH report has GitHub URL")
     check(SKILL_PATH_AGENTS in mock_audit["ai_prompt_en"], "AI prompt EN cites skill path")
+
+    # 5. Legacy vendor IMS daemon & Passport baseband pre-flight helpers
+    check(extract_firmware_build_id("flavor:none\nbuild_id:AAB982\n") == "AAB982", "extract AAB982")
+    check(extract_firmware_build_id("build_id:AAA596") == "AAA596", "extract AAA596")
+    check(extract_firmware_build_id("") == "", "extract empty")
+
+    no_conflict = assess_legacy_ims_daemon_conflict({"imsqmidaemon": "stopped"}, {"sys.ims.QMI_DAEMON_STATUS": "0"})
+    check(no_conflict["conflicting"] is False, "stopped daemon is non-conflicting")
+    yes_conflict = assess_legacy_ims_daemon_conflict({"imsqmidaemon": "running"}, {})
+    check(yes_conflict["conflicting"] is True and "imsqmidaemon=running" in yes_conflict["active_services"], "running imsqmidaemon flagged")
+    prop_conflict = assess_legacy_ims_daemon_conflict({}, {"sys.ims.QMI_DAEMON_STATUS": "1"})
+    check(prop_conflict["conflicting"] is True, "sys.ims.QMI_DAEMON_STATUS=1 flagged")
+
+    bb_ok = assess_passport_baseband("MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1", "AAB982")
+    check(bb_ok["compatible"] is True, "AAB982 DI.4.0.1 compatible")
+    bb_aaa = assess_passport_baseband("MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1", "AAA596")
+    check(bb_aaa["compatible"] is False and bb_aaa["reason"] == "LEGACY_AAA_FIRMWARE", "AAA596 blocked")
+    bb_bb10 = assess_passport_baseband("MPSS.DI.2.0.1.c1.16-00018-M8974AAAAANPZM-1", "")
+    check(bb_bb10["compatible"] is False and bb_bb10["reason"] == "INCOMPATIBLE_BASEBAND", "BB10 DI.2.0.1 blocked")
+    bb_empty = assess_passport_baseband("", "")
+    check(bb_empty["compatible"] is False and bb_empty["reason"] == "EMPTY_BASEBAND_PROP", "Empty baseband blocked")
+
+    class _MockConflictedPassportAdb:
+        def shell(self, cmd: str, timeout: int = 15, check: bool = False) -> str:
+            table = {
+                "getprop ro.product.brand": "blackberry",
+                "getprop ro.product.manufacturer": "BlackBerry",
+                "getprop ro.product.model": "Passport",
+                "getprop ro.product.device": "wolverine",
+                "getprop ro.board.platform": "msm8974",
+                "getprop ro.product.cpu.abi": "armeabi-v7a",
+                "getprop ro.build.version.sdk": "30",
+                "getprop ro.build.version.release": "11",
+                "getprop ro.build.display.id": "lineage_wseries-userdebug 11 RQ3A test-keys",
+                "getprop ro.build.tags": "test-keys",
+                "getprop gsm.version.baseband": "MPSS.DI.4.0.1-00158-M8974AAAAANAZM-1",
+                "getprop gsm.sim.state": "LOADED",
+                "getprop init.svc.imsqmidaemon": "running",
+                "id -u": "0",
+                "getenforce": "Permissive",
+            }
+            if cmd in table:
+                return table[cmd]
+            if "CONTENTS.TXT" in cmd:
+                return "build_id:AAA596"
+            if "rild_ims0" in cmd:
+                return "srw-rw---- 1 radio radio 0 /dev/socket/qmux_radio/rild_ims0"
+            if "/dev/diag" in cmd:
+                return "crw-rw---- 1 system qcom_diag 249, 0 /dev/diag"
+            if "mixer_paths" in cmd:
+                return "/vendor/etc/mixer_paths.xml"
+            if "qp_ims_reg_config" in cmd:
+                return "/firmware/image/modem.b18"
+            return ""
+
+    bad_pp_audit = run_readonly_readiness_audit(_MockConflictedPassportAdb())
+    check(bad_pp_audit["catalog_match"]["route"] == "NEEDS_ROM_OR_BASEBAND_UPGRADE", "Conflicted Passport route downgraded")
+    check(bad_pp_audit["gates"]["gate2_ril_diag"]["status"] == "FAIL_LEGACY_IMS_DAEMON_CONFLICT", "Gate 2 catches imsqmidaemon")
+    check(bad_pp_audit["gates"]["gate3_modem_ims"]["status"] == "FAIL_INCOMPATIBLE_BASEBAND", "Gate 3 catches AAA596")
 
     return assertions
