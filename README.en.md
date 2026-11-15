@@ -8,7 +8,7 @@ Qcom32 VoLTE provides an Android 11 IMS service and device-specific modem EFS to
 >
 > **Modem EFS writes are risky.** Make an independent device-specific EFS backup (for example `modemst1`, `modemst2`, `fsg`) first, keep it off-device, and use at your own risk. The tool automatically saves an inspection log and hashes, **not a complete restorable backup**. Rollback writes fixed values and deletes items; it does not guarantee restoration of original bytes. Verify your own recovery plan.
 >
-> **Published v1.2.4-r1 artifacts do not contain the new edition gate or claims corrections.** They still allow one-click writes on `oslo`, `wichita` and `keian`; do not use those writes on unverified editions.
+> **v1.2.4-r1 and earlier lack the new edition gate** and still allow one-click writes on unverified editions. Upgrade to v1.2.5-r1; do not use the older builds to write on those devices.
 
 ## Verification checklist
 
@@ -35,7 +35,20 @@ python3 cli/volte_ctl.py rollback     # fixed cleanup, not original-byte restora
 python3 cli/gui.py
 ```
 
-Use the Windows EXE GUI “Run Fixed EFS Cleanup & Uninstall”, or `<EXE> --cli rollback`; the Android manager also has a rollback action. The same original-backup limitation applies. Registration alone does not establish successful calls. Four delivery methods (Windows EXE, Android manager, portable CLI/GUI and ROM integration) were tested end to end only on the one Unicom unit. Published downloads are on [Releases](https://github.com/Octo-o-o-o/qcom32-volte/releases).
+Use the Windows EXE GUI “Run Fixed EFS Cleanup & Uninstall”, or `<EXE> --cli rollback`; the Android manager also has a rollback action. The same original-backup limitation applies. Registration alone does not establish successful calls. Four delivery methods (Windows EXE, Android manager, portable CLI/GUI and ROM integration) were tested end to end only on the one Unicom unit.
+
+## v1.2.5-r1 downloads
+
+Each asset also has an individual `.sha256` file.
+
+| Asset | R2 mirror | GitHub Release |
+| --- | --- | --- |
+| Windows EXE | [Download](https://qcom32-downloads.octoooo.com/v1.2.5-r1/qcom32-volte-1.2.5-r1-windows-x64.exe) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.5-r1/qcom32-volte-1.2.5-r1-windows-x64.exe.sha256) | [Download](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/qcom32-volte-1.2.5-r1-windows-x64.exe) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/qcom32-volte-1.2.5-r1-windows-x64.exe.sha256) |
+| Manager APK | [Download](https://qcom32-downloads.octoooo.com/v1.2.5-r1/Qcom32VolteManager-1.2.5-r1.apk) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.5-r1/Qcom32VolteManager-1.2.5-r1.apk.sha256) | [Download](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/Qcom32VolteManager-1.2.5-r1.apk) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/Qcom32VolteManager-1.2.5-r1.apk.sha256) |
+| IMS APK 2.8 | [Download](https://qcom32-downloads.octoooo.com/v1.2.5-r1/Qcom32VolteIms-2.8-r1-platform.apk) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.5-r1/Qcom32VolteIms-2.8-r1-platform.apk.sha256) | [Download](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/Qcom32VolteIms-2.8-r1-platform.apk) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/Qcom32VolteIms-2.8-r1-platform.apk.sha256) |
+| Portable ZIP | [Download](https://qcom32-downloads.octoooo.com/v1.2.5-r1/qcom32-volte-1.2.5-r1-portable.zip) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.5-r1/qcom32-volte-1.2.5-r1-portable.zip.sha256) | [Download](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/qcom32-volte-1.2.5-r1-portable.zip) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/qcom32-volte-1.2.5-r1-portable.zip.sha256) |
+| Source ZIP | [Download](https://qcom32-downloads.octoooo.com/v1.2.5-r1/qcom32-volte-1.2.5-r1-source.zip) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.5-r1/qcom32-volte-1.2.5-r1-source.zip.sha256) | [Download](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/qcom32-volte-1.2.5-r1-source.zip) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/qcom32-volte-1.2.5-r1-source.zip.sha256) |
+| Checksums | [SHA256SUMS.txt](https://qcom32-downloads.octoooo.com/v1.2.5-r1/SHA256SUMS.txt) | [SHA256SUMS.txt](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/SHA256SUMS.txt) |
 
 ## Local checks
 
@@ -54,6 +67,9 @@ Thanks to [balika011](https://balika011.hu) for the LineageOS 18.1 `wseries` por
 
 Source-available under [PolyForm Noncommercial 1.0.0](LICENSE); a commercial license is available: [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md).
 
-## Unreleased
+## v1.2.5-r1 (2026-11-15)
 
-Gates for unverified Passport editions and corrected verification, emergency-calling and recovery claims are **not in published v1.2.4-r1 artifacts**, which still allow one-click writes on `oslo`, `wichita` and `keian`. No new artifacts have been built or published.
+- Unverified `oslo`, `wichita`, `keian`, `wseries` and `windermere` are read-only by default in the CLI, GUI, EXE and Manager. Experimental CLI writes require explicit opt-in and typed confirmation, or a second explicit acknowledgement for non-interactive use. Rollback remains available for recognized Passport editions.
+- Corrected claims: calls were verified on one SQW100-1 `wolverine` with China Unicom 46001; China Telecom has LTE attach and IMS registration evidence only, with calls untested; China Mobile is untested, SMS over IMS is not implemented, and emergency calls are unsupported. Rollback writes a fixed baseline and unlinks created items, and cannot restore each device's original values; `--inspect-state` is not a backup. Independently back up `modemst1`, `modemst2` and `fsg`.
+- Includes the v1.2.4 ROM/baseband preflight guards and post-reboot radio-loss auto-rollback, verified offline or with mock ADB only, not on a failing real device.
+- v1.2.4-r1 and earlier still allow one-click writes on unverified editions; upgrade to v1.2.5-r1.

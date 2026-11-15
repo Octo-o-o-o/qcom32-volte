@@ -15,7 +15,7 @@ description: >-
 
 Only one SQW100-1 `wolverine` on China Unicom 46001 has complete call verification. China Telecom 46003/46011 has LTE attach and IMS registration only; calls are untested (EPS-only fix: 149 s without a drop). China Mobile is untested; FDD B3/B8 is theoretical and Passport lacks TDD B38–41. IMS SMS is not implemented. Emergency calls are not supported or certified; keep another phone. VoWiFi, video, supplementary services and non-Chinese carriers are unsupported or untested.
 
-EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE / 实验性，未经真机验证: `oslo`, `wichita`, `keian`, `wseries`, `windermere` default to read-only; CLI EFS writes require `--experimental-unverified-edition` plus typed confirmation or `--i-understand-unverified-baseband-write`. GUI/on-device activation is blocked; rollback remains available for Passport. Non-Passport baseband writes are blocked. Published v1.2.3-r1 artifacts lack this new gate.
+EXPERIMENTAL — NOT VERIFIED ON REAL HARDWARE / 实验性，未经真机验证: `oslo`, `wichita`, `keian`, `wseries`, `windermere` default to read-only; CLI EFS writes require `--experimental-unverified-edition` plus typed confirmation or `--i-understand-unverified-baseband-write`. GUI/on-device activation is blocked; rollback remains available for Passport. Non-Passport baseband writes are blocked. v1.2.4-r1 and earlier lack this gate and still allow one-click writes on unverified editions; upgrade to v1.2.5-r1.
 
 Back up EFS independently and keep the backup off-device before writing. The automatic inspection log is not a restorable full backup, and fixed rollback does not guarantee the original bytes. This project is source-available (PolyForm Noncommercial 1.0.0; commercial license available).
 

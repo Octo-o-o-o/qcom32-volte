@@ -1,7 +1,7 @@
 export const REPOSITORY_URL = 'https://github.com/Octo-o-o-o/qcom32-volte';
 export const SISTER_REPOSITORY_URL = 'https://github.com/Octo-o-o-o/bb10-volte';
-export const RELEASE_TAG = 'v1.2.4-r1';
-// The published artifact predates the source edition gate; never imply otherwise.
+export const RELEASE_TAG = 'v1.2.5-r1';
+// The v1.2.4-r1 and earlier releases predate the edition gate.
 export const VERIFICATION_SCOPE = Object.freeze({
   verifiedDevice: 'one SQW100-1 wolverine',
   verifiedCalls: 'China Unicom 46001',

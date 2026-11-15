@@ -8,7 +8,7 @@ Qcom32 VoLTE 包含 Android 11 原生 IMS 服务和按设备隔离的基带 EFS 
 >
 > **基带写入有风险。** 修改前独立备份本机 modem EFS（如 `modemst1`、`modemst2`、`fsg`），将备份保存在手机之外，风险自负。当前工具自动保存的是 EFS 检查日志和哈希，**不是可完整回灌的原始备份**；回滚执行固定值写入和条目删除，不保证恢复本机原值。请核实自己的恢复方案。
 >
-> **已发布的 v1.2.4-r1 制品尚无本次机型门禁与口径修正**，仍允许 `oslo`、`wichita`、`keian` 一键写入；在未经验证版本上不要运行其写入操作。
+> **v1.2.4-r1 及更早版本缺少本次机型门禁**，仍允许对未经验证的版本一键写入；请升级至 v1.2.5-r1，勿用旧版在这些机型上写入。
 
 ## 验证范围
 
@@ -37,7 +37,20 @@ python3 cli/gui.py                               # 图形界面
 
 Windows EXE 图形界面可点击“执行固定基带清理并卸载”，命令行形式为 `<EXE> --cli rollback`；Android 管理端可点击回滚。各入口的回滚均有上述原值限制。完整步骤见 [安装与回滚](docs/guide/INSTALL_AND_ROLLBACK.md)。请以手机实际通话验证为准，IMS 注册不等于通话成功。
 
-四种交付形态包括 Windows 桌面 EXE、Android 管理端、跨平台 CLI/GUI 和 ROM 源码集成；四种方式仅在上述一台联通设备上完成端到端验证。发行文件见 [Releases](https://github.com/Octo-o-o-o/qcom32-volte/releases)。
+四种交付形态包括 Windows 桌面 EXE、Android 管理端、跨平台 CLI/GUI 和 ROM 源码集成；四种方式仅在上述一台联通设备上完成端到端验证。
+
+## v1.2.5-r1 下载
+
+每个文件均提供独立的 `.sha256` 校验文件。
+
+| 文件 | R2 镜像 | GitHub Release |
+| --- | --- | --- |
+| Windows EXE | [下载](https://qcom32-downloads.octoooo.com/v1.2.5-r1/qcom32-volte-1.2.5-r1-windows-x64.exe) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.5-r1/qcom32-volte-1.2.5-r1-windows-x64.exe.sha256) | [下载](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/qcom32-volte-1.2.5-r1-windows-x64.exe) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/qcom32-volte-1.2.5-r1-windows-x64.exe.sha256) |
+| Manager APK | [下载](https://qcom32-downloads.octoooo.com/v1.2.5-r1/Qcom32VolteManager-1.2.5-r1.apk) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.5-r1/Qcom32VolteManager-1.2.5-r1.apk.sha256) | [下载](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/Qcom32VolteManager-1.2.5-r1.apk) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/Qcom32VolteManager-1.2.5-r1.apk.sha256) |
+| IMS APK 2.8 | [下载](https://qcom32-downloads.octoooo.com/v1.2.5-r1/Qcom32VolteIms-2.8-r1-platform.apk) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.5-r1/Qcom32VolteIms-2.8-r1-platform.apk.sha256) | [下载](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/Qcom32VolteIms-2.8-r1-platform.apk) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/Qcom32VolteIms-2.8-r1-platform.apk.sha256) |
+| 便携包 | [下载](https://qcom32-downloads.octoooo.com/v1.2.5-r1/qcom32-volte-1.2.5-r1-portable.zip) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.5-r1/qcom32-volte-1.2.5-r1-portable.zip.sha256) | [下载](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/qcom32-volte-1.2.5-r1-portable.zip) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/qcom32-volte-1.2.5-r1-portable.zip.sha256) |
+| 源码包 | [下载](https://qcom32-downloads.octoooo.com/v1.2.5-r1/qcom32-volte-1.2.5-r1-source.zip) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.5-r1/qcom32-volte-1.2.5-r1-source.zip.sha256) | [下载](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/qcom32-volte-1.2.5-r1-source.zip) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/qcom32-volte-1.2.5-r1-source.zip.sha256) |
+| 全部校验和 | [SHA256SUMS.txt](https://qcom32-downloads.octoooo.com/v1.2.5-r1/SHA256SUMS.txt) | [SHA256SUMS.txt](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.5-r1/SHA256SUMS.txt) |
 
 ## 本地验证
 
@@ -56,6 +69,9 @@ cd website && npm test
 
 源码可见：适用 [PolyForm Noncommercial 1.0.0](LICENSE)，商业授权另行提供，详见 [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md)。
 
-## Unreleased
+## v1.2.5-r1 (2026-11-15)
 
-限制未经真机验证的 Passport 版本写入，澄清验证范围、紧急呼叫和基带恢复边界。**已发布 v1.2.4-r1 制品不含这些门禁与口径修正，仍允许 oslo、wichita、keian 一键写入**；本次修改尚未生成或发布新版制品。
+- `oslo`、`wichita`、`keian`、`wseries`、`windermere` 未经真机验证，在 CLI、GUI、EXE 和 Manager 中默认只读；实验性 CLI 写入需显式开启并输入确认，非交互运行须提供第二项明确确认。已识别的 Passport 版本均保留回滚入口。
+- 修正验证与恢复口径：仅一台联通 46001 的 SQW100-1 `wolverine` 完成通话实测；电信仅验证 LTE 驻留及 IMS 注册，通话未测；移动未测，IMS 短信未实现，紧急呼叫不支持。回滚写入固定基线并删除创建的条目，不保证恢复本机原值；`--inspect-state` 不是备份。请自行备份 `modemst1`、`modemst2`、`fsg`。
+- 包含 v1.2.4 的 ROM/基带预检和重启后无信号自动回滚；这些防护仅经离线或模拟 ADB 验证，未在故障真机上验证。
+- v1.2.4-r1 及更早版本仍允许未经验证的版本一键写入；用户应升级到 v1.2.5-r1。

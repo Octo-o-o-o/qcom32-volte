@@ -96,7 +96,7 @@ CATALOG_FAMILIES: list[dict[str, Any]] = [
             "SCL23",
             "SC-04F",
         ],
-        "name_zh": "三星 Galaxy S5 骁龙全系 (klte / klteduos / kltechn)",
+        "name_zh": "三星 Galaxy S5 骁龙候选机型 (klte / klteduos / kltechn)",
         "name_en": "Samsung Galaxy S5 Snapdragon Family (klte / klteduos / kltechn)",
         "rom_zh": "官方/非官方 LineageOS 18.1（注意：官方签名为 release-keys，需平台密钥重签或放入 priv-app）",
         "rom_en": "Official/Unofficial LineageOS 18.1 (Note: official builds use release-keys; sign APK with ROM key or use priv-app)",

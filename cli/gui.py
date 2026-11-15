@@ -4,7 +4,7 @@
 Runs identically:
   - From source (`python cli/gui.py` or `Start-GUI.cmd`)
   - From portable ZIP (`python3 cli/gui.py`)
-  - From standalone Windows x64 EXE (`qcom32-volte-1.2.4-r1-windows-x64.exe`, with bundled Python/Tk/ADB/Payloads)
+  - From standalone Windows x64 EXE (`qcom32-volte-1.2.5-r1-windows-x64.exe`, with bundled Python/Tk/ADB/Payloads)
 
 Supports:
   - `--self-test <report.json>` for automated offline build & packaging verification without touching any connected phone
@@ -35,7 +35,7 @@ if str(SCRIPT_DIR) not in sys.path:
 import device_readiness  # noqa: E402
 import volte_ctl  # noqa: E402
 
-APP_VERSION = "1.2.4-r1"
+APP_VERSION = "1.2.5-r1"
 WEBSITE_URL = "https://qcom32-volte.octoooo.com/"
 SISTER_URL = "https://bb10-volte.octoooo.com/"
 GITHUB_URL = "https://github.com/Octo-o-o-o/qcom32-volte"
