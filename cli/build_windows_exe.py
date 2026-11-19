@@ -208,6 +208,8 @@ def main() -> int:
         "volte_ctl",
         "--hidden-import",
         "device_readiness",
+        "--hidden-import",
+        "oslo_rom",
         "--add-data",
         f"{staged_payloads}{os.pathsep}payloads",
         "--add-data",

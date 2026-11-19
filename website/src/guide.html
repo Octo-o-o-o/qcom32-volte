@@ -60,13 +60,13 @@
   <main id="main">
     <section class="guide-hero" aria-labelledby="guide-title">
       <div class="shell">
-        <p class="eyebrow">SETUP &amp; INTEGRATION GUIDE · <span data-release-version>v1.2.6-r1</span></p>
+        <p class="eyebrow">SETUP &amp; INTEGRATION GUIDE · <span data-release-version>v1.2.7-r1</span></p>
         <h1 id="guide-title">从检查设备到安装与回滚</h1>
         <p class="guide-intro">仅一台联通 wolverine 完整实测。</p>
-        <p class="hero-note"><strong>⚠️ 紧急呼叫不支持、未认证；请备另一部手机。</strong> LTE-only 网络可能无法拨通 110/112/911。写入基带有风险：请先独立备份 EFS 并存到手机之外，风险自负；检查日志不是完整备份，固定回滚不保证原值恢复。请自行备份 modemst1、modemst2、fsg。v1.2.4-r1 及更早版本仍允许对未经验证版本一键写入，且 v1.2.4-r1 / v1.2.5-r1 会误拒 .DI.4.0.1 运行时基带；请升级至 v1.2.6-r1。v1.2.4 的预检和自动回滚与 v1.2.6 的基带识别修正仅经离线/模拟验证，未在故障真机上验证。</p>
+        <p class="hero-note"><strong>⚠️ 紧急呼叫不支持、未认证；请备另一部手机。</strong> LTE-only 网络可能无法拨通 110/112/911。写入基带有风险：请先独立备份 EFS 并存到手机之外，风险自负；检查日志不是完整备份，固定回滚不保证原值恢复。请自行备份 modemst1、modemst2、fsg。v1.2.4-r1 及更早版本仍允许对未经验证版本一键写入，且 v1.2.4-r1 / v1.2.5-r1 会误拒 .DI.4.0.1 运行时基带；请升级至 v1.2.7-r1。v1.2.4 的预检和自动回滚与 v1.2.6 的基带识别修正仅经离线/模拟验证，未在故障真机上验证。</p>
         <div class="guide-actions">
-          <a class="button button-primary" data-download="windows" href="https://qcom32-downloads.octoooo.com/v1.2.6-r1/qcom32-volte-1.2.6-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>下载 Windows 一键版 EXE</span><small>推荐 · 无需 Magisk</small></span></a>
-          <a class="button button-secondary" data-download="manager" href="https://qcom32-downloads.octoooo.com/v1.2.6-r1/Qcom32VolteManager-1.2.6-r1.apk" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>下载手机端管理 APK</span><small>免 su 实时状态面板 + 多机型体检</small></span></a>
+          <a class="button button-primary" data-download="windows" href="https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>下载 Windows 一键版 EXE</span><small>推荐 · 无需 Magisk</small></span></a>
+          <a class="button button-secondary" data-download="manager" href="https://qcom32-downloads.octoooo.com/v1.2.7-r1/Qcom32VolteManager-1.2.7-r1.apk" target="_blank" rel="noopener noreferrer"><span class="button-copy"><span>下载手机端管理 APK</span><small>免 su 实时状态面板 + 多机型体检</small></span></a>
         </div>
       </div>
     </section>
@@ -94,7 +94,7 @@
         <section class="guide-section" id="prepare">
           <h2>01. 前提条件与已验证设备 Profile</h2>
           <ol class="step-list">
-            <li>一台 SQW100-1 wolverine 验证；oslo、wichita、keian、wseries、windermere 未经真机验证；本仓库源码默认只读，回滚保留。</li>
+            <li>一台 SQW100-1 wolverine 验证；oslo、wichita、keian、wseries、windermere 默认只读，回滚保留。</li>
             <li>源码部署还须检查旧 IMS 守护进程，运行时基带包含 DI.4.0.1（如 .DI.4.0.1-00158-M8974AAAAANAZM-1）和 AAAAANAZM，Root 下固件 build_id 为 AAB982（免 Root 只读体检遇 SELinux 限制将标记待 Root 复核，不误判基带不兼容）；回滚不受部署门禁阻断。重启后符合无信号条件时会尝试固定回滚，不能保证恢复原值或信号；此防护仅经离线/模拟验证。</li>
             <li><strong>SIM 卡要求：</strong>已插入开通了 VoLTE 高清语音业务的 4G/5G USIM 卡，且处于机身射频支持的 LTE 频段内并正常驻留 <code>LTE</code>。</li>
             <li><strong>保持空闲状态：</strong>执行写入与重启前，请确认当前没有正在进行的通话，电量建议高于 30%，并使用可靠的数据线连接电脑。</li>
@@ -116,9 +116,9 @@
         <section class="guide-section" id="method-windows">
           <h2>03. 方式一：Windows 桌面一键激活工具（最推荐）</h2>
           <ol class="step-list">
-            <li>下载 <code>qcom32-volte-1.2.6-r1-windows-x64.exe</code> 并双击运行（无需安装 Python 或 ADB）。</li>
+            <li>下载 <code>qcom32-volte-1.2.7-r1-windows-x64.exe</code> 并双击运行（无需安装 Python 或 ADB）。</li>
             <li>确认顶部「ADB 设备」下拉框已识别到手机序列号，点击 <strong>「1. 只读检查状态」</strong>（非 Passport 的高通 32 位手机可点击 <strong>「多机型识别与只读适配体检（AI + GitHub）」</strong> 查看 4 道门禁体检并一键复制 AI 提示词）。</li>
-            <li>v1.2.6-r1 匹配 wolverine 后显示按钮 <strong>「2. 激活 VoLTE（wolverine）」</strong>；检查日志并非可恢复的 EFS 原值备份。</li>
+            <li>v1.2.7-r1 匹配 wolverine 后显示按钮 <strong>「2. 激活 VoLTE（wolverine）」</strong>；检查日志并非可恢复的 EFS 原值备份。</li>
             <li>程序保存 EFS 检查日志和哈希，执行配置写入、安装与重启；日志不能恢复全部原值。</li>
             <li>（推荐顺手点一下）点击 <strong>「安装手机端管理 App」</strong>，将伴侣应用推送到手机桌面，可在手机屏幕查看状态。</li>
           </ol>
@@ -126,7 +126,7 @@
 
         <section class="guide-section" id="method-manager">
           <h2>04. 方式二：手机端独立状态与管理 App</h2>
-          <p>安装 <code>Qcom32VolteManager-1.2.6-r1.apk</code>（桌面图标名称 <strong>Qcom32 VoLTE</strong>）：</p>
+          <p>安装 <code>Qcom32VolteManager-1.2.7-r1.apk</code>（桌面图标名称 <strong>Qcom32 VoLTE</strong>）：</p>
           <ol class="step-list">
             <li><strong>无 Magisk 场景（免 su 实时状态面板 + 多机型只读体检）：</strong>打开应用点击「刷新实时状态」，通过只读 <code>content://org.octolab.qcom32ims.status</code> 接口读取当前 SIM 运营商、<code>rild_ims0</code>、<code>QMI_IMSA</code> 与系统注册状态；若安装在其他高通 32 位机型上，可点击「多机型识别与只读适配体检」生成零写入诊断报告并复制 AI 提示词。</li>
             <li>手机端源码仅允许 wolverine 激活；其他 Passport 版本可只读或回滚。</li>
@@ -135,7 +135,7 @@
 
         <section class="guide-section" id="method-cli">
           <h2>05. 方式三：macOS / Linux / 跨平台便携包（CLI &amp; GUI）</h2>
-          <p>下载并解压 <code>qcom32-volte-1.2.6-r1-portable.zip</code>（内置已编译签名的 ARM32 工具、双 APK 与 <code>devices/</code> Profile 库，仅需 Python 3.9+ 与 <code>adb</code>）：</p>
+          <p>下载并解压 <code>qcom32-volte-1.2.7-r1-portable.zip</code>（内置已编译签名的 ARM32 工具、双 APK 与 <code>devices/</code> Profile 库，仅需 Python 3.9+ 与 <code>adb</code>）：</p>
           <pre class="code-block"><code># 1. 离线单元测试自检 / 查看内置 32 位机型目录
 python3 cli/volte_ctl.py self-test
 python3 cli/volte_ctl.py list-models
@@ -152,6 +152,17 @@ python3 cli/volte_ctl.py install-manager
 
 # 5. 或启动跨平台桌面图形界面
 python3 cli/gui.py</code></pre>
+        </section>
+
+        <section class="guide-section" id="radio-diagnostics">
+          <h2>SIM 已识别但无信号</h2>
+          <p>先运行 Windows 的只读体检，或执行 <code>python3 cli/volte_ctl.py inspect-device</code>。如果 SIM 已加载、语音和数据均无服务且运行时基带为空，工具会引导检查基带运行模式与固件来源。工厂测试模式是已实测的一种原因；退出工厂模式属于独立维修。</p>
+          <p>鬼触过滤和只在顶部听筒无声的故障也走独立维修。听筒故障可以先对照普通音频与 VoLTE 的听筒和免提输出。</p>
+        </section>
+
+        <section class="guide-section" id="silver-edition">
+          <h2>银色版 Passport（oslo）</h2>
+          <p>一台银色版用定向修订的 LineageOS 18.1 20251205、AAB982 和联通 46001 完成了呼入、呼出。CLI 可用 <code>prepare-oslo-rom</code> 检查本机；确认自身 EFS 备份和 Recovery 后，再用 <code>prepare-oslo-rom --apply</code> 处理匹配的旧 IMS 配置。激活仍须走 CLI 实验双确认。</p>
         </section>
 
         <section class="guide-section" id="method-rom">
@@ -172,7 +183,7 @@ $(call inherit-product, packages/services/Qcom32VolteIms/device-qcom32-volte.mk)
           <h2>07. 换卡与验证范围</h2>
           <ol class="step-list">
             <li>换卡效果取决于具体 SIM、运营商及网络，不能保证自动注册或通话。</li>
-            <li>联通 46001 一台完成通话验证；电信 46003/46011 仅 LTE 驻留及 IMS 注册，通话未测，EPS-only 防掉线 149 秒无掉线。移动未测；FDD B3/B8 仅理论，机身无 TDD B38–41。IMS 短信未实现；紧急呼叫、VoWiFi、视频、补充业务和非中国运营商不支持或未测试。</li>
+            <li>联通 46001 在一台 wolverine 和一台实验 oslo 完成通话验证；电信 46003/46011 已验证 LTE 和 IMS，一台 46011 免提双向有声、听筒无声，EPS-only 防掉线 149 秒无掉线。移动未测；FDD B3/B8 仅理论，机身无 TDD B38–41。IMS 短信未实现；紧急呼叫、VoWiFi、视频、补充业务和非中国运营商不支持或未测试。</li>
           </ol>
         </section>
 
@@ -196,10 +207,10 @@ $(call inherit-product, packages/services/Qcom32VolteIms/device-qcom32-volte.mk)
         <section class="guide-section" id="verify">
           <h2>10. 校验下载文件 SHA-256</h2>
           <pre class="code-block"><code># Windows PowerShell:
-Get-FileHash "$HOME\Downloads\qcom32-volte-1.2.6-r1-windows-x64.exe" -Algorithm SHA256
+Get-FileHash "$HOME\Downloads\qcom32-volte-1.2.7-r1-windows-x64.exe" -Algorithm SHA256
 
 # macOS / Linux:
-shasum -a 256 ~/Downloads/qcom32-volte-1.2.6-r1-portable.zip</code></pre>
+shasum -a 256 ~/Downloads/qcom32-volte-1.2.7-r1-portable.zip</code></pre>
         </section>
       </div>
     </div>

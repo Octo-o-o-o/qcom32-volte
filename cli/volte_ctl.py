@@ -12,6 +12,7 @@ Commands:
   python3 cli/volte_ctl.py inspect-device   # 100% read-only 4-Gate readiness check + AI & GitHub self-porting guide
   python3 cli/volte_ctl.py list-models      # List Passport editions and candidate 32-bit Qualcomm families
   python3 cli/volte_ctl.py deploy           # Guarded modem EFS provisioning + APK install + reboot verification
+  python3 cli/volte_ctl.py prepare-oslo-rom # Inspect or prepare the tested Silver Edition ROM
   python3 cli/volte_ctl.py upgrade-apk      # Zero-EFS-write in-place APK upgrade + optional reboot verification
   python3 cli/volte_ctl.py install-manager  # Install optional on-device companion app (Qcom32VolteManager.apk)
   python3 cli/volte_ctl.py rollback         # Fixed EFS cleanup + APK uninstall + reboot (not original-byte restoration)
@@ -37,6 +38,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import device_readiness  # noqa: E402
+import oslo_rom  # noqa: E402
 
 FROZEN_ROOT: Path | None = (
     Path(getattr(sys, "_MEIPASS"))
@@ -58,7 +60,7 @@ LEGACY_ADMIN_RECEIVER = f"{LEGACY_IMS_PKG}/.VolteAdminReceiver"
 LEGACY_ADMIN_ACTION = "org.passport.volteims.ACTION_ADMIN"
 
 REMOTE_TMP_PROVISIONER = "/data/local/tmp/pp_regconfig_provision_v6"
-EXPECTED_VERSION = "2.8-qcom32-volte"
+EXPECTED_VERSION = "2.9-qcom32-volte"
 
 PII_REDACT_RE = re.compile(r"\b\d{11,20}\b")
 
@@ -1008,7 +1010,7 @@ def run_deploy_flow(
     finally:
         adb.shell(f"rm -f {REMOTE_TMP_PROVISIONER}", check=False)
 
-    step("Installing Qcom32VolteIms.apk v2.8 & applying persistent CarrierConfig...")
+    step("Installing Qcom32VolteIms.apk v2.9 & applying persistent CarrierConfig...")
     adb.run(["install", "-r", str(apk_path)], timeout=60)
     adb.shell(
         f"am broadcast -n {IMS_ADMIN_RECEIVER} -a {IMS_ADMIN_ACTION} "
@@ -1294,6 +1296,11 @@ def main(argv: list[str] | None = None) -> int:
     p_deploy.add_argument("--experimental-unverified-edition", action="store_true", help="Opt in to an unverified Passport edition; separate confirmation also required")
     p_deploy.add_argument("--i-understand-unverified-baseband-write", action="store_true", help="Second explicit acknowledgement for non-interactive experimental use")
 
+    p_oslo = sub.add_parser("prepare-oslo-rom", help="Check or repair legacy IMS init on the tested oslo ROM")
+    oslo_action = p_oslo.add_mutually_exclusive_group()
+    oslo_action.add_argument("--apply", action="store_true", help="Back up the original init files and remove the conflicting services in Recovery")
+    oslo_action.add_argument("--restore", metavar="BACKUP_DIRECTORY", help="Restore this phone's original init files after EFS has been restored")
+
     p_upg = sub.add_parser("upgrade-apk", help="In-place Qcom32VolteIms.apk upgrade (zero EFS writes)")
     p_upg.add_argument("--apk", default=None, help="Path to signed Qcom32VolteIms.apk")
     p_upg.add_argument("--reboot", action="store_true", help="Reboot and verify hands-free VoLTE restoration")
@@ -1326,6 +1333,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     adb = AdbClient(resolve_adb(args.adb), args.serial)
+    if args.subcmd == "prepare-oslo-rom":
+        emit_json(oslo_rom.run(adb, verify_device_identity, persistent_backup_root,
+                              apply=args.apply, restore=args.restore), args.out_json)
+        return 0
     if args.subcmd == "status":
         emit_json(query_live_volte_status(adb), args.out_json)
         return 0

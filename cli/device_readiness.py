@@ -656,6 +656,19 @@ def run_readonly_readiness_audit(adb: Any) -> dict[str, Any]:
         if is_passport
         else None
     )
+    radio_startup_unavailable = False
+    if (is_passport and sdk_int == 30 and props.get("gsm.sim.state") == "LOADED"
+            and not props.get("gsm.version.baseband")
+            and props.get("gsm.network.type", "").lower() in ("", "unknown")
+            and fw_build_id in ("", "AAB982")
+            and adb.shell("settings get global airplane_mode_on", timeout=10, check=False).strip() == "0"):
+        registry = adb.shell("dumpsys -t 5 telephony.registry", timeout=8, check=False)
+        radio_startup_unavailable = any(
+            "mServiceState=" in line
+            and "mVoiceRegState=1(OUT_OF_SERVICE)" in line
+            and "mDataRegState=1(OUT_OF_SERVICE)" in line
+            for line in registry.splitlines()
+        )
 
     # Gate 1: Android 11 (SDK 30) & Platform Signature
     selinux_note_zh = "；注意当前内核为 SELinux Permissive，建议确认无旧版 vendor 守护进程冲突" if selinux.lower() == "permissive" else ""
@@ -700,7 +713,11 @@ def run_readonly_readiness_audit(adb: Any) -> dict[str, Any]:
         g2_en = f"WARN (rild_ims0={'present' if rild_ok else 'missing'}, /dev/diag={'present' if diag_ok else 'missing'})"
 
     # Gate 3: Modem Hexagon IMS Engine & Passport Baseband Verification
-    if passport_bb is not None and not passport_bb["compatible"]:
+    if radio_startup_unavailable and not legacy_conflict["conflicting"]:
+        g3_status = "FAIL_RADIO_STARTUP_UNAVAILABLE"
+        g3_zh = "SIM 已加载，但语音和数据均无服务，运行时基带版本为空。先只读核对基带运行模式及固件来源；工厂测试模式是已见过的一种原因。"
+        g3_en = "SIM loaded, but voice and data are out of service and the runtime baseband is blank. Check the modem operating mode and firmware provenance read-only. Factory test mode is one observed cause."
+    elif passport_bb is not None and not passport_bb["compatible"]:
         g3_status = "FAIL_INCOMPATIBLE_BASEBAND"
         g3_zh = passport_bb["detail_zh"]
         g3_en = passport_bb["detail_en"]
@@ -724,7 +741,9 @@ def run_readonly_readiness_audit(adb: Any) -> dict[str, Any]:
         g3_zh = "未直接扫到（可能基带分区为 Q6ZIP 压缩段或挂载路径不同，可由 AI 用 `qcom32-volte` 技能深入核验）"
         g3_en = "WARN (Not matched in plain strings; may use Q6ZIP compressed segments or alternate mount path — check with AI Skill)"
 
-    if is_passport and sdk_int == 30 and (
+    if g3_status == "FAIL_RADIO_STARTUP_UNAVAILABLE":
+        match.update(route="PASSPORT_RADIO_STARTUP_UNAVAILABLE", summary_zh=g3_zh, summary_en=g3_en)
+    elif is_passport and sdk_int == 30 and (
         legacy_conflict["conflicting"] or (passport_bb is not None and not passport_bb["compatible"])
     ):
         reasons_zh: list[str] = []
@@ -1150,10 +1169,13 @@ def run_unit_tests() -> int:
     check(bb_partial["compatible"] is False, "Partial or conflicting baseband tokens blocked")
 
     class _MockPassportAdb:
-        def __init__(self, *, uid: str = "0", fw: str = "build_id:AAB982", daemon: str = "") -> None:
+        def __init__(self, *, uid: str = "0", fw: str = "build_id:AAB982", daemon: str = "",
+                     radio_down: bool = False, airplane: str = "0") -> None:
             self.uid = uid
             self.fw = fw
             self.daemon = daemon
+            self.radio_down = radio_down
+            self.airplane = airplane
 
         def shell(self, cmd: str, timeout: int = 15, check: bool = False) -> str:
             table = {
@@ -1167,8 +1189,10 @@ def run_unit_tests() -> int:
                 "getprop ro.build.version.release": "11",
                 "getprop ro.build.display.id": "lineage_wseries-userdebug 11 RQ3A test-keys",
                 "getprop ro.build.tags": "test-keys",
-                "getprop gsm.version.baseband": ".DI.4.0.1-00158-M8974AAAAANAZM-1",
+                "getprop gsm.version.baseband": "" if self.radio_down else ".DI.4.0.1-00158-M8974AAAAANAZM-1",
                 "getprop gsm.sim.state": "LOADED",
+                "settings get global airplane_mode_on": self.airplane,
+                "dumpsys -t 5 telephony.registry": "mServiceState={mVoiceRegState=1(OUT_OF_SERVICE), mDataRegState=1(OUT_OF_SERVICE)}",
                 "getprop init.svc.imsqmidaemon": self.daemon,
                 "id -u": self.uid,
                 "getenforce": "Permissive" if self.daemon else "Enforcing",
@@ -1203,5 +1227,12 @@ def run_unit_tests() -> int:
     check(bad_pp_audit["catalog_match"]["route"] == "NEEDS_ROM_OR_BASEBAND_UPGRADE", "Conflicted Passport route downgraded")
     check(bad_pp_audit["gates"]["gate2_ril_diag"]["status"] == "FAIL_LEGACY_IMS_DAEMON_CONFLICT", "Gate 2 catches imsqmidaemon")
     check(bad_pp_audit["gates"]["gate3_modem_ims"]["status"] == "FAIL_INCOMPATIBLE_BASEBAND", "Gate 3 catches AAA596")
+    radio_down = run_readonly_readiness_audit(_MockPassportAdb(radio_down=True))
+    check(radio_down["catalog_match"]["route"] == "PASSPORT_RADIO_STARTUP_UNAVAILABLE", "Loaded SIM with no service routes to radio diagnosis")
+    check(radio_down["passport_baseband_check"]["compatible"] is False, "Radio diagnosis preserves baseband write guard")
+    airplane = run_readonly_readiness_audit(_MockPassportAdb(radio_down=True, airplane="1"))
+    check(airplane["catalog_match"]["route"] != "PASSPORT_RADIO_STARTUP_UNAVAILABLE", "Airplane mode excluded from radio diagnosis")
+    legacy_radio = run_readonly_readiness_audit(_MockPassportAdb(radio_down=True, fw="build_id:AAA596"))
+    check(legacy_radio["catalog_match"]["route"] == "NEEDS_ROM_OR_BASEBAND_UPGRADE", "Known incompatible modem remains blocked")
 
     return assertions

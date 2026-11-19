@@ -562,10 +562,27 @@ public final class Qcom32VolteImsHostTest {
                     "MT #2 mid-ring Caller ID updated to OIR=2");
             check("Unicom Caller".equals(mt2.getPeerName()), "MT #2 mid-ring CNAP updated");
 
-            srv.activeCallsPayload = new byte[0];
+            byte[] stillRinging = srv.activeCallsPayload;
             mt2.rejectIncoming(RilImsWire.IMS_REASON_LOCAL_CALL_DECLINE);
             awaitCond(() -> mt2Cb.initFailedReason.get() == RilImsWire.IMS_REASON_LOCAL_CALL_DECLINE,
                     "MT decline -> 143");
+            int incomingCount = incomingHandles.size();
+            mt2.close();
+            engine.onCallListSnapshot(RilImsWire.decodeCallList(stillRinging), true);
+            check(incomingHandles.size() == incomingCount, "stale rejected MT does not ring again");
+            srv.activeCallsPayload = new byte[0];
+            engine.onCallListSnapshot(Collections.emptyList(), true);
+            engine.onCallListSnapshot(RilImsWire.decodeCallList(stillRinging), false);
+            check(incomingHandles.size() == incomingCount + 1, "modem can reuse index after removing rejected MT");
+            CallStateEngine.SessionHandle retry = incomingHandles.get(incomingCount);
+            RecordingCallbacks retryCb = new RecordingCallbacks();
+            retry.setCallbacks(retryCb);
+            srv.nextHangupRilError = 2;
+            retry.rejectIncoming(RilImsWire.IMS_REASON_LOCAL_CALL_DECLINE);
+            awaitCond(() -> retryCb.initFailedReason.get() == RilImsWire.IMS_REASON_LOCAL_CALL_DECLINE,
+                    "failed reject completes old framework session");
+            engine.onCallListSnapshot(RilImsWire.decodeCallList(stillRinging), false);
+            check(incomingHandles.size() == incomingCount + 2, "failed reject permits modem's still-ringing call");
 
             check(srv.countRequest(26) == 0 && srv.countRequest(30) == 0, "zero 26/30 in CallStateEngine test");
         } finally {
@@ -819,6 +836,7 @@ public final class Qcom32VolteImsHostTest {
         private Thread thread;
 
         volatile byte[] activeCallsPayload = new byte[0];
+        volatile int nextHangupRilError = 0;
         volatile int regStateToReturn = RilImsWire.REG_STATE_REGISTERED;
         volatile int lastFailCause = RilImsWire.CALL_FAIL_NORMAL;
         volatile int nextDialRilError = 0;
@@ -947,6 +965,12 @@ public final class Qcom32VolteImsHostTest {
                         case RilImsWire.REQ_LAST_CALL_FAIL_CAUSE: {
                             byte[] fc = new RilImsWire.ProtoWriter().varint(1, lastFailCause).toByteArray();
                             sendSolicited(req.token, req.id, 0, fc);
+                            break;
+                        }
+                        case RilImsWire.REQ_HANGUP: {
+                            int error = nextHangupRilError;
+                            nextHangupRilError = 0;
+                            sendSolicited(req.token, req.id, error, new byte[0]);
                             break;
                         }
                         default: {

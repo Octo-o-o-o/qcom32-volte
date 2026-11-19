@@ -1,11 +1,11 @@
 export const REPOSITORY_URL = 'https://github.com/Octo-o-o-o/qcom32-volte';
 export const SISTER_REPOSITORY_URL = 'https://github.com/Octo-o-o-o/bb10-volte';
-export const RELEASE_TAG = 'v1.2.6-r1';
+export const RELEASE_TAG = 'v1.2.7-r1';
 // The v1.2.4-r1 and earlier releases predate the edition gate; v1.2.4-r1 and v1.2.5-r1 predate the .DI.4.0.1 runtime baseband fix.
 export const VERIFICATION_SCOPE = Object.freeze({
   verifiedDevice: 'one SQW100-1 wolverine',
   verifiedCalls: 'China Unicom 46001',
-  telecom: 'LTE attach and IMS registration only; calls untested; 149 seconds without drops',
+  telecom: 'LTE and IMS verified; one 46011 unit had two-way speakerphone audio with a silent earpiece; EPS-only observed for 149 seconds without drops',
   mobile: 'untested; FDD B3/B8 theoretical; no TDD B38–41',
   imsSms: 'not implemented',
   emergencyCalls: 'not supported or certified',
@@ -29,7 +29,9 @@ export function buildReleaseAssetNames(tag) {
   const ver = tag.replace(/^v/, '');
   const revMatch = ver.match(/-r(\d+)$/);
   const rev = revMatch ? revMatch[1] : '1';
-  const imsVer = /^1\.2\.[0-3]-/.test(ver) || /^1\.[01]\./.test(ver) ? '2.7' : '2.8';
+  let imsVer = '2.9';
+  if (/^1\.2\.[0-3]-/.test(ver) || /^1\.[01]\./.test(ver)) imsVer = '2.7';
+  else if (/^1\.2\.[4-6]-/.test(ver)) imsVer = '2.8';
   return {
     windows: `qcom32-volte-${ver}-windows-x64.exe`,
     'windows-sha': `qcom32-volte-${ver}-windows-x64.exe.sha256`,

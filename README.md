@@ -8,14 +8,15 @@ Qcom32 VoLTE 包含 Android 11 原生 IMS 服务和按设备隔离的基带 EFS 
 >
 > **基带写入有风险。** 修改前独立备份本机 modem EFS（如 `modemst1`、`modemst2`、`fsg`），将备份保存在手机之外，风险自负。当前工具自动保存的是 EFS 检查日志和哈希，**不是可完整回灌的原始备份**；回滚执行固定值写入和条目删除，不保证恢复本机原值。请核实自己的恢复方案。
 >
-> **v1.2.4-r1 及更早版本缺少未验证机型门禁**（仍允许对未经验证的版本一键写入），且 **v1.2.4-r1 / v1.2.5-r1 会误判拦截真机 `.DI.4.0.1` 运行时基带串与非 Root 只读体检**；请升级至 v1.2.6-r1，勿用旧版在未验证机型上写入。
+> **v1.2.4-r1 及更早版本缺少未验证机型门禁**（仍允许对未经验证的版本一键写入），且 **v1.2.4-r1 / v1.2.5-r1 会误判拦截真机 `.DI.4.0.1` 运行时基带串与非 Root 只读体检**；请升级至 v1.2.7-r1，勿用旧版在未验证机型上写入。
 
 ## 验证范围
 
 | 项目 | 结果 |
 | --- | --- |
 | 联通 46001，一台 `wolverine` | 已实测主叫、被叫、双向 AMR-WB、来电显示、通话中 LTE 数据保持、拔线重启恢复和四种交付方式。 |
-| 电信 46003 / 46011 | 仅验证 LTE 驻留与 IMS 注册；**未测试 VoLTE 通话**。EPS-only `fallbackmode=9` 防掉线观察 149 秒无掉线。 |
+| 联通 46001，一台 Passport Silver Edition（`oslo`） | 已在定向修复的 LineageOS 18.1 `20251205` 和 AAB982 上完成 IMS 注册，用户实测主叫、被叫正常。须先完成 ROM 准备和本机 EFS 恢复检查，仍走 CLI 实验入口。[安装与回滚](docs/guide/INSTALL_AND_ROLLBACK.md) |
+| 电信 46003 / 46011 | 已验证 LTE 与 IMS 注册；另有一台 46011 在免提下完成双向通话，顶部听筒无声仍在排查。EPS-only `fallbackmode=9` 防掉线曾观察 149 秒无掉线。 |
 | 中国移动 | **未测试**；FDD B3/B8 仅为理论可能，Passport 不支持 TDD B38–41。 |
 | IMS 短信 | **未实现**；服务不声明 `CAPABILITY_TYPE_SMS`。 |
 | 紧急呼叫、VoWiFi、视频通话、呼叫转移/USSD/UT 等补充业务 | 不支持或未测试，不能依赖。 |
@@ -23,7 +24,7 @@ Qcom32 VoLTE 包含 Android 11 原生 IMS 服务和按设备隔离的基带 EFS 
 
 ## 使用与回滚
 
-本仓库源码默认只允许 `wolverine` 进行部署；`oslo`（银色版）、`wichita`（AT&T）、`keian`（保时捷）及通用 `wseries` / `windermere` 默认只读。实验性 CLI 写入必须同时提供 `--experimental-unverified-edition` 与交互式强确认；非交互时还需 `--i-understand-unverified-baseband-write`。桌面 GUI 和手机管理端不提供这些机型的一键激活。所有识别出的 Passport 版本保留回滚入口，非 Passport 基带写入拒绝。
+本仓库源码默认只允许 `wolverine` 进行部署；`oslo`（银色版）、`wichita`（AT&T）、`keian`（保时捷）及通用 `wseries` / `windermere` 默认只读。实验性 CLI 写入必须同时提供 `--experimental-unverified-edition` 与交互式强确认；非交互时还需 `--i-understand-unverified-baseband-write`。银色版已实测的构建可用 `prepare-oslo-rom` 检查或修复旧 IMS 冲突。桌面 GUI 和手机管理端不提供这些机型的一键激活。所有识别出的 Passport 版本保留回滚入口，非 Passport 基带写入拒绝。
 
 部署还必须通过旧 IMS 守护进程检查及基带预检：要求 `DI.4.0.1`、`AAAAANAZM`（真机运行时属性为 `.DI.4.0.1-00158-M8974AAAAANAZM-1`）和固件 `build_id:AAB982`；缺失或冲突时拒绝写入。重启后满足无信号条件时桌面端尝试固定回滚；仅 IMS 注册超时且 SIM 仍就绪时不会自动清理。回滚不受机型实验授权或 ROM/基带部署门禁阻断，也不保证原值或信号恢复。这些 v1.2.4 防护仅经离线／模拟验证，未在故障真机上验证。
 
@@ -39,18 +40,24 @@ Windows EXE 图形界面可点击“执行固定基带清理并卸载”，命�
 
 四种交付形态包括 Windows 桌面 EXE、Android 管理端、跨平台 CLI/GUI 和 ROM 源码集成；四种方式仅在上述一台联通设备上完成端到端验证。
 
-## v1.2.6-r1 下载
+## v1.2.7-r1 更新
+
+- Windows 与便携版增加无信号只读分流；手机伴侣提示转用桌面体检。工厂测试模式退出、触控过滤与听筒维修保留为独立流程。
+- IMS 2.9 修复拒接后旧来电状态重新触发响铃。已激活设备可用 `upgrade-apk` 更新 IMS，无需重写 EFS。
+- 银色版 CLI 加入 `prepare-oslo-rom`。已实测组合为 `oslo`、LineageOS 18.1 20251205、AAB982、联通 46001；仍需独立备份和实验确认。
+
+## v1.2.7-r1 下载
 
 每个文件均提供独立的 `.sha256` 校验文件。
 
 | 文件 | R2 镜像 | GitHub Release |
 | --- | --- | --- |
-| Windows EXE | [下载](https://qcom32-downloads.octoooo.com/v1.2.6-r1/qcom32-volte-1.2.6-r1-windows-x64.exe) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.6-r1/qcom32-volte-1.2.6-r1-windows-x64.exe.sha256) | [下载](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.6-r1/qcom32-volte-1.2.6-r1-windows-x64.exe) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.6-r1/qcom32-volte-1.2.6-r1-windows-x64.exe.sha256) |
-| Manager APK | [下载](https://qcom32-downloads.octoooo.com/v1.2.6-r1/Qcom32VolteManager-1.2.6-r1.apk) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.6-r1/Qcom32VolteManager-1.2.6-r1.apk.sha256) | [下载](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.6-r1/Qcom32VolteManager-1.2.6-r1.apk) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.6-r1/Qcom32VolteManager-1.2.6-r1.apk.sha256) |
-| IMS APK 2.8 | [下载](https://qcom32-downloads.octoooo.com/v1.2.6-r1/Qcom32VolteIms-2.8-r1-platform.apk) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.6-r1/Qcom32VolteIms-2.8-r1-platform.apk.sha256) | [下载](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.6-r1/Qcom32VolteIms-2.8-r1-platform.apk) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.6-r1/Qcom32VolteIms-2.8-r1-platform.apk.sha256) |
-| 便携包 | [下载](https://qcom32-downloads.octoooo.com/v1.2.6-r1/qcom32-volte-1.2.6-r1-portable.zip) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.6-r1/qcom32-volte-1.2.6-r1-portable.zip.sha256) | [下载](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.6-r1/qcom32-volte-1.2.6-r1-portable.zip) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.6-r1/qcom32-volte-1.2.6-r1-portable.zip.sha256) |
-| 源码包 | [下载](https://qcom32-downloads.octoooo.com/v1.2.6-r1/qcom32-volte-1.2.6-r1-source.zip) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.6-r1/qcom32-volte-1.2.6-r1-source.zip.sha256) | [下载](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.6-r1/qcom32-volte-1.2.6-r1-source.zip) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.6-r1/qcom32-volte-1.2.6-r1-source.zip.sha256) |
-| 全部校验和 | [SHA256SUMS.txt](https://qcom32-downloads.octoooo.com/v1.2.6-r1/SHA256SUMS.txt) | [SHA256SUMS.txt](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.6-r1/SHA256SUMS.txt) |
+| Windows EXE | [下载](https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-windows-x64.exe) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-windows-x64.exe.sha256) | [下载](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-windows-x64.exe) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-windows-x64.exe.sha256) |
+| Manager APK | [下载](https://qcom32-downloads.octoooo.com/v1.2.7-r1/Qcom32VolteManager-1.2.7-r1.apk) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.7-r1/Qcom32VolteManager-1.2.7-r1.apk.sha256) | [下载](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/Qcom32VolteManager-1.2.7-r1.apk) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/Qcom32VolteManager-1.2.7-r1.apk.sha256) |
+| IMS APK 2.9 | [下载](https://qcom32-downloads.octoooo.com/v1.2.7-r1/Qcom32VolteIms-2.9-r1-platform.apk) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.7-r1/Qcom32VolteIms-2.9-r1-platform.apk.sha256) | [下载](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/Qcom32VolteIms-2.9-r1-platform.apk) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/Qcom32VolteIms-2.9-r1-platform.apk.sha256) |
+| 便携包 | [下载](https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-portable.zip) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-portable.zip.sha256) | [下载](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-portable.zip) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-portable.zip.sha256) |
+| 源码包 | [下载](https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-source.zip) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-source.zip.sha256) | [下载](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-source.zip) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-source.zip.sha256) |
+| 全部校验和 | [SHA256SUMS.txt](https://qcom32-downloads.octoooo.com/v1.2.7-r1/SHA256SUMS.txt) | [SHA256SUMS.txt](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/SHA256SUMS.txt) |
 
 ## 本地验证
 

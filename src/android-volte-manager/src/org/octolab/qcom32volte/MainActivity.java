@@ -255,7 +255,7 @@ public final class MainActivity extends Activity {
     private void refreshLabels() {
         if (englishMode) {
             titleView.setText("Qcom32 VoLTE & IMS Stack");
-            subtitleView.setText("OCTOLAB · Android 11 · IMS v2.8 · one wolverine unit verified");
+            subtitleView.setText("OCTOLAB · Android 11 · IMS v2.9 · one wolverine unit verified");
             langButton.setText("中文");
             refreshButton.setText("Check Live VoLTE & SIM Status");
             readinessButton.setText("32-Bit Device Identification & AI Porting Check (Read-Only)");
@@ -266,7 +266,7 @@ public final class MainActivity extends Activity {
             licenseNoteView.setText("Source-available: PolyForm Noncommercial 1.0.0; commercial license available: octoooo@octoooo.com");
         } else {
             titleView.setText("Qcom32 VoLTE 通话栈管理端");
-            subtitleView.setText("OCTOLAB · Android 11 · IMS v2.8 · 仅一台 wolverine 已验证");
+            subtitleView.setText("OCTOLAB · Android 11 · IMS v2.9 · 仅一台 wolverine 已验证");
             langButton.setText("English");
             refreshButton.setText("检查当前 SIM / 4G / VoLTE 状态");
             readinessButton.setText("多机型识别与只读适配体检（AI + GitHub 自助适配）");
@@ -405,6 +405,14 @@ public final class MainActivity extends Activity {
                     ? Build.SUPPORTED_ABIS[0] : Build.CPU_ABI;
             VolteManagerLogic.DeviceCatalogMatch catMatch = VolteManagerLogic.identifyDeviceCatalog(
                     Build.BRAND, model, device, boardPlatform, cpuAbi, sdk, Build.TAGS);
+            String radioHint = "";
+            if (VolteManagerLogic.isPassportFamilyIdentity(model, device, sdk)
+                    && !airplaneMode && "LOADED".equals(simStateProp) && basebandProp.isEmpty()
+                    && (netType.isEmpty() || "UNKNOWN".equalsIgnoreCase(netType))) {
+                radioHint = englishMode
+                        ? "SIM loaded; runtime baseband missing. Use the desktop read-only radio check.\n"
+                        : "SIM 已加载，运行时基带版本为空。请用桌面只读体检确认蜂窝状态。\n";
+            }
 
             String details = "Model / Device : " + model + " (" + device + ", SDK " + sdk + ")\n"
                     + "Catalog Family : " + (englishMode ? catMatch.displayNameEn : catMatch.displayNameZh) + "\n"
@@ -412,6 +420,7 @@ public final class MainActivity extends Activity {
                     + "Baseband / SIM : " + (basebandProp.isEmpty() ? "unknown" : basebandProp)
                     + " | sim_state=" + (simStateProp.isEmpty() ? "<empty>" : simStateProp) + "\n"
                     + "SIM / Network  : " + snap.carrierSummary + "\n"
+                    + radioHint
                     + "Local Root (su): " + (snap.suAvailable ? "YES (UID 0)" : "NO (Use PC ADB Root tool)") + "\n"
                     + "Bundled Assets : " + (assetsVerified ? "Verified (3 payloads SHA-256 OK)" : "Unverified") + "\n"
                     + "ImsService APK : " + (snap.imsServicePresent ? ("Installed (" + snap.imsServiceVersion + ")") : "Not installed") + "\n"
@@ -541,8 +550,8 @@ public final class MainActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle(englishMode ? "Update Qcom32VolteIms APK" : "更新桥接服务 APK")
                 .setMessage(englishMode
-                        ? "Updates Qcom32VolteIms.apk v2.8 in place without touching modem EFS."
-                        : "仅原位更新 Qcom32VolteIms.apk v2.8，不写入任何基带 EFS 项。")
+                        ? "Updates Qcom32VolteIms.apk v2.9 in place without touching modem EFS."
+                        : "仅原位更新 Qcom32VolteIms.apk v2.9，不写入任何基带 EFS 项。")
                 .setPositiveButton(englishMode ? "Update" : "确认更新", (d, w) -> executeRootOperation("upgrade"))
                 .setNegativeButton(englishMode ? "Cancel" : "取消", null)
                 .show();

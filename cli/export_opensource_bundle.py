@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Export the standalone public source-available Git repository bundle AND package v1.2.6-r1 release assets
+"""Export the standalone public source-available Git repository bundle AND package v1.2.7-r1 release assets
 for `qcom32-volte`.
 
 Outputs:
   1. `dist/qcom32-volte-opensource/` — Clean public Git repository tree (zero research clutter, zero keys, zero PII)
-  2. `dist/release-v1.2.6-r1/` (when built artifacts exist under `build/release/` & `build/windows/`):
-       - `qcom32-volte-1.2.6-r1-windows-x64.exe` (+ `.sha256`)
-       - `Qcom32VolteManager-1.2.6-r1.apk` (+ `.sha256`)
-       - `Qcom32VolteIms-2.8-r1-platform.apk` (+ `.sha256`)
-       - `qcom32-volte-1.2.6-r1-portable.zip` (+ `.sha256`)
-       - `qcom32-volte-1.2.6-r1-source.zip` (+ `.sha256`)
+  2. `dist/release-v1.2.7-r1/` (when built artifacts exist under `build/release/` & `build/windows/`):
+       - `qcom32-volte-1.2.7-r1-windows-x64.exe` (+ `.sha256`)
+       - `Qcom32VolteManager-1.2.7-r1.apk` (+ `.sha256`)
+       - `Qcom32VolteIms-2.9-r1-platform.apk` (+ `.sha256`)
+       - `qcom32-volte-1.2.7-r1-portable.zip` (+ `.sha256`)
+       - `qcom32-volte-1.2.7-r1-source.zip` (+ `.sha256`)
        - `SHA256SUMS.txt`
 """
 from __future__ import annotations
@@ -106,6 +106,7 @@ def build_portable_zip(opensource_dir: Path, release_dir: Path, dst_zip: Path, v
         "assets",
         "devices",
         "cli/device_readiness.py",
+        "cli/oslo_rom.py",
         "cli/volte_ctl.py",
         "cli/gui.py",
         "docs/guide",
@@ -152,6 +153,8 @@ def main() -> int:
         action="store_true",
         help="Export dist/qcom32-volte-opensource only without repackaging dist/release-*",
     )
+    ap.add_argument("--release-build-dir", type=Path, default=REPO_ROOT / "build/release")
+    ap.add_argument("--windows-build-dir", type=Path, default=REPO_ROOT / "build/windows")
     args = ap.parse_args()
 
     # Never publish stale agent instructions that label unverified editions as verified.
@@ -217,8 +220,8 @@ def main() -> int:
         })
 
     release_summary: dict[str, object] = {"packaged": False}
-    build_rel_dir = REPO_ROOT / "build/release"
-    win_exe = REPO_ROOT / f"build/windows/qcom32-volte-{ver_label}-windows-x64.exe"
+    build_rel_dir = args.release_build_dir.resolve()
+    win_exe = args.windows_build_dir.resolve() / f"qcom32-volte-{ver_label}-windows-x64.exe"
     if (not args.skip_release_package) and (build_rel_dir / "Qcom32VolteIms.apk").is_file() and (build_rel_dir / "Qcom32VolteManager.apk").is_file() and win_exe.is_file():
         rel_out = Path(args.release_out).expanduser().resolve() if args.release_out else (REPO_ROOT / f"dist/release-{tag}")
         if rel_out.exists():

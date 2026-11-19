@@ -206,7 +206,15 @@ public final class CallStateEngine {
                     ? RilImsWire.CALL_FAIL_USER_BUSY
                     : RilImsWire.CALL_FAIL_USER_REJECT;
             if (idx > 0) {
+                synchronized (lock) {
+                    rejectedCallIndices.put(idx, this);
+                }
                 rilClient.sendHangup(idx, true, vendorReject, resp -> {
+                    if (resp.error != 0) {
+                        synchronized (lock) {
+                            rejectedCallIndices.remove(idx, this);
+                        }
+                    }
                     notifyRejectComplete(this);
                 });
             } else {
@@ -307,6 +315,7 @@ public final class CallStateEngine {
     private final AtomicInteger pendingSeq = new AtomicInteger(1);
     private final List<SessionHandle> pendingMoSessions = new ArrayList<>();
     private final Map<Integer, SessionHandle> boundSessions = new HashMap<>();
+    private final Map<Integer, SessionHandle> rejectedCallIndices = new HashMap<>();
 
     private volatile boolean frameworkEnabled = true;
     private volatile boolean voiceCapabilityConfigured = true;
@@ -393,6 +402,7 @@ public final class CallStateEngine {
             pendingMoSessions.clear();
             toTerminate.addAll(boundSessions.values());
             boundSessions.clear();
+            rejectedCallIndices.clear();
         }
         for (SessionHandle s : toFailStart) {
             notifyStartFailedOnce(s, RilImsWire.IMS_REASON_LOCAL_IMS_SERVICE_DOWN, 1, "backend_disconnected");
@@ -461,6 +471,7 @@ public final class CallStateEngine {
                     boundSessions.put(dc.index, session);
                     cancelledPending = session.cancelPendingOnBind;
                 } else if (session == null && dc.isMt
+                        && !rejectedCallIndices.containsKey(dc.index)
                         && (dc.state == RilImsWire.CALL_STATE_INCOMING || dc.state == RilImsWire.CALL_STATE_WAITING)) {
                     session = new SessionHandle(Integer.toString(dc.index), true);
                     session.callIndex = dc.index;
@@ -474,6 +485,7 @@ public final class CallStateEngine {
                     seenLiveIndices.add(dc.index);
                 } else {
                     boundSessions.remove(dc.index);
+                    rejectedCallIndices.remove(dc.index);
                 }
             }
 
@@ -483,7 +495,7 @@ public final class CallStateEngine {
                 continue;
             }
 
-            if (session != null) {
+            if (session != null && (!session.locallyRejected || dc.state == RilImsWire.CALL_STATE_END)) {
                 if (cancelledPending) {
                     rilClient.sendHangup(dc.index, false, 0, null);
                 }
@@ -495,6 +507,8 @@ public final class CallStateEngine {
             List<SessionHandle> timedOutPending = new ArrayList<>();
             long nowMs = System.currentTimeMillis();
             synchronized (lock) {
+                // HANGUP acknowledgement can precede the modem removing the rejected call.
+                rejectedCallIndices.keySet().retainAll(seenLiveIndices);
                 Iterator<Map.Entry<Integer, SessionHandle>> it = boundSessions.entrySet().iterator();
                 while (it.hasNext()) {
                     Map.Entry<Integer, SessionHandle> e = it.next();
@@ -670,7 +684,7 @@ public final class CallStateEngine {
             s.sessionState = SESSION_STATE_TERMINATED;
         }
         synchronized (lock) {
-            if (s.callIndex > 0) boundSessions.remove(s.callIndex);
+            if (s.callIndex > 0) boundSessions.remove(s.callIndex, s);
         }
         SessionCallbacks cb = s.callbacks;
         if (cb != null) {
