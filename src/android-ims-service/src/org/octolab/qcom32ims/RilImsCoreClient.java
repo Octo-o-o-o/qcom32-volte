@@ -3,10 +3,12 @@ package org.octolab.qcom32ims;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -28,7 +30,8 @@ public final class RilImsCoreClient {
         int peerPid() throws IOException;
         InputStream inputStream() throws IOException;
         OutputStream outputStream() throws IOException;
-        void setSoTimeout(int timeoutMs) throws IOException;
+        byte[] readFrame(InputStream in, int timeoutMs) throws IOException;
+        void wakeReader() throws IOException;
         void close();
     }
 
@@ -68,7 +71,7 @@ public final class RilImsCoreClient {
     private final Object syncLock = new Object();
     private final AtomicInteger nextToken = new AtomicInteger(1);
     private final Map<Integer, ResponseCallback> pendingCallbacks = new ConcurrentHashMap<>();
-    private final ArrayList<String> eventRing = new ArrayList<>();
+    private final ArrayDeque<String> eventRing = new ArrayDeque<>(300);
 
     private volatile boolean running;
     private volatile SocketTransport activeTransport;
@@ -175,9 +178,9 @@ public final class RilImsCoreClient {
         String safe = RilImsWire.redactPii(msg);
         synchronized (this) {
             if (eventRing.size() >= 300) {
-                eventRing.remove(0);
+                eventRing.removeFirst();
             }
-            eventRing.add(safe);
+            eventRing.addLast(safe);
         }
         listener.onDiagnosticLog(safe);
     }
@@ -321,7 +324,6 @@ public final class RilImsCoreClient {
     }
 
     public int sendDial(String callee, int clirMode, int callDomain, ResponseCallback cb) {
-        final byte[] wirePayload;
         try {
             int token = nextToken.getAndIncrement();
             byte[] fullWire = RilImsWire.encodeDial(token, callee, clirMode, callDomain);
@@ -447,7 +449,6 @@ public final class RilImsCoreClient {
                 txCount++;
             }
             recordEvent("tx id=" + reqId + " tok=" + token + " len=" + fullWire.length);
-            return token;
         } catch (IOException ex) {
             pendingCallbacks.remove(token);
             recordEvent("tx_io_err id=" + reqId + " err=" + ex.getClass().getSimpleName());
@@ -457,6 +458,16 @@ public final class RilImsCoreClient {
             }
             return -1;
         }
+        if (reqId == RilImsWire.REQ_DIAL) {
+            // An outgoing call makes the safety poll relevant even if rild has not replied.
+            try {
+                t.wakeReader();
+            } catch (IOException ex) {
+                recordEvent("dial_reader_wake_err=" + ex.getClass().getSimpleName());
+                t.close();
+            }
+        }
+        return token;
     }
 
     private void runSupervisorLoop() {
@@ -525,13 +536,15 @@ public final class RilImsCoreClient {
     private void runSingleConnectionReadLoop(SocketTransport transport) throws IOException {
         InputStream in = transport.inputStream();
         boolean bootstrapped = false;
-        long connectTimeMs = System.currentTimeMillis();
+        long connectTimeMs = monotonicTimeMs();
         long lastRegPollMs = 0L;
         long lastCallPollMs = 0L;
+        long nextCheckMs = connectTimeMs + 350L;
 
         while (running && connected) {
-            byte[] raw = RilImsWire.receiveRawFrameOrNull(in, transport::setSoTimeout, 400, 3000);
-            long now = System.currentTimeMillis();
+            int waitMs = (int) Math.min(Integer.MAX_VALUE, Math.max(0L, nextCheckMs - monotonicTimeMs()));
+            byte[] raw = transport.readFrame(in, waitMs);
+            long now = monotonicTimeMs();
             if (raw != null) {
                 RilImsWire.Frame frame = RilImsWire.decodeFrame(raw);
                 if (frame.type == RilImsWire.MSG_TYPE_UNSOL_RESPONSE) {
@@ -568,12 +581,20 @@ public final class RilImsCoreClient {
                     lastRegPollMs = now;
                     sendPassiveRegAndServicePoll();
                 }
-                if (listener.hasLiveCalls() && (now - lastCallPollMs >= liveCallSafetyPollIntervalMs)) {
-                    lastCallPollMs = now;
-                    requestCallSync();
+                nextCheckMs = lastRegPollMs + regInterval;
+                if (listener.hasLiveCalls()) {
+                    if (now - lastCallPollMs >= liveCallSafetyPollIntervalMs) {
+                        lastCallPollMs = now;
+                        requestCallSync();
+                    }
+                    nextCheckMs = Math.min(nextCheckMs, lastCallPollMs + liveCallSafetyPollIntervalMs);
                 }
             }
         }
+    }
+
+    private static long monotonicTimeMs() {
+        return TimeUnit.NANOSECONDS.toMillis(System.nanoTime());
     }
 
     private void handleUnsolicitedFrame(RilImsWire.Frame frame) {

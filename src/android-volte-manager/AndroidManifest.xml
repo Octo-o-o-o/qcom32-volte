@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.octolab.qcom32volte"
-    android:versionCode="127"
-    android:versionName="1.2.7-r1">
+    android:versionCode="128"
+    android:versionName="1.2.8-r1">
 
     <uses-sdk
         android:minSdkVersion="30"

@@ -1,6 +1,6 @@
 export const REPOSITORY_URL = 'https://github.com/Octo-o-o-o/qcom32-volte';
 export const SISTER_REPOSITORY_URL = 'https://github.com/Octo-o-o-o/bb10-volte';
-export const RELEASE_TAG = 'v1.2.7-r1';
+export const RELEASE_TAG = 'v1.2.8-r1';
 // The v1.2.4-r1 and earlier releases predate the edition gate; v1.2.4-r1 and v1.2.5-r1 predate the .DI.4.0.1 runtime baseband fix.
 export const VERIFICATION_SCOPE = Object.freeze({
   verifiedDevice: 'one SQW100-1 wolverine',
@@ -29,9 +29,10 @@ export function buildReleaseAssetNames(tag) {
   const ver = tag.replace(/^v/, '');
   const revMatch = ver.match(/-r(\d+)$/);
   const rev = revMatch ? revMatch[1] : '1';
-  let imsVer = '2.9';
+  let imsVer = '2.10';
   if (/^1\.2\.[0-3]-/.test(ver) || /^1\.[01]\./.test(ver)) imsVer = '2.7';
   else if (/^1\.2\.[4-6]-/.test(ver)) imsVer = '2.8';
+  else if (/^1\.2\.7-/.test(ver)) imsVer = '2.9';
   return {
     windows: `qcom32-volte-${ver}-windows-x64.exe`,
     'windows-sha': `qcom32-volte-${ver}-windows-x64.exe.sha256`,

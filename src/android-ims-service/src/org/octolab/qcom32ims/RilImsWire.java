@@ -517,19 +517,27 @@ public final class RilImsWire {
         if (b0 < 0) throw new EOFException("rild_ims0 EOF");
 
         if (setter != null) setter.setTimeout(bodyTimeoutMs);
-        byte[] restLen = readExact(in, 3);
-        long frameBodyLen = ((long) (b0 & 0xff) << 24)
-                | ((long) (restLen[0] & 0xff) << 16)
-                | ((long) (restLen[1] & 0xff) << 8)
-                | ((long) (restLen[2] & 0xff));
+        return readFrameFromFirstByte(in, b0);
+    }
+
+    static byte[] readFrame(InputStream in) throws IOException {
+        int firstByte = in.read();
+        if (firstByte < 0) throw new EOFException("rild_ims0 EOF");
+        return readFrameFromFirstByte(in, firstByte);
+    }
+
+    private static byte[] readFrameFromFirstByte(InputStream in, int b0) throws IOException {
+        byte[] restLen = new byte[3];
+        readExact(in, restLen, 0);
+        long frameBodyLen = ((long) b0 << 24)
+                | ((restLen[0] & 0xff) << 16) | ((restLen[1] & 0xff) << 8) | (restLen[2] & 0xff);
         if (frameBodyLen < 2 || frameBodyLen > MAX_FRAME_BYTES - 4) {
             throw new IOException("Invalid rild_ims0 frame length: " + frameBodyLen);
         }
-        byte[] body = readExact(in, (int) frameBodyLen);
         byte[] wire = new byte[(int) frameBodyLen + 4];
         wire[0] = (byte) b0;
         System.arraycopy(restLen, 0, wire, 1, 3);
-        System.arraycopy(body, 0, wire, 4, body.length);
+        readExact(in, wire, 4);
         return wire;
     }
 
@@ -1053,16 +1061,13 @@ public final class RilImsWire {
         return out.toString();
     }
 
-    private static byte[] readExact(InputStream in, int n) throws IOException {
-        byte[] buf = new byte[n];
-        int off = 0;
-        while (off < n) {
-            int got = in.read(buf, off, n - off);
+    private static void readExact(InputStream in, byte[] buf, int off) throws IOException {
+        while (off < buf.length) {
+            int got = in.read(buf, off, buf.length - off);
             if (got < 0) throw new EOFException("Unexpected EOF reading frame body");
             if (got == 0) throw new IOException("Zero-byte read on stream");
             off += got;
         }
-        return buf;
     }
 
     static final class ProtoWriter {

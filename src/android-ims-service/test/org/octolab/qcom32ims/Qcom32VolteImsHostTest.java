@@ -219,6 +219,7 @@ public final class Qcom32VolteImsHostTest {
         CountDownLatch firstReady = new CountDownLatch(1);
         CountDownLatch disconnectedOnce = new CountDownLatch(1);
         CountDownLatch reconnectedReady = new CountDownLatch(1);
+        AtomicBoolean liveCalls = new AtomicBoolean();
         List<List<RilImsWire.DriverCall>> callSnapshots = new CopyOnWriteArrayList<>();
 
         RilImsCoreClient.TransportFactory factory = () -> {
@@ -275,7 +276,7 @@ public final class Qcom32VolteImsHostTest {
 
                     @Override
                     public boolean hasLiveCalls() {
-                        return false;
+                        return liveCalls.get();
                     }
 
                     @Override
@@ -292,6 +293,20 @@ public final class Qcom32VolteImsHostTest {
             check(client.getLastPeerPid() == 523, "bound to pid 523 after rejecting uid 2000");
 
             FakeRildServer srv1 = servers.get(1);
+            awaitCond(() -> srv1.clientAwaitTimeoutMs > 5000,
+                    "healthy idle reader blocks until its registration deadline");
+            int req6BeforeDial = srv1.countRequest(RilImsWire.REQ_GET_CURRENT_CALLS);
+            srv1.dropDialReply = true;
+            liveCalls.set(true);
+            check(client.sendDial("10010", 0, RilImsWire.IMS_CALL_DOMAIN_PS, ignored -> { }) >= 0,
+                    "dial request sent during long idle wait");
+            awaitCond(() -> srv1.countRequest(RilImsWire.REQ_GET_CURRENT_CALLS) > req6BeforeDial,
+                    "call safety poll wakes the idle reader without a dial reply");
+            liveCalls.set(false);
+            srv1.dropDialReply = false;
+            awaitCond(() -> srv1.clientAwaitTimeoutMs > 5000,
+                    "reader returns to long deadline after call work ends");
+
             int baseReq6 = srv1.countRequest(RilImsWire.REQ_GET_CURRENT_CALLS);
             // Burst 3 back-to-back 0-byte UNSOL 201 pokes
             srv1.sendUnsol(RilImsWire.UNSOL_RESPONSE_CALL_STATE_CHANGED, new byte[0]);
@@ -350,6 +365,7 @@ public final class Qcom32VolteImsHostTest {
 
     private static void testCallStateEngineLifecycles() throws Exception {
         FakeRildServer srv = new FakeRildServer(1001, 600);
+        srv.sendInitialRadioState = false;
         srv.start();
         List<CallStateEngine.SessionHandle> incomingHandles = new CopyOnWriteArrayList<>();
         final CallStateEngine[] engineRef = new CallStateEngine[1];
@@ -409,7 +425,7 @@ public final class Qcom32VolteImsHostTest {
             while (!engine.isVoiceImsReady() && System.currentTimeMillis() < deadline) {
                 Thread.sleep(25L);
             }
-            check(engine.isVoiceImsReady(), "engine ready after passive 1+29");
+            check(engine.isVoiceImsReady(), "bootstrap fallback queries 1+29 without initial radio notification");
 
             // 1. Routing rules: normal -> IMS; emergency & USSD -> CSFB
             check(engine.shouldProcessCall(new String[] { "10010" }, false) == CallStateEngine.PROCESS_CALL_IMS,
@@ -758,14 +774,37 @@ public final class Qcom32VolteImsHostTest {
         private final LinkedBlockingQueue<Integer> q = new LinkedBlockingQueue<>();
         private volatile int timeoutMs = 1000;
         private final AtomicBoolean closed = new AtomicBoolean(false);
+        private boolean wakeRequested;
+
+        synchronized boolean awaitInput(int ms) throws IOException {
+            long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(ms);
+            while (q.isEmpty() && !wakeRequested) {
+                long remaining = deadline - System.nanoTime();
+                if (remaining <= 0L) return false;
+                try {
+                    TimeUnit.NANOSECONDS.timedWait(this, remaining);
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException("interrupted", ex);
+                }
+            }
+            wakeRequested = false;
+            return !q.isEmpty();
+        }
+
+        synchronized void wakeReader() {
+            wakeRequested = true;
+            notifyAll();
+        }
 
         void setSoTimeout(int ms) {
             this.timeoutMs = Math.max(10, ms);
         }
 
-        void close() {
+        synchronized void close() {
             if (closed.compareAndSet(false, true)) {
                 q.offer(-1);
+                notifyAll();
             }
         }
 
@@ -814,6 +853,9 @@ public final class Qcom32VolteImsHostTest {
             public void write(int b) throws IOException {
                 if (closed.get()) throw new IOException("stream closed");
                 q.offer(b & 0xff);
+                synchronized (TimeoutQueueStream.this) {
+                    TimeoutQueueStream.this.notifyAll();
+                }
             }
 
             @Override
@@ -821,6 +863,9 @@ public final class Qcom32VolteImsHostTest {
                 if (closed.get()) throw new IOException("stream closed");
                 for (int i = 0; i < len; i++) {
                     q.offer(b[off + i] & 0xff);
+                }
+                synchronized (TimeoutQueueStream.this) {
+                    TimeoutQueueStream.this.notifyAll();
                 }
             }
         };
@@ -843,6 +888,9 @@ public final class Qcom32VolteImsHostTest {
         volatile long req1DelayMs = 0L;
         volatile long req6DelayMs = 0L;
         volatile long dialDelayMs = 0L;
+        volatile boolean dropDialReply;
+        boolean sendInitialRadioState = true;
+        volatile int clientAwaitTimeoutMs;
 
         FakeRildServer(int uid, int pid) {
             this.uid = uid;
@@ -859,7 +907,7 @@ public final class Qcom32VolteImsHostTest {
             return new RilImsCoreClient.SocketTransport() {
                 @Override
                 public void connect() throws IOException {
-                    if (open.get() && uid == 1001) {
+                    if (open.get() && uid == 1001 && sendInitialRadioState) {
                         // Match real libril-qc-qmi-1.so: emit UNSOL 213 (RADIO_STATE_ON) on connect
                         sendUnsol(RilImsWire.UNSOL_RADIO_STATE_CHANGED,
                                 new RilImsWire.ProtoWriter().varint(1, RilImsWire.RADIO_STATE_ON).toByteArray());
@@ -887,8 +935,14 @@ public final class Qcom32VolteImsHostTest {
                 }
 
                 @Override
-                public void setSoTimeout(int timeoutMs) {
-                    serverToClient.setSoTimeout(timeoutMs);
+                public byte[] readFrame(InputStream in, int timeoutMs) throws IOException {
+                    clientAwaitTimeoutMs = timeoutMs;
+                    return serverToClient.awaitInput(timeoutMs) ? RilImsWire.readFrame(in) : null;
+                }
+
+                @Override
+                public void wakeReader() {
+                    serverToClient.wakeReader();
                 }
 
                 @Override
@@ -956,6 +1010,7 @@ public final class Qcom32VolteImsHostTest {
                             break;
                         }
                         case RilImsWire.REQ_DIAL: {
+                            if (dropDialReply) break;
                             if (dialDelayMs > 0L) Thread.sleep(dialDelayMs);
                             int err = nextDialRilError;
                             nextDialRilError = 0;

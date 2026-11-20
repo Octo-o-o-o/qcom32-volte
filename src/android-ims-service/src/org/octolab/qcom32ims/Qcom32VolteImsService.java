@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
  * ImsResolver dynamic-feature-query service instances never touch rild_ims0.
  */
 public final class Qcom32VolteImsService extends ImsService {
-    static final String SERVICE_VERSION = "2.9-qcom32-volte";
+    static final String SERVICE_VERSION = "2.10-qcom32-volte";
     private static final String TAG = "Qcom32VolteIms";
     private static final int KEY_VOLTE_PROVISIONING_STATUS = 10;
     private static final int KEY_VT_PROVISIONING_STATUS = 11;
@@ -131,6 +131,7 @@ public final class Qcom32VolteImsService extends ImsService {
     private volatile boolean guardRegistered;
     private volatile String selinuxIdentity = "unknown";
     private volatile int lastPublishedFrameworkReg = -1;
+    private boolean lastNotificationReady;
 
     static boolean isFeatureBound() {
         Qcom32VolteImsService inst = activeInstance;
@@ -336,9 +337,14 @@ public final class Qcom32VolteImsService extends ImsService {
         if (feat != null) {
             feat.publishCurrentCapabilities();
         }
-        if (desiredReg == RilImsWire.REG_STATE_REGISTERED && callEngine.isVoiceImsReady()) {
+        boolean notificationReady = lastPublishedFrameworkReg == RilImsWire.REG_STATE_REGISTERED
+                && callEngine.isVoiceImsReady();
+        if (notificationReady != lastNotificationReady) {
+            lastNotificationReady = notificationReady;
             mainHandler.removeCallbacks(registeredNotifyRunnable);
-            mainHandler.postDelayed(registeredNotifyRunnable, 1200L);
+            if (notificationReady) {
+                mainHandler.postDelayed(registeredNotifyRunnable, 1200L);
+            }
         }
     }
 

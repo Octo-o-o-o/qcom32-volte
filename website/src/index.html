@@ -89,16 +89,16 @@
             <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span>QUALCOMM 32-BIT (MSM8974) · ANDROID 11 · VERIFIED: BLACKBERRY PASSPORT</p>
             <h1 id="hero-title">为高通 32 位老旗舰补齐<br><em>Android 11 原生 VoLTE 通话栈。</em></h1>
             <p class="hero-lead">Qcom32 VoLTE 是 Android 11 IMS 和基带配置源码可见项目（PolyForm Noncommercial 1.0.0 + 商业授权）。仅一台 Passport SQW100-1 <code>wolverine</code>、联通 46001 完整实测。<code>oslo</code>、<code>wichita</code>、<code>keian</code>、<code>wseries</code>、<code>windermere</code> 默认只读；另有一台银色版在指定 ROM 上完成实验通话。</p>
-            <p class="hero-note"><strong>⚠️ 紧急呼叫不支持、未认证；请备另一部手机。</strong> LTE-only 网络可能无法拨通 110/112/911。写入基带有风险：请先独立备份 EFS 并存到手机之外，风险自负；检查日志不是完整备份，固定回滚不保证原值恢复。请自行备份 modemst1、modemst2、fsg。v1.2.4-r1 及更早版本仍允许对未经验证版本一键写入，且 v1.2.4-r1 / v1.2.5-r1 会误拒 .DI.4.0.1 运行时基带；请升级至 v1.2.7-r1。v1.2.4 的预检和自动回滚与 v1.2.6 的基带识别修正仅经离线/模拟验证，未在故障真机上验证。</p>
+            <p class="hero-note"><strong>⚠️ 紧急呼叫不支持、未认证；请备另一部手机。</strong> LTE-only 网络可能无法拨通 110/112/911。写入基带有风险：请先独立备份 EFS 并存到手机之外，风险自负；检查日志不是完整备份，固定回滚不保证原值恢复。请自行备份 modemst1、modemst2、fsg。v1.2.4-r1 及更早版本仍允许对未经验证版本一键写入，且 v1.2.4-r1 / v1.2.5-r1 会误拒 .DI.4.0.1 运行时基带；请升级至 v1.2.8-r1。v1.2.4 的预检和自动回滚与 v1.2.6 的基带识别修正仅经离线/模拟验证，未在故障真机上验证。</p>
             <div class="hero-actions">
-              <a class="button button-primary" data-download="windows" href="https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer">
+              <a class="button button-primary" data-download="windows" href="https://qcom32-downloads.octoooo.com/v1.2.8-r1/qcom32-volte-1.2.8-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer">
                 <span class="button-copy"><span>下载 Windows 桌面一键版</span><small>推荐 · 无需安装 Magisk · 自带 ADB 与多机型只读体检</small></span>
                 <svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg>
               </a>
               <a class="button button-secondary" href="#methods">查看全部 4 种使用方式</a>
             </div>
-            <p class="hero-note">当前发行：<strong data-release-version>v1.2.7-r1</strong> · 未验证版本默认只读。 <a href="guide.html">使用指南</a></p>
-            <p class="hero-note">IMS 2.9 修复拒接后重复响铃。<a href="guide.html#radio-diagnostics">无信号只读体检</a> · <a href="guide.html#silver-edition">银色版实验流程</a></p>
+            <p class="hero-note">当前发行：<strong data-release-version>v1.2.8-r1</strong> · 未验证版本默认只读。 <a href="guide.html">使用指南</a></p>
+            <p class="hero-note">IMS 2.10 待机优化预览。已完成电脑端连接回归，真机耗电与锁屏通话待测。 <a href="https://github.com/Octo-o-o-o/qcom32-volte/releases/tag/v1.2.7-r1">上一稳定版</a> · <a href="guide.html#radio-diagnostics">无信号只读体检</a> · <a href="guide.html#silver-edition">银色版实验流程</a></p>
           </div>
 
           <div class="hero-visual">
@@ -106,7 +106,7 @@
             <figure class="software-figure">
               <div class="software-topbar"><span>QCOM32 VOLTE STACK · OCTOLAB</span><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
               <img src="assets/og-card.png" width="1200" height="630" alt="Qcom32 VoLTE 一台 wolverine 验证概览">
-              <figcaption><span><i class="status-dot" aria-hidden="true"></i>先前版本实测：QMI_IMSA 已注册 · 原生拨号器高清通话 · 来电显示正常</span><small>v1.2.7-r1 源码</small></figcaption>
+              <figcaption><span><i class="status-dot" aria-hidden="true"></i>先前版本实测：QMI_IMSA 已注册 · 原生拨号器高清通话 · 来电显示正常</span><small>v1.2.8-r1 源码</small></figcaption>
             </figure>
             <div class="signal-note" aria-hidden="true">
               <svg viewBox="0 0 90 44"><path d="M2 36h12l7-24 9 29 10-36 10 31h12l7-15 7 15h12"/></svg>
@@ -175,7 +175,7 @@
           <article class="method-card method-card-primary">
             <div class="method-top"><span>METHOD 01 · WINDOWS X64</span><span class="badge badge-recommended">最推荐 · 免装 Magisk</span></div>
             <h3>Windows 桌面一键激活工具</h3>
-            <p class="method-sub">qcom32-volte-1.2.7-r1-windows-x64.exe</p>
+            <p class="method-sub">qcom32-volte-1.2.8-r1-windows-x64.exe</p>
             <p>Windows 图形工具包含 ADB 与只读体检；旧发行制品不含新门禁与运行时基带识别修正。</p>
             <ul>
               <li>只需在手机「开发者选项」开启 <strong>USB 调试</strong> 与 <strong>Root 调试（Rooted debugging）</strong></li>
@@ -191,7 +191,7 @@
           <article class="method-card">
             <div class="method-top"><span>METHOD 02 · ON-DEVICE APK</span><span class="badge badge-neutral">免 su 实时面板 + 多机型体检</span></div>
             <h3>手机端独立管理与状态 App</h3>
-            <p class="method-sub">Qcom32VolteManager-1.2.7-r1.apk（org.octolab.qcom32volte）</p>
+            <p class="method-sub">Qcom32VolteManager-1.2.8-r1.apk（org.octolab.qcom32volte）</p>
             <p>安装在手机桌面的独立伴侣应用（独立签名不与 <code>UID 1001</code> 冲突），内置 SHA-256 自校验载荷、只读状态桥接与 32 位多机型识别体检面板。</p>
             <ul>
               <li><strong>无需 Magisk、无需连电脑</strong>：随时查看三网 SIM 运营商、<code>rild_ims0</code>、<code>QMI_IMSA</code> 状态，或运行 100% 只读多机型适配体检并复制 AI 提示词</li>
@@ -206,7 +206,7 @@
           <article class="method-card">
             <div class="method-top"><span>METHOD 03 · PORTABLE CLI &amp; GUI</span><span class="badge badge-neutral">macOS / Linux / 脚本党</span></div>
             <h3>跨平台便携包（CLI + Tk GUI）</h3>
-            <p class="method-sub">qcom32-volte-1.2.7-r1-portable.zip</p>
+            <p class="method-sub">qcom32-volte-1.2.8-r1-portable.zip</p>
             <p>零第三方 Python 依赖的命令行与跨平台图形工具，内置已编译签名的 ARM32 工具、双 APK 与 <code>devices/</code> Profile 库，解压即用。</p>
             <ul>
               <li><code>python3 cli/volte_ctl.py status</code> / <code>inspect-device</code> / <code>list-models</code></li>
@@ -345,8 +345,8 @@
         <div class="section-heading">
           <h2 id="download-title">选择对应安装包，<br><em>核对校验码即可开始。</em></h2>
           <div class="release-summary">
-            <p>当前公开版本<br><strong data-release-version>v1.2.7-r1</strong> · 个人非商用免费版（商用需授权）</p>
-            <a class="text-link" data-release-link href="https://github.com/Octo-o-o-o/qcom32-volte/releases/tag/v1.2.7-r1" target="_blank" rel="noopener noreferrer">GitHub Release 说明<svg class="icon" aria-hidden="true"><use href="#icon-external"/></svg></a>
+            <p>当前公开版本<br><strong data-release-version>v1.2.8-r1</strong> · 个人非商用免费版（商用需授权）</p>
+            <a class="text-link" data-release-link href="https://github.com/Octo-o-o-o/qcom32-volte/releases/tag/v1.2.8-r1" target="_blank" rel="noopener noreferrer">GitHub Release 说明<svg class="icon" aria-hidden="true"><use href="#icon-external"/></svg></a>
           </div>
         </div>
 
@@ -357,8 +357,8 @@
             <p class="platform-spec"><span>Windows 10 / 11 · x64</span><span>免装 Magisk · 免装 Python/ADB</span></p>
             <p>仅一台 wolverine 完整实测；旧版下载不含本次门禁与 .DI.4.0.1 基带修正，未经验证机型勿写入。</p>
             <div class="download-actions">
-              <a class="button button-primary" data-download="windows" href="https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg>下载 Windows 一键版 EXE</a>
-              <a class="checksum-link" data-download="windows-sha" href="https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-windows-x64.exe.sha256" target="_blank" rel="noopener noreferrer">SHA-256 校验文件<svg class="icon" aria-hidden="true"><use href="#icon-external"/></svg></a>
+              <a class="button button-primary" data-download="windows" href="https://qcom32-downloads.octoooo.com/v1.2.8-r1/qcom32-volte-1.2.8-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg>下载 Windows 一键版 EXE</a>
+              <a class="checksum-link" data-download="windows-sha" href="https://qcom32-downloads.octoooo.com/v1.2.8-r1/qcom32-volte-1.2.8-r1-windows-x64.exe.sha256" target="_blank" rel="noopener noreferrer">SHA-256 校验文件<svg class="icon" aria-hidden="true"><use href="#icon-external"/></svg></a>
             </div>
             <small class="package-note">独立软件未购买商业 EV 代码签名证书；若遇 SmartScreen 提示，核对 SHA-256 一致后选择“仍要运行”。</small>
           </article>
@@ -369,8 +369,8 @@
             <p class="platform-spec"><span>Qcom32VolteManager.apk</span><span>Android 11 ARM32 · 免 su 实时面板 + 多机型体检</span></p>
             <p>手机端提供状态查看；仅一台 wolverine 实测，其他版本不得依赖旧版门禁。</p>
             <div class="download-actions">
-              <a class="button button-primary" data-download="manager" href="https://qcom32-downloads.octoooo.com/v1.2.7-r1/Qcom32VolteManager-1.2.7-r1.apk" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg>下载手机端管理 APK</a>
-              <a class="checksum-link" data-download="manager-sha" href="https://qcom32-downloads.octoooo.com/v1.2.7-r1/Qcom32VolteManager-1.2.7-r1.apk.sha256" target="_blank" rel="noopener noreferrer">SHA-256 校验文件<svg class="icon" aria-hidden="true"><use href="#icon-external"/></svg></a>
+              <a class="button button-primary" data-download="manager" href="https://qcom32-downloads.octoooo.com/v1.2.8-r1/Qcom32VolteManager-1.2.8-r1.apk" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg>下载手机端管理 APK</a>
+              <a class="checksum-link" data-download="manager-sha" href="https://qcom32-downloads.octoooo.com/v1.2.8-r1/Qcom32VolteManager-1.2.8-r1.apk.sha256" target="_blank" rel="noopener noreferrer">SHA-256 校验文件<svg class="icon" aria-hidden="true"><use href="#icon-external"/></svg></a>
             </div>
             <small class="package-note">已内嵌经过 SHA-256 校验的 <code>Qcom32VolteIms.apk</code> v2.8 与 <code>pp_regconfig_provision_v6</code>。</small>
           </article>
@@ -379,30 +379,30 @@
         <div class="source-download">
           <p><strong>macOS / Linux / 社区公益 ROM 开发者包：</strong>包含跨平台便携 CLI/GUI 包、通用系统签名通话栈 APK 与完整源码包。</p>
           <div>
-            <a data-download="portable" href="https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-portable.zip" target="_blank" rel="noopener noreferrer">跨平台便携包 ZIP</a>
-            <a data-download="rom-apk" href="https://qcom32-downloads.octoooo.com/v1.2.7-r1/Qcom32VolteIms-2.9-r1-platform.apk" target="_blank" rel="noopener noreferrer">Qcom32VolteIms 系统通话栈 APK</a>
-            <a data-download="source" href="https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-source.zip" target="_blank" rel="noopener noreferrer">源码公开 ZIP</a>
-            <a data-download="portable-sha" href="https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-portable.zip.sha256" target="_blank" rel="noopener noreferrer">Portable ZIP SHA-256</a>
-            <a data-download="rom-apk-sha" href="https://qcom32-downloads.octoooo.com/v1.2.7-r1/Qcom32VolteIms-2.9-r1-platform.apk.sha256" target="_blank" rel="noopener noreferrer">IMS APK SHA-256</a>
-            <a data-download="source-sha" href="https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-source.zip.sha256" target="_blank" rel="noopener noreferrer">Source ZIP SHA-256</a>
-            <a data-release-checksums href="https://qcom32-downloads.octoooo.com/v1.2.7-r1/SHA256SUMS.txt" target="_blank" rel="noopener noreferrer">全部 SHA256SUMS.txt</a>
+            <a data-download="portable" href="https://qcom32-downloads.octoooo.com/v1.2.8-r1/qcom32-volte-1.2.8-r1-portable.zip" target="_blank" rel="noopener noreferrer">跨平台便携包 ZIP</a>
+            <a data-download="rom-apk" href="https://qcom32-downloads.octoooo.com/v1.2.8-r1/Qcom32VolteIms-2.10-r1-platform.apk" target="_blank" rel="noopener noreferrer">Qcom32VolteIms 系统通话栈 APK</a>
+            <a data-download="source" href="https://qcom32-downloads.octoooo.com/v1.2.8-r1/qcom32-volte-1.2.8-r1-source.zip" target="_blank" rel="noopener noreferrer">源码公开 ZIP</a>
+            <a data-download="portable-sha" href="https://qcom32-downloads.octoooo.com/v1.2.8-r1/qcom32-volte-1.2.8-r1-portable.zip.sha256" target="_blank" rel="noopener noreferrer">Portable ZIP SHA-256</a>
+            <a data-download="rom-apk-sha" href="https://qcom32-downloads.octoooo.com/v1.2.8-r1/Qcom32VolteIms-2.10-r1-platform.apk.sha256" target="_blank" rel="noopener noreferrer">IMS APK SHA-256</a>
+            <a data-download="source-sha" href="https://qcom32-downloads.octoooo.com/v1.2.8-r1/qcom32-volte-1.2.8-r1-source.zip.sha256" target="_blank" rel="noopener noreferrer">Source ZIP SHA-256</a>
+            <a data-release-checksums href="https://qcom32-downloads.octoooo.com/v1.2.8-r1/SHA256SUMS.txt" target="_blank" rel="noopener noreferrer">全部 SHA256SUMS.txt</a>
           </div>
         </div>
 
         <div class="mirror-note">
           <p><strong>默认通过 Cloudflare R2（<code>qcom32-downloads.octoooo.com</code>）高速直连下载，无需访问 GitHub。</strong>如遇网络波动，也可使用下方 GitHub Releases 镜像，两边文件与 SHA-256 完全一致：</p>
           <p>
-            <a data-github-download="windows" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer">GitHub Windows EXE</a> ·
-            <a data-github-download="manager" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/Qcom32VolteManager-1.2.7-r1.apk" target="_blank" rel="noopener noreferrer">GitHub 手机管理 APK</a> ·
-            <a data-github-download="portable" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-portable.zip" target="_blank" rel="noopener noreferrer">GitHub 跨平台便携 ZIP</a> ·
-            <a data-github-download="rom-apk" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/Qcom32VolteIms-2.9-r1-platform.apk" target="_blank" rel="noopener noreferrer">GitHub 通话栈 APK</a> ·
-            <a data-github-download="source" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-source.zip" target="_blank" rel="noopener noreferrer">GitHub Source ZIP</a> ·
-            <a data-github-download="windows-sha" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-windows-x64.exe.sha256" target="_blank" rel="noopener noreferrer">GitHub Windows EXE SHA-256</a> ·
-            <a data-github-download="manager-sha" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/Qcom32VolteManager-1.2.7-r1.apk.sha256" target="_blank" rel="noopener noreferrer">GitHub Manager APK SHA-256</a> ·
-            <a data-github-download="portable-sha" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-portable.zip.sha256" target="_blank" rel="noopener noreferrer">GitHub Portable ZIP SHA-256</a> ·
-            <a data-github-download="rom-apk-sha" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/Qcom32VolteIms-2.9-r1-platform.apk.sha256" target="_blank" rel="noopener noreferrer">GitHub IMS APK SHA-256</a> ·
-            <a data-github-download="source-sha" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-source.zip.sha256" target="_blank" rel="noopener noreferrer">GitHub Source ZIP SHA-256</a> ·
-            <a href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/SHA256SUMS.txt" target="_blank" rel="noopener noreferrer">GitHub SHA-256</a>
+            <a data-github-download="windows" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/qcom32-volte-1.2.8-r1-windows-x64.exe" target="_blank" rel="noopener noreferrer">GitHub Windows EXE</a> ·
+            <a data-github-download="manager" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/Qcom32VolteManager-1.2.8-r1.apk" target="_blank" rel="noopener noreferrer">GitHub 手机管理 APK</a> ·
+            <a data-github-download="portable" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/qcom32-volte-1.2.8-r1-portable.zip" target="_blank" rel="noopener noreferrer">GitHub 跨平台便携 ZIP</a> ·
+            <a data-github-download="rom-apk" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/Qcom32VolteIms-2.10-r1-platform.apk" target="_blank" rel="noopener noreferrer">GitHub 通话栈 APK</a> ·
+            <a data-github-download="source" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/qcom32-volte-1.2.8-r1-source.zip" target="_blank" rel="noopener noreferrer">GitHub Source ZIP</a> ·
+            <a data-github-download="windows-sha" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/qcom32-volte-1.2.8-r1-windows-x64.exe.sha256" target="_blank" rel="noopener noreferrer">GitHub Windows EXE SHA-256</a> ·
+            <a data-github-download="manager-sha" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/Qcom32VolteManager-1.2.8-r1.apk.sha256" target="_blank" rel="noopener noreferrer">GitHub Manager APK SHA-256</a> ·
+            <a data-github-download="portable-sha" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/qcom32-volte-1.2.8-r1-portable.zip.sha256" target="_blank" rel="noopener noreferrer">GitHub Portable ZIP SHA-256</a> ·
+            <a data-github-download="rom-apk-sha" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/Qcom32VolteIms-2.10-r1-platform.apk.sha256" target="_blank" rel="noopener noreferrer">GitHub IMS APK SHA-256</a> ·
+            <a data-github-download="source-sha" href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/qcom32-volte-1.2.8-r1-source.zip.sha256" target="_blank" rel="noopener noreferrer">GitHub Source ZIP SHA-256</a> ·
+            <a href="https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/SHA256SUMS.txt" target="_blank" rel="noopener noreferrer">GitHub SHA-256</a>
           </p>
         </div>
       </div>
@@ -444,9 +444,9 @@
             <details><summary>Magisk?<span aria-hidden="true"></span></summary><p>实测 ROM 的桌面方式可使用 ADB Root；不同 ROM 的权限支持需自行确认。</p></details>
             <details><summary>SELinux / EFS<span aria-hidden="true"></span></summary><p>实测设备保持 Enforcing；写入前应独立备份本机 EFS。</p></details>
             <details><summary>银色版和其他版本是否验证？<span aria-hidden="true"></span></summary><p>一台 oslo 在指定 ROM 上完成实验通话。oslo、wichita、keian、wseries 和 windermere 默认只读，保留回滚。</p></details>
-            <details><summary>早期已安装旧包名 org.passport.volteims 的设备如何升级？<span aria-hidden="true"></span></summary><p>完全自动！运行 <code>v1.2.7-r1</code> 的桌面一键版或 CLI 时，工具会自动清理旧包残留、平滑迁移至新通用包名 <code>org.octolab.qcom32ims</code>（v2.8）并重新绑定持久化 <code>CarrierConfig</code>。</p></details>
+            <details><summary>早期已安装旧包名 org.passport.volteims 的设备如何升级？<span aria-hidden="true"></span></summary><p>完全自动！运行 <code>v1.2.8-r1</code> 的桌面一键版或 CLI 时，工具会自动清理旧包残留、平滑迁移至新通用包名 <code>org.octolab.qcom32ims</code>（v2.8）并重新绑定持久化 <code>CarrierConfig</code>。</p></details>
             <details><summary>来电显示正常吗？为什么早期方案会显示“未知号码”？<span aria-hidden="true"></span></summary><p>通话栈处理 3GPP <code>CLIP</code> 与 Android <code>ImsCallProfile.OIR</code> 的极性差异及国际号码格式；来显仅在此前一台联通 46001 wolverine 上实测，v2.8 本轮仅经离线/模拟验证。</p></details>
-            <details><summary>重启后无信号或提示基带不兼容怎么办？<span aria-hidden="true"></span></summary><p>v1.2.7-r1 修正了运行时基带省略 <code>MPSS</code> 前缀（如 <code>.DI.4.0.1-00158-M8974AAAAANAZM-1</code>）及免 Root 只读体检的误判，保留旧 IMS 守护进程（例如 imsqmidaemon）与基带预检，并在回滚无法打开 <code>/dev/diag</code> 时提示先恢复机外备份或刷回原版 <code>AAB982</code> <code>NON-HLOS.bin</code>；这些保护仅经离线/模拟验证，不保证恢复信号或原值。源码中的实验机型授权同样不能跳过预检。</p></details>
+            <details><summary>重启后无信号或提示基带不兼容怎么办？<span aria-hidden="true"></span></summary><p>v1.2.8-r1 修正了运行时基带省略 <code>MPSS</code> 前缀（如 <code>.DI.4.0.1-00158-M8974AAAAANAZM-1</code>）及免 Root 只读体检的误判，保留旧 IMS 守护进程（例如 imsqmidaemon）与基带预检，并在回滚无法打开 <code>/dev/diag</code> 时提示先恢复机外备份或刷回原版 <code>AAB982</code> <code>NON-HLOS.bin</code>；这些保护仅经离线/模拟验证，不保证恢复信号或原值。源码中的实验机型授权同样不能跳过预检。</p></details>
             <details><summary>回滚能还原原值吗？<span aria-hidden="true"></span></summary><p>不能保证。检查日志并非完整备份；固定清理会写入 00 并删除条目。请提前独立备份。</p></details>
             <details><summary>支持紧急呼叫（110/119/120/911）吗？<span aria-hidden="true"></span></summary><p>本项目属于实验性经典硬件救援方案，未经过运营商或紧急呼叫中心（E911/IMS Emergency PDN）认证。请勿将修改后的老手机作为唯一的紧急求救联络工具。</p></details>
           </div>

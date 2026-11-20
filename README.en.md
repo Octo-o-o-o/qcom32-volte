@@ -8,7 +8,7 @@ Qcom32 VoLTE provides an Android 11 IMS service and device-specific modem EFS to
 >
 > **Modem EFS writes are risky.** Make an independent device-specific EFS backup (for example `modemst1`, `modemst2`, `fsg`) first, keep it off-device, and use at your own risk. The tool automatically saves an inspection log and hashes, **not a complete restorable backup**. Rollback writes fixed values and deletes items; it does not guarantee restoration of original bytes. Verify your own recovery plan.
 >
-> **v1.2.4-r1 and earlier lack the unverified-edition gate** (still permitting one-click writes on unverified editions), and **v1.2.4-r1 / v1.2.5-r1 falsely reject the real-device `.DI.4.0.1` runtime baseband string and unrooted read-only checks**. Upgrade to v1.2.7-r1; do not use older builds to write on unverified devices.
+> **v1.2.4-r1 and earlier lack the unverified-edition gate** (still permitting one-click writes on unverified editions), and **v1.2.4-r1 / v1.2.5-r1 falsely reject the real-device `.DI.4.0.1` runtime baseband string and unrooted read-only checks**. Upgrade to v1.2.8-r1; do not use older builds to write on unverified devices.
 
 ## Verification checklist
 
@@ -38,24 +38,25 @@ python3 cli/gui.py
 
 Use the Windows EXE GUI “Run Fixed EFS Cleanup & Uninstall”, or `<EXE> --cli rollback`; the Android manager also has a rollback action. The same original-backup limitation applies. Registration alone does not establish successful calls. Four delivery methods (Windows EXE, Android manager, portable CLI/GUI and ROM integration) were tested end to end only on the one Unicom unit.
 
-## What’s new in v1.2.7-r1
+After activation, you can uninstall the optional **Qcom32 VoLTE** companion (`org.octolab.qcom32volte`), disconnect the computer, and turn off USB and rooted debugging. Keep **Qcom32 VoLTE IMS** (`org.octolab.qcom32ims`) installed and enabled for native VoLTE. Use Android’s app settings to remove the companion. The rollback action also clears modem configuration.
 
-- Windows and portable builds distinguish a loaded SIM with missing radio service in the read-only check. The Android companion points affected users to the desktop check. Factory-mode recovery, touch filtering and earpiece repair stay outside normal activation.
-- IMS 2.9 prevents late modem updates from ringing again after a rejection. Already activated devices can use `upgrade-apk` without rewriting EFS.
-- The CLI can prepare the tested Silver Edition ROM with `prepare-oslo-rom`. One `oslo` made and received calls on China Unicom 46001 with the prepared 20251205 build and AAB982. An independent backup and both experimental confirmations still apply.
+## v1.2.8-r1 standby optimization preview
 
-## v1.2.7-r1 downloads
+- IMS 2.10 waits for socket events until the next scheduled check, reducing idle read timeouts while retaining registration checks, active-call checks and reconnects.
+- Already activated devices can use `upgrade-apk` without rewriting EFS. Host builds and connection regression tests passed. Screen-off power and lock-screen calls await handset testing. [v1.2.7-r1](https://github.com/Octo-o-o-o/qcom32-volte/releases/tag/v1.2.7-r1) remains the stable release.
+
+## v1.2.8-r1 downloads
 
 Each asset also has an individual `.sha256` file.
 
 | Asset | R2 mirror | GitHub Release |
 | --- | --- | --- |
-| Windows EXE | [Download](https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-windows-x64.exe) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-windows-x64.exe.sha256) | [Download](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-windows-x64.exe) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-windows-x64.exe.sha256) |
-| Manager APK | [Download](https://qcom32-downloads.octoooo.com/v1.2.7-r1/Qcom32VolteManager-1.2.7-r1.apk) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.7-r1/Qcom32VolteManager-1.2.7-r1.apk.sha256) | [Download](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/Qcom32VolteManager-1.2.7-r1.apk) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/Qcom32VolteManager-1.2.7-r1.apk.sha256) |
-| IMS APK 2.9 | [Download](https://qcom32-downloads.octoooo.com/v1.2.7-r1/Qcom32VolteIms-2.9-r1-platform.apk) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.7-r1/Qcom32VolteIms-2.9-r1-platform.apk.sha256) | [Download](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/Qcom32VolteIms-2.9-r1-platform.apk) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/Qcom32VolteIms-2.9-r1-platform.apk.sha256) |
-| Portable ZIP | [Download](https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-portable.zip) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-portable.zip.sha256) | [Download](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-portable.zip) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-portable.zip.sha256) |
-| Source ZIP | [Download](https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-source.zip) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.7-r1/qcom32-volte-1.2.7-r1-source.zip.sha256) | [Download](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-source.zip) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/qcom32-volte-1.2.7-r1-source.zip.sha256) |
-| Checksums | [SHA256SUMS.txt](https://qcom32-downloads.octoooo.com/v1.2.7-r1/SHA256SUMS.txt) | [SHA256SUMS.txt](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.7-r1/SHA256SUMS.txt) |
+| Windows EXE | [Download](https://qcom32-downloads.octoooo.com/v1.2.8-r1/qcom32-volte-1.2.8-r1-windows-x64.exe) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.8-r1/qcom32-volte-1.2.8-r1-windows-x64.exe.sha256) | [Download](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/qcom32-volte-1.2.8-r1-windows-x64.exe) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/qcom32-volte-1.2.8-r1-windows-x64.exe.sha256) |
+| Manager APK | [Download](https://qcom32-downloads.octoooo.com/v1.2.8-r1/Qcom32VolteManager-1.2.8-r1.apk) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.8-r1/Qcom32VolteManager-1.2.8-r1.apk.sha256) | [Download](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/Qcom32VolteManager-1.2.8-r1.apk) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/Qcom32VolteManager-1.2.8-r1.apk.sha256) |
+| IMS APK 2.10 | [Download](https://qcom32-downloads.octoooo.com/v1.2.8-r1/Qcom32VolteIms-2.10-r1-platform.apk) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.8-r1/Qcom32VolteIms-2.10-r1-platform.apk.sha256) | [Download](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/Qcom32VolteIms-2.10-r1-platform.apk) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/Qcom32VolteIms-2.10-r1-platform.apk.sha256) |
+| Portable ZIP | [Download](https://qcom32-downloads.octoooo.com/v1.2.8-r1/qcom32-volte-1.2.8-r1-portable.zip) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.8-r1/qcom32-volte-1.2.8-r1-portable.zip.sha256) | [Download](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/qcom32-volte-1.2.8-r1-portable.zip) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/qcom32-volte-1.2.8-r1-portable.zip.sha256) |
+| Source ZIP | [Download](https://qcom32-downloads.octoooo.com/v1.2.8-r1/qcom32-volte-1.2.8-r1-source.zip) · [SHA-256](https://qcom32-downloads.octoooo.com/v1.2.8-r1/qcom32-volte-1.2.8-r1-source.zip.sha256) | [Download](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/qcom32-volte-1.2.8-r1-source.zip) · [SHA-256](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/qcom32-volte-1.2.8-r1-source.zip.sha256) |
+| Checksums | [SHA256SUMS.txt](https://qcom32-downloads.octoooo.com/v1.2.8-r1/SHA256SUMS.txt) | [SHA256SUMS.txt](https://github.com/Octo-o-o-o/qcom32-volte/releases/download/v1.2.8-r1/SHA256SUMS.txt) |
 
 ## Local checks
 

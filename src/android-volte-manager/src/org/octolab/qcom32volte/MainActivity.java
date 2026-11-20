@@ -255,7 +255,7 @@ public final class MainActivity extends Activity {
     private void refreshLabels() {
         if (englishMode) {
             titleView.setText("Qcom32 VoLTE & IMS Stack");
-            subtitleView.setText("OCTOLAB · Android 11 · IMS v2.9 · one wolverine unit verified");
+            subtitleView.setText("OCTOLAB · Android 11 · IMS v2.10 · one wolverine unit verified");
             langButton.setText("中文");
             refreshButton.setText("Check Live VoLTE & SIM Status");
             readinessButton.setText("32-Bit Device Identification & AI Porting Check (Read-Only)");
@@ -266,7 +266,7 @@ public final class MainActivity extends Activity {
             licenseNoteView.setText("Source-available: PolyForm Noncommercial 1.0.0; commercial license available: octoooo@octoooo.com");
         } else {
             titleView.setText("Qcom32 VoLTE 通话栈管理端");
-            subtitleView.setText("OCTOLAB · Android 11 · IMS v2.9 · 仅一台 wolverine 已验证");
+            subtitleView.setText("OCTOLAB · Android 11 · IMS v2.10 · 仅一台 wolverine 已验证");
             langButton.setText("English");
             refreshButton.setText("检查当前 SIM / 4G / VoLTE 状态");
             readinessButton.setText("多机型识别与只读适配体检（AI + GitHub 自助适配）");
@@ -550,8 +550,8 @@ public final class MainActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle(englishMode ? "Update Qcom32VolteIms APK" : "更新桥接服务 APK")
                 .setMessage(englishMode
-                        ? "Updates Qcom32VolteIms.apk v2.9 in place without touching modem EFS."
-                        : "仅原位更新 Qcom32VolteIms.apk v2.9，不写入任何基带 EFS 项。")
+                        ? "Updates Qcom32VolteIms.apk v2.10 in place without touching modem EFS."
+                        : "仅原位更新 Qcom32VolteIms.apk v2.10，不写入任何基带 EFS 项。")
                 .setPositiveButton(englishMode ? "Update" : "确认更新", (d, w) -> executeRootOperation("upgrade"))
                 .setNegativeButton(englishMode ? "Cancel" : "取消", null)
                 .show();
